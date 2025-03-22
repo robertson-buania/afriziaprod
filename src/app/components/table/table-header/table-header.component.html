@@ -1,0 +1,29 @@
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+  <div class="d-flex align-items-center">
+    <div class="d-flex align-items-center">
+      <select
+        class="form-select me-2"
+        style="width: auto"
+        [(ngModel)]="tableService.pageSize"
+      >
+        <option [ngValue]="5">5</option>
+        <option [ngValue]="10" selected>10</option>
+        <option [ngValue]="15">15</option>
+        <option [ngValue]="20">20</option>
+        <option [ngValue]="25">25</option>
+      </select>
+      <span class="text-nowrap">par page</span>
+    </div>
+  </div>
+  <div class="search-bar">
+    <div class="input-group">
+      <span class="input-group-text"><i class="las la-search"></i></span>
+      <input
+        type="search"
+        class="form-control"
+        [(ngModel)]="tableService.searchTerm"
+        placeholder="Rechercher..."
+      />
+    </div>
+  </div>
+</div>

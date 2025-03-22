@@ -1,0 +1,26 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <h4 class="card-title">
+              <i class="las la-box me-2"></i>Colis en attente de vérification
+            </h4>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary me-2" (click)="openNewColisModal()">
+              <i class="las la-plus me-1"></i>Nouveau colis
+            </button>
+            <a class="btn btn-success" routerLink="/colis/import-excel">
+              <i class="las la-file-excel me-1"></i>Importer depuis Excel
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="card-body pt-0">
+        <app-colis-table />
+      </div>
+    </div>
+  </div>
+</div>

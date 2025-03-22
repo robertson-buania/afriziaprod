@@ -1,0 +1,36 @@
+// Styles pour la liste des factures
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+  cursor: pointer;
+}
+
+// Style pour les badges
+.badge {
+  padding: 0.5em 0.8em;
+  font-weight: 500;
+}
+
+// Style pour la barre de progression
+.progress {
+  background-color: #e9ecef;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+// Animation pour l'entrée des éléments
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.table-responsive {
+  animation: fadeIn 0.5s ease-in;
+}
+
+// Style responsive pour les petits écrans
+@media (max-width: 768px) {
+  .btn-sm {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+  }
+}

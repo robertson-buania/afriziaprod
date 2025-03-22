@@ -1,0 +1,161 @@
+<div class="modal-header">
+  <h5 class="modal-title">
+    <i class="las la-money-bill-wave me-2"></i>Effectuer un paiement
+  </h5>
+  <button type="button" class="btn-close" aria-label="Close" (click)="activeModal.dismiss()"></button>
+</div>
+
+<div class="modal-body">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="alert alert-info">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-1">Facture #{{ facture?.id }}</h6>
+            <p class="mb-0">Montant total: {{ facture?.montant | currency:'USD':'symbol' }}</p>
+            <p class="mb-0">Déjà payé: {{ facture?.montantPaye | currency:'USD':'symbol' }}</p>
+            <p class="mb-0"><strong>Reste à payer: {{ montantRestant() | currency:'USD':'symbol' }}</strong></p>
+          </div>
+          @if (client) {
+            <div class="text-end">
+              <p class="mb-0"><strong>{{ client.nom }} {{ client.prenom }}</strong></p>
+              <p class="mb-0 small">{{ client.email }}</p>
+              <p class="mb-0 small">{{ client.telephone || '' }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form [formGroup]="paiementForm" (ngSubmit)="onSubmit()">
+    <!-- Mode de paiement -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <label class="form-label fw-bold">Mode de paiement</label>
+        <div class="payment-methods">
+          @for (option of typePaiementOptions; track option.value) {
+            <div class="form-check payment-method-item">
+              <input
+                class="form-check-input"
+                type="radio"
+                [id]="'payment-' + option.value"
+                [value]="option.value"
+                formControlName="typePaiement"
+              >
+              <label class="form-check-label" [for]="'payment-' + option.value">
+                <div class="payment-method-content">
+                  <div class="payment-icon">
+                    <i class="las" [ngClass]="{
+                      'la-money-bill': option.value === 0,
+                      'la-credit-card': option.value === 1,
+                      'la-mobile': option.value === 2 || option.value === 3
+                    }"></i>
+                  </div>
+                  <div>
+                    <span class="payment-name">{{ option.label }}</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Numéro de référence (pour carte, MPesa, Orange Money) -->
+    <div class="row mb-4" *ngIf="isTypeRequiringReference()">
+      <div class="col-12">
+        <label class="form-label fw-bold">
+          {{ paiementForm.get('typePaiement')?.value === 1 ? 'Numéro de transaction' : 'Numéro de téléphone' }}
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="las" [ngClass]="{
+              'la-credit-card': paiementForm.get('typePaiement')?.value === 1,
+              'la-mobile': paiementForm.get('typePaiement')?.value === 2 || paiementForm.get('typePaiement')?.value === 3
+            }"></i>
+          </span>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="reference"
+            [placeholder]="paiementForm.get('typePaiement')?.value === 1 ? 'Ex: TXID1234567' : 'Ex: +243 999 888 777'"
+          >
+        </div>
+        <small class="text-muted">
+          {{ paiementForm.get('typePaiement')?.value === 1 ? 'Entrez le numéro de transaction de votre carte bancaire' : 'Entrez le numéro de téléphone utilisé pour le paiement mobile' }}
+        </small>
+      </div>
+    </div>
+
+    <!-- Montant -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <label class="form-label fw-bold">Montant</label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input
+            type="number"
+            class="form-control"
+            formControlName="montant"
+            (input)="onMontantChange()"
+            [max]="montantRestant()"
+            [min]="1"
+            step="0.01"
+          >
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            (click)="paiementForm.get('montant')?.setValue(montantRestant())"
+          >
+            Montant total
+          </button>
+        </div>
+        <div class="form-text text-danger" *ngIf="paiementForm.get('montant')?.invalid && paiementForm.get('montant')?.touched">
+          <span *ngIf="paiementForm.get('montant')?.errors?.['required']">Le montant est requis</span>
+          <span *ngIf="paiementForm.get('montant')?.errors?.['min']">Le montant minimum est 1$</span>
+          <span *ngIf="paiementForm.get('montant')?.errors?.['max']">Le montant ne peut pas dépasser {{ montantRestant() | currency:'USD':'symbol' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résumé du paiement -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h6 class="mb-3">Résumé du paiement</h6>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Mode de paiement:</span>
+              <span class="fw-bold">{{ getModeLabel(paiementForm.get('typePaiement')?.value || 0) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2" *ngIf="isTypeRequiringReference() && paiementForm.get('reference')?.value">
+              <span>Référence:</span>
+              <span class="fw-bold">{{ paiementForm.get('reference')?.value }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span>Montant:</span>
+              <span class="fw-bold text-primary">{{ paiementForm.get('montant')?.value | currency:'USD':'symbol' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" (click)="onCancel()">
+    <i class="las la-times me-1"></i>Annuler
+  </button>
+  <button
+    type="button"
+    class="btn btn-primary"
+    [disabled]="paiementForm.invalid || isSubmitting()"
+    (click)="onSubmit()"
+  >
+    <i class="las" [ngClass]="{'la-check': !isSubmitting(), 'la-spinner la-spin': isSubmitting()}"></i>
+    <span class="ms-1">{{ isSubmitting() ? 'Traitement...' : 'Confirmer le paiement' }}</span>
+  </button>
+</div>

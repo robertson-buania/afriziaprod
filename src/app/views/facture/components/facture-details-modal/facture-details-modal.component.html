@@ -1,0 +1,274 @@
+<div class="modal-header bg-black">
+  <div class="row w-100">
+    <div class="col-4 align-self-center">
+      <img src="assets/images/logo-sm.png" alt="logo-small" class="logo-sm me-1" height="70"/>
+    </div>
+    <div class="col-8 text-end align-self-center">
+      <h5 class="mb-1 fw-semibold text-white">
+        <span class="text-muted">Facture:</span> #{{ facture()?.id }}
+      </h5>
+      <h5 class="mb-0 fw-semibold text-white">
+        <span class="text-muted">Date:</span>
+        {{ facture() && facture()!.colis && facture()!.colis.length > 0 && facture()!.colis[0].dateCreation
+          ? (facture()!.colis[0].dateCreation | date:'dd/MM/yyyy')
+          : 'Non disponible' }}
+      </h5>
+    </div>
+  </div>
+</div>
+
+<div class="modal-body">
+  <!-- Indicateur de chargement -->
+  <div class="text-center my-5" *ngIf="isLoading()">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <p class="mt-2 text-muted">Chargement des détails de la facture...</p>
+  </div>
+
+  <div *ngIf="!isLoading() && facture()">
+    <!-- Statut de paiement -->
+    <div class="alert" [ngClass]="{
+      'alert-success': paymentPercentage() === 100,
+      'alert-warning': paymentPercentage() > 0 && paymentPercentage() < 100,
+      'alert-danger': paymentPercentage() === 0
+    }">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="alert-heading">
+            <i class="las" [ngClass]="{
+              'la-check-circle': paymentPercentage() === 100,
+              'la-exclamation-triangle': paymentPercentage() < 100
+            }"></i>
+            <span class="payment-status" [ngClass]="{
+              'paid': paymentPercentage() === 100,
+              'partial': paymentPercentage() > 0 && paymentPercentage() < 100,
+              'unpaid': paymentPercentage() === 0
+            }">
+              {{ getPaymentStatus(paymentPercentage()) }}
+            </span>
+          </h5>
+          <p class="mb-0">
+            <span *ngIf="paymentPercentage() < 100">
+              Montant restant: <strong>{{ (facture()?.montant || 0) - (facture()?.montantPaye || 0) | currency:'USD':'symbol' }}</strong>
+            </span>
+            <span *ngIf="paymentPercentage() === 100">
+              Cette facture est entièrement payée.
+            </span>
+          </p>
+        </div>
+        <div>
+          <button *ngIf="paymentPercentage() < 100" class="btn btn-success" (click)="onAddPayment()">
+            <i class="las la-money-bill-wave me-1"></i>Effectuer un paiement
+          </button>
+        </div>
+      </div>
+
+      <!-- Barre de progression -->
+      <div class="progress mt-3">
+        <div
+          class="progress-bar"
+          [ngClass]="getProgressBarClass(paymentPercentage())"
+          role="progressbar"
+          [style.width.%]="paymentPercentage()"
+          aria-valuemin="0"
+          aria-valuemax="100">
+        </div>
+      </div>
+      <small class="text-muted d-block mt-1">
+        <strong>{{ facture()?.montantPaye | currency:'USD':'symbol' }}</strong> payé sur
+        <strong>{{ facture()?.montant | currency:'USD':'symbol' }}</strong>
+        (<strong>{{ paymentPercentage() | number:'1.0-0' }}%</strong>)
+      </small>
+    </div>
+
+    <div class="row">
+      <!-- Informations de l'entreprise -->
+      <div class="col-lg-12 col-xl-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="mb-3">Kamba Agency</h5>
+            <p class="mb-2">Adresse: 123 Rue Principale</p>
+            <p class="mb-2">Téléphone: +243 999 888 777</p>
+            <p class="mb-2">Email: contact&#64;kamba-agency.com</p>
+            <p class="mb-0">Site web: www.kamba-agency.com</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Informations du client -->
+      <div class="col-lg-12 col-xl-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="mb-3">Informations du client</h5>
+            <p class="mb-2">{{ client()?.nom }} {{ client()?.prenom }}</p>
+            <p class="mb-2">{{ client()?.email }}</p>
+            <p class="mb-2">{{ client()?.telephone || '' }}</p>
+            <p class="mb-0" *ngIf="client()?.adresse">{{ client()?.adresse }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Résumé de la facture -->
+      <div class="col-lg-12 col-xl-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="mb-3">Résumé de la facture</h5>
+            <p class="mb-2">Facture #: {{ facture()?.id }}</p>
+            <p class="mb-2">Date:
+              {{ facture() && facture()!.colis && facture()!.colis.length > 0 && facture()!.colis[0].dateCreation
+                ? (facture()!.colis[0].dateCreation | date:'dd/MM/yyyy')
+                : 'Non disponible' }}
+            </p>
+            <p class="mb-2">Nombre de colis: {{ facture()?.colis?.length || 0 }}</p>
+            <p class="mb-0 text-primary fw-bold">Total: {{ facture()?.montant | currency:'USD':'symbol' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des colis -->
+    <div class="mt-4" *ngIf="facture() && facture()!.colis && facture()!.colis.length > 0">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Détail des colis</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table class="table table-bordered mb-0">
+              <thead>
+                <tr>
+                  <th>Code de suivi</th>
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th>Expédition</th>
+                  <th>Poids</th>
+                  <th>Unités</th>
+                  <th class="text-end">Coût</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for(colis of facture()!.colis; track colis.id) {
+                  <tr>
+                    <td>{{ colis.codeSuivi }}</td>
+                    <td>{{ colis.description || '-' }}</td>
+                    <td>{{ getTypeColisLabel(colis.type) }}</td>
+                    <td>{{ getTypeExpeditionLabel(colis.typeExpedition) }}</td>
+                    <td>{{ colis.poids ? colis.poids + ' kg' : '-' }}</td>
+                    <td>{{ isTypeWithUnites(colis.type) ? (colis.nombreUnites || 1) : '-' }}</td>
+                    <td class="text-end">{{ colis.cout | currency:'USD':'symbol' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Résumé des coûts -->
+          <div class="row justify-content-end mt-4">
+            <div class="col-lg-4">
+              <table class="table table-sm">
+                <tbody>
+                  <tr class="border-top">
+                    <td><strong>Total:</strong></td>
+                    <td class="text-end"><strong>{{ facture()?.montant | currency:'USD':'symbol' }}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historique des paiements -->
+    <div class="mt-4" *ngIf="facture() && facture()!.paiements && facture()!.paiements.length > 0">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i class="las la-history me-2"></i>Historique des paiements
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Mode de paiement</th>
+                  <th class="text-end">Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for(paiement of facture()!.paiements; track paiement.id) {
+                  <tr>
+                    <td>{{ paiement.datepaiement | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="{
+                        'bg-primary': paiement.typepaiement === 0,
+                        'bg-info': paiement.typepaiement === 1,
+                        'bg-warning': paiement.typepaiement === 2,
+                        'bg-success': paiement.typepaiement === 3
+                      }">
+                        <i class="las" [ngClass]="{
+                          'la-money-bill': paiement.typepaiement === 0,
+                          'la-credit-card': paiement.typepaiement === 1,
+                          'la-mobile': paiement.typepaiement === 2 || paiement.typepaiement === 3
+                        }"></i>
+                        {{ paiement.typepaiement === 0 ? 'Espèce' :
+                           paiement.typepaiement === 1 ? 'Carte bancaire' :
+                           paiement.typepaiement === 2 ? 'MPesa' :
+                           paiement.typepaiement === 3 ? 'Orange Money' : 'Inconnu' }}
+                      </span>
+                    </td>
+                    <td class="text-end">{{ paiement.montant_paye | currency:'USD':'symbol' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="2" class="text-end"><strong>Total payé:</strong></td>
+                  <td class="text-end"><strong>{{ facture()?.montantPaye | currency:'USD':'symbol' }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message si aucun paiement -->
+    <div class="mt-4" *ngIf="facture() && (!facture()!.paiements || facture()!.paiements.length === 0)">
+      <div class="alert alert-info">
+        <i class="las la-info-circle me-2"></i>Aucun paiement enregistré pour cette facture.
+      </div>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="alert alert-danger" *ngIf="!isLoading() && !facture()">
+    <i class="las la-exclamation-triangle me-2"></i>Impossible de charger les détails de la facture. Veuillez réessayer plus tard.
+  </div>
+</div>
+
+<div class="modal-footer">
+  <div class="row d-flex justify-content-center w-100">
+    <div class="col-lg-12 col-xl-4 ms-auto align-self-center">
+      <div class="text-center">
+        <small class="fs-12">Merci de faire affaire avec nous.</small>
+      </div>
+    </div>
+    <div class="col-lg-12 col-xl-4">
+      <div class="float-end d-print-none mt-2 mt-md-0">
+        <button type="button" class="btn btn-info me-2" (click)="onPrint()">
+          <i class="las la-print me-1"></i>Imprimer
+        </button>
+        <button *ngIf="paymentPercentage() < 100" type="button" class="btn btn-success me-2" (click)="onAddPayment()">
+          <i class="las la-money-bill-wave me-1"></i>Payer
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="activeModal.dismiss()">
+          <i class="las la-times me-1"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

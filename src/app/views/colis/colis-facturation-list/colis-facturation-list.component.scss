@@ -1,0 +1,20 @@
+.table {
+  th {
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  td {
+    vertical-align: middle;
+
+    .badge {
+      font-size: 0.85em;
+      padding: 0.4em 0.65em;
+    }
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}

@@ -1,0 +1,31 @@
+<div
+  class="align-items-center justify-content-between row g-0 text-center text-sm-start pt-3 border-top"
+>
+  <div class="col-sm-4">
+    <div class="d-flex align-items-center">
+      <span class="badge bg-light text-dark">
+        {{ tableService.startIndex + 1 }}-{{ tableService.endIndex }} / {{ (total | async)! }}
+      </span>
+    </div>
+  </div>
+  <div class="col-sm-8 mt-3 mt-sm-0">
+    <div class="d-flex justify-content-end">
+      <ngb-pagination
+        [collectionSize]="(total | async)!"
+        [(page)]="tableService.page"
+        [pageSize]="tableService.pageSize"
+        [maxSize]="5"
+        [rotate]="true"
+        [boundaryLinks]="true"
+        class="mb-0"
+      >
+        <ng-template ngbPaginationPrevious
+          ><i class="las la-angle-left"></i
+        ></ng-template>
+        <ng-template ngbPaginationNext
+          ><i class="las la-angle-right"></i
+        ></ng-template>
+      </ngb-pagination>
+    </div>
+  </div>
+</div>
