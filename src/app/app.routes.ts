@@ -45,10 +45,10 @@ export const APP_ROUTES: Route[] = [
         path: 'colis',
         loadChildren: () => import('./views/colis/colis.routes').then(m => m.COLIS_ROUTES)
       },
-      {
-        path: 'apps',
-        loadChildren: () => import('./views/applications/apps.route').then(m => m.APPS_ROUTES)
-      },
+      // {
+      //   path: 'apps',
+      //   loadChildren: () => import('./views/applications/apps.route').then(m => m.APPS_ROUTES)
+      // },
       {
         path: '',
         redirectTo: 'dashboard/analytics',
