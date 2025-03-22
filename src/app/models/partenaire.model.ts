@@ -43,6 +43,12 @@ export interface Colis{
   transporteur:string
 }
 
+export interface sac{
+  id?:string,
+  reference:string,
+  colis:Colis[]
+}
+
 export interface Paiement{
   id?:string
   typepaiement:TYPE_PAIEMENT,

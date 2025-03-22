@@ -245,6 +245,13 @@ export const MENU_ITEMS: MenuItem[] = [
         icon: 'iconoir-list'
       },
       {
+        key: 'colis-import-sacs',
+        label: 'Importation colis arrivés',
+        parentKey: 'colis',
+        url: '/colis/import-sacs',
+        icon: 'iconoir-inbox'
+      },
+      {
         key: 'colis-verification',
         label: 'Colis enregistré',
         parentKey: 'colis',

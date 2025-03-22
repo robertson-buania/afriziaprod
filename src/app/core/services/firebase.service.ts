@@ -19,7 +19,7 @@ import {
 } from '@angular/fire/firestore';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Colis, Facture, Partenaire, Paiement } from '@/app/models/partenaire.model';
+import { Colis, Facture, Partenaire, Paiement, sac } from '@/app/models/partenaire.model';
 import { Client } from '@/app/models/client.model';
 
 @Injectable({
@@ -243,5 +243,34 @@ export class FirebaseService {
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
     return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Client;
+  }
+
+  // Méthodes pour les sacs
+  getSacs(): Observable<sac[]> {
+    const colRef = collection(this.firestore, 'sacs');
+    return from(getDocs(colRef)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as sac[];
+      })
+    );
+  }
+
+  async addSac(sac: Omit<sac, 'id'>): Promise<string> {
+    const colRef = collection(this.firestore, 'sacs');
+    const docRef = await addDoc(colRef, sac);
+    return docRef.id;
+  }
+
+  async updateSac(id: string, data: Partial<sac>): Promise<void> {
+    const docRef = doc(this.firestore, 'sacs', id);
+    await updateDoc(docRef, data as DocumentData);
+  }
+
+  async deleteSac(id: string): Promise<void> {
+    const docRef = doc(this.firestore, 'sacs', id);
+    await deleteDoc(docRef);
   }
 }

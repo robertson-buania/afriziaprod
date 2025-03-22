@@ -4,6 +4,7 @@ import { ColisFacturationListComponent } from "./colis-facturation-list/colis-fa
 import { ColisLivraisonListComponent } from "./colis-livraison-list/colis-livraison-list.component";
 import { ColisArchivesListComponent } from "./colis-archives-list/colis-archives-list.component";
 import { ColisImportExcelComponent } from "./colis-import-excel/colis-import-excel.component";
+import { ColisImportSacsComponent } from "./colis-import-sacs/colis-import-sacs.component";
 
 export const COLIS_ROUTES: Route[] = [
   {
@@ -35,5 +36,10 @@ export const COLIS_ROUTES: Route[] = [
     path: 'import-excel',
     component: ColisImportExcelComponent,
     data: { title: 'Importation de colis depuis Excel' }
+  },
+  {
+    path: 'import-sacs',
+    component: ColisImportSacsComponent,
+    data: { title: 'Importation de colis arrivés' }
   }
 ];
