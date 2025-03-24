@@ -63,158 +63,158 @@ export const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
-
-  {
-    key: 'apps',
-    icon: 'iconoir-view-grid',
-    collapsed: true,
-    label: 'Applications',
-    subMenu: [
-      {
-        key: 'apps-analytics',
-        label: 'Analytics',
-        collapsed: true,
-        parentKey: 'apps',
-        subMenu: [
-          {
-            key: 'apps-analytics-customers',
-            label: 'Customers',
-            url: '/apps/analytics/customers',
-            parentKey: 'apps-analytics',
-          },
-          {
-            key: 'apps-analytics-reports',
-            label: 'Reports',
-            url: '/apps/analytics/reports',
-            parentKey: 'apps-analytics',
-          },
-        ],
-      },
-      {
-        key: 'apps-projects',
-        label: 'Projects',
-        collapsed: true,
-        parentKey: 'apps',
-        subMenu: [
-          {
-            key: 'apps-projects-clients',
-            label: 'Clients',
-            collapsed: true,
-            url: '/apps/projects/clients',
-            parentKey: 'apps-projects',
-          },
-          {
-            key: 'apps-projects-team',
-            label: 'Team',
-            url: '/apps/projects/team',
-            parentKey: 'apps-projects',
-          },
-          {
-            key: 'apps-projects-project',
-            label: 'Project',
-            url: '/apps/projects/project',
-            parentKey: 'apps-projects',
-          },
-          {
-            key: 'apps-projects-task',
-            label: 'Task',
-            url: '/apps/projects/task',
-            parentKey: 'apps-projects',
-          },
-          {
-            key: 'apps-projects-kanban',
-            label: 'Kanban Board',
-            url: '/apps/projects/kanban',
-            parentKey: 'apps-projects',
-          },
-          {
-            key: 'apps-projects-users',
-            label: 'Users',
-            url: '/apps/projects/users',
-            parentKey: 'apps-projects',
-          },
-          {
-            key: 'apps-projects-create',
-            label: 'Project Create',
-            url: '/apps/projects/create',
-            parentKey: 'apps-projects',
-          },
-        ],
-      },
-      {
-        key: 'apps-ecommerce',
-        label: 'Ecommerce',
-        parentKey: 'apps',
-        collapsed: true,
-        subMenu: [
-          {
-            key: 'apps-ecommerce-products',
-            label: 'Products',
-            url: '/apps/ecommerce/products',
-            parentKey: 'apps-ecommerce',
-          },
-          {
-            key: 'apps-ecommerce-customers',
-            label: 'Customers',
-            url: '/apps/ecommerce/customers',
-            parentKey: 'apps-ecommerce',
-          },
-          {
-            key: 'apps-ecommerce-customers-details',
-            label: 'Customer Details',
-            url: '/apps/ecommerce/customers/101',
-            parentKey: 'apps-ecommerce',
-          },
-          {
-            key: 'apps-ecommerce-orders',
-            label: 'Orders',
-            url: '/apps/ecommerce/orders',
-            parentKey: 'apps-ecommerce',
-          },
-          {
-            key: 'apps-ecommerce-orders-details',
-            label: 'Order Details',
-            url: '/apps/ecommerce/orders/3001',
-            parentKey: 'apps-ecommerce',
-          },
-          {
-            key: 'apps-ecommerce-refunds',
-            label: 'Refunds',
-            url: '/apps/ecommerce/refunds',
-            parentKey: 'apps-ecommerce',
-          },
-        ],
-      },
-      {
-        key: 'apps-chat',
-        label: 'Chat',
-        parentKey: 'apps',
-        url: '/apps/chat',
-        icon: 'iconoir-chat-bubble'
-      },
-      {
-        key: 'apps-contact-list',
-        label: 'Contact List',
-        parentKey: 'apps',
-        url: '/apps/contacts',
-        icon: 'iconoir-address-book'
-      },
-      {
-        key: 'apps-calendar',
-        label: 'Calendar',
-        parentKey: 'apps',
-        url: '/apps/calendar',
-        icon: 'iconoir-calendar'
-      },
-      {
-        key: 'apps-invoice',
-        label: 'Invoice',
-        parentKey: 'apps',
-        url: '/apps/invoice',
-        icon: 'iconoir-document'
-      },
-    ],
-  },
+  
+  // {
+  //   key: 'apps',
+  //   icon: 'iconoir-view-grid',
+  //   collapsed: true,
+  //   label: 'Applications',
+  //   subMenu: [
+  //     {
+  //       key: 'apps-analytics',
+  //       label: 'Analytics',
+  //       collapsed: true,
+  //       parentKey: 'apps',
+  //       subMenu: [
+  //         {
+  //           key: 'apps-analytics-customers',
+  //           label: 'Customers',
+  //           url: '/apps/analytics/customers',
+  //           parentKey: 'apps-analytics',
+  //         },
+  //         {
+  //           key: 'apps-analytics-reports',
+  //           label: 'Reports',
+  //           url: '/apps/analytics/reports',
+  //           parentKey: 'apps-analytics',
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       key: 'apps-projects',
+  //       label: 'Projects',
+  //       collapsed: true,
+  //       parentKey: 'apps',
+  //       subMenu: [
+  //         {
+  //           key: 'apps-projects-clients',
+  //           label: 'Clients',
+  //           collapsed: true,
+  //           url: '/apps/projects/clients',
+  //           parentKey: 'apps-projects',
+  //         },
+  //         {
+  //           key: 'apps-projects-team',
+  //           label: 'Team',
+  //           url: '/apps/projects/team',
+  //           parentKey: 'apps-projects',
+  //         },
+  //         {
+  //           key: 'apps-projects-project',
+  //           label: 'Project',
+  //           url: '/apps/projects/project',
+  //           parentKey: 'apps-projects',
+  //         },
+  //         {
+  //           key: 'apps-projects-task',
+  //           label: 'Task',
+  //           url: '/apps/projects/task',
+  //           parentKey: 'apps-projects',
+  //         },
+  //         {
+  //           key: 'apps-projects-kanban',
+  //           label: 'Kanban Board',
+  //           url: '/apps/projects/kanban',
+  //           parentKey: 'apps-projects',
+  //         },
+  //         {
+  //           key: 'apps-projects-users',
+  //           label: 'Users',
+  //           url: '/apps/projects/users',
+  //           parentKey: 'apps-projects',
+  //         },
+  //         {
+  //           key: 'apps-projects-create',
+  //           label: 'Project Create',
+  //           url: '/apps/projects/create',
+  //           parentKey: 'apps-projects',
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       key: 'apps-ecommerce',
+  //       label: 'Ecommerce',
+  //       parentKey: 'apps',
+  //       collapsed: true,
+  //       subMenu: [
+  //         {
+  //           key: 'apps-ecommerce-products',
+  //           label: 'Products',
+  //           url: '/apps/ecommerce/products',
+  //           parentKey: 'apps-ecommerce',
+  //         },
+  //         {
+  //           key: 'apps-ecommerce-customers',
+  //           label: 'Customers',
+  //           url: '/apps/ecommerce/customers',
+  //           parentKey: 'apps-ecommerce',
+  //         },
+  //         {
+  //           key: 'apps-ecommerce-customers-details',
+  //           label: 'Customer Details',
+  //           url: '/apps/ecommerce/customers/101',
+  //           parentKey: 'apps-ecommerce',
+  //         },
+  //         {
+  //           key: 'apps-ecommerce-orders',
+  //           label: 'Orders',
+  //           url: '/apps/ecommerce/orders',
+  //           parentKey: 'apps-ecommerce',
+  //         },
+  //         {
+  //           key: 'apps-ecommerce-orders-details',
+  //           label: 'Order Details',
+  //           url: '/apps/ecommerce/orders/3001',
+  //           parentKey: 'apps-ecommerce',
+  //         },
+  //         {
+  //           key: 'apps-ecommerce-refunds',
+  //           label: 'Refunds',
+  //           url: '/apps/ecommerce/refunds',
+  //           parentKey: 'apps-ecommerce',
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       key: 'apps-chat',
+  //       label: 'Chat',
+  //       parentKey: 'apps',
+  //       url: '/apps/chat',
+  //       icon: 'iconoir-chat-bubble'
+  //     },
+  //     {
+  //       key: 'apps-contact-list',
+  //       label: 'Contact List',
+  //       parentKey: 'apps',
+  //       url: '/apps/contacts',
+  //       icon: 'iconoir-address-book'
+  //     },
+  //     {
+  //       key: 'apps-calendar',
+  //       label: 'Calendar',
+  //       parentKey: 'apps',
+  //       url: '/apps/calendar',
+  //       icon: 'iconoir-calendar'
+  //     },
+  //     {
+  //       key: 'apps-invoice',
+  //       label: 'Invoice',
+  //       parentKey: 'apps',
+  //       url: '/apps/invoice',
+  //       icon: 'iconoir-document'
+  //     },
+  //   ],
+  // },
   {
     key: 'partenaires',
     icon: 'iconoir-user',
@@ -244,13 +244,7 @@ export const MENU_ITEMS: MenuItem[] = [
         url: '/colis/import-excel',
         icon: 'iconoir-list'
       },
-      {
-        key: 'colis-import-sacs',
-        label: 'Importation colis arrivés',
-        parentKey: 'colis',
-        url: '/colis/import-sacs',
-        icon: 'iconoir-inbox'
-      },
+     
       {
         key: 'colis-verification',
         label: 'Colis enregistré',
@@ -284,6 +278,28 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
+  {
+    key: 'colis-arrive',
+    icon: 'iconoir-view-grid',
+    collapsed: true,
+    label: 'Colis arrivés',
+    subMenu: [
+      {
+        key: 'colis-import-sacs',
+        label: 'Importation colis arrivés',
+        parentKey: 'colis-arrive',
+        url: '/colis/import-sacs',
+        icon: 'iconoir-inbox'
+      },
+      {
+        key: 'colis-arrive-list',
+        label: 'Colis arrivés',
+        parentKey: 'colis-arrive',
+        url: '/colis/liste-arrive',
+        icon: 'iconoir-list'
+      },
+    ],
+  },
   // {
   //   key: 'components',
   //   label: 'COMPONENTS',

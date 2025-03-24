@@ -11,7 +11,8 @@
         </div>
       </div>
       <div class="card-body">
-        <app-colis-import-sacs-form />
+        <app-colis-import-sacs-form (sacsImported)="onSacsImported($event)" />
+        <app-sacs-list [sacs]="sacs" />
       </div>
     </div>
   </div>

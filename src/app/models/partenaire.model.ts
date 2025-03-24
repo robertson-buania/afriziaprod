@@ -43,10 +43,11 @@ export interface Colis{
   transporteur:string
 }
 
-export interface sac{
+export interface Sac{
   id?:string,
   reference:string,
-  colis:Colis[]
+  colis:Colis[],
+  dateCreation?: string
 }
 
 export interface Paiement{
