@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableService } from '@/app/core/service/table.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Sac } from '@/app/models/partenaire.model';
+import { Sac, Colis, STATUT_COLIS } from '@/app/models/partenaire.model';
 import { TableFooterComponent } from '@/app/components/table/table-footer/table-footer.component';
 import { TableHeaderComponent } from '@/app/components/table/table-header/table-header.component';
 import { AsyncPipe } from '@angular/common';
@@ -80,6 +80,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
                         <th>Destination</th>
                         <th>Poids</th>
                         <th>Quantité</th>
+                        <th class="text-end">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -89,12 +90,23 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
                         <td>{{ colis.type }}</td>
                         <td>
                           <span class="badge" [ngClass]="getColisStatusBadgeClass(colis)">
-                            {{ colis.statut }}
+                            {{ getColisStatusLabel(colis.statut) }}
                           </span>
                         </td>
                         <td>{{ colis.destination }}</td>
                         <td>{{ colis.poids ? colis.poids + ' kg' : '-' }}</td>
                         <td>{{ colis.quantite }}</td>
+                        <td class="text-end">
+                          <button
+                            *ngIf="colis.statut !== STATUT_COLIS.COLIS_ARRIVE"
+                            (click)="validateColis(colis)"
+                            class="btn btn-sm btn-success me-2"
+                            [disabled]="isValidating"
+                          >
+                            <span *ngIf="isValidating" class="spinner-border spinner-border-sm me-1"></span>
+                            Valider
+                          </button>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -144,8 +156,11 @@ export class SacsTableComponent implements OnInit {
   sacs$ = this.tableService.items$;
   total$ = this.tableService.total$;
   isLoading = false;
+  isValidating = false;
   sacToDelete: Sac | null = null;
   private expandedSacs = new Set<string>();
+
+  readonly STATUT_COLIS = STATUT_COLIS;
 
   constructor(
     public tableService: TableService<Sac>,
@@ -178,6 +193,26 @@ export class SacsTableComponent implements OnInit {
         this.tableService.setItems(sacs, pageSize);
         this.isLoading = false;
       });
+  }
+
+  async validateColis(colis: Colis) {
+    if (!colis.id || !colis.codeSuivi) return;
+
+    this.isValidating = true;
+    try {
+      // Mettre à jour le statut du colis dans la base de données
+      await this.firebaseService.updateColis(colis.id, {
+        statut: STATUT_COLIS.COLIS_ARRIVE
+      });
+
+      // Recharger les sacs pour mettre à jour l'affichage
+      this.loadSacs();
+    } catch (error) {
+      console.error('Erreur lors de la validation du colis:', error);
+      alert('Erreur lors de la validation du colis');
+    } finally {
+      this.isValidating = false;
+    }
   }
 
   isExpanded(sac: Sac): boolean {
@@ -221,17 +256,23 @@ export class SacsTableComponent implements OnInit {
     return sac.colis.length > 0 ? 'bg-success' : 'bg-warning text-dark';
   }
 
-  getColisStatusBadgeClass(colis: any): string {
+  getColisStatusLabel(statut: STATUT_COLIS): string {
+    return STATUT_COLIS[statut].replace(/_/g, ' ');
+  }
+
+  getColisStatusBadgeClass(colis: Colis): string {
     switch(colis.statut) {
-      case 'EN_ATTENTE_VERIFICATION':
+      case STATUT_COLIS.EN_ATTENTE_VERIFICATION:
         return 'bg-warning text-dark';
-      case 'EN_ATTENTE_FACTURATION':
+      case STATUT_COLIS.EN_ATTENTE_FACTURATION:
         return 'bg-secondary text-white';
-      case 'EN_ATTENTE_PAIEMENT':
+      case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
         return 'bg-info text-white';
-      case 'EN_ATTENTE_LIVRAISON':
+      case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
         return 'bg-primary text-white';
-      case 'LIVRE':
+      case STATUT_COLIS.COLIS_ARRIVE:
+        return 'bg-success text-white';
+      case STATUT_COLIS.LIVRE:
         return 'bg-success text-white';
       default:
         return 'bg-danger text-white';
