@@ -19,7 +19,7 @@ import {
 } from '@angular/fire/firestore';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Colis, Facture, Partenaire, Paiement, sac } from '@/app/models/partenaire.model';
+import { Colis, Facture, Partenaire, Paiement, Sac } from '@/app/models/partenaire.model';
 import { Client } from '@/app/models/client.model';
 
 @Injectable({
@@ -33,7 +33,7 @@ export class FirebaseService {
     const colRef = collection(this.firestore, 'partenaires');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Partenaire[];
@@ -61,7 +61,7 @@ export class FirebaseService {
   async searchPartenaires(searchTerm: string): Promise<Partenaire[]> {
     const colRef = collection(this.firestore, 'partenaires');
     const snapshot = await getDocs(colRef);
-    const partenaires = snapshot.docs.map(doc => ({
+    const partenaires = snapshot.docs.map((doc:any) => ({
       id: doc.id,
       ...doc.data()
     })) as Partenaire[];
@@ -78,7 +78,7 @@ export class FirebaseService {
     const colRef = collection(this.firestore, 'colis');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Colis[];
@@ -107,7 +107,7 @@ export class FirebaseService {
     const colRef = collection(this.firestore, 'factures');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Facture[];
@@ -133,7 +133,7 @@ export class FirebaseService {
     const colRef = collection(this.firestore, 'paiements');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Paiement[];
@@ -166,7 +166,7 @@ export class FirebaseService {
     );
     return from(getDocs(q)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Facture[];
@@ -182,7 +182,7 @@ export class FirebaseService {
       limit(1)
     );
     return collectionData<Colis>(q, { idField: 'id' }).pipe(
-      map(colis => colis[0] || null)
+      map((colis:Colis[]) => colis[0] || null)
     );
   }
 
@@ -191,7 +191,7 @@ export class FirebaseService {
     const colRef = collection(this.firestore, 'clients');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Client[];
@@ -224,7 +224,7 @@ export class FirebaseService {
   async searchClients(searchTerm: string): Promise<Client[]> {
     const colRef = collection(this.firestore, 'clients');
     const snapshot = await getDocs(colRef);
-    const clients = snapshot.docs.map(doc => ({
+    const clients = snapshot.docs.map((doc:any) => ({
       id: doc.id,
       ...doc.data()
     })) as Client[];
@@ -246,25 +246,25 @@ export class FirebaseService {
   }
 
   // Méthodes pour les sacs
-  getSacs(): Observable<sac[]> {
+  getSacs(): Observable<Sac[]> {
     const colRef = collection(this.firestore, 'sacs');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map(doc => ({
+        return snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
-        })) as sac[];
+        })) as Sac[];
       })
     );
   }
 
-  async addSac(sac: Omit<sac, 'id'>): Promise<string> {
+  async addSac(sac: Omit<Sac, 'id'>): Promise<string> {
     const colRef = collection(this.firestore, 'sacs');
     const docRef = await addDoc(colRef, sac);
     return docRef.id;
   }
 
-  async updateSac(id: string, data: Partial<sac>): Promise<void> {
+  async updateSac(id: string, data: Partial<Sac>): Promise<void> {
     const docRef = doc(this.firestore, 'sacs', id);
     await updateDoc(docRef, data as DocumentData);
   }

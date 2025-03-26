@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, signal, HostListener, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, signal, HostListener, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Colis, sac, STATUT_COLIS, TYPE_COLIS, TYPE_EXPEDITION } from '@/app/models/partenaire.model';
+import { Colis, Sac, STATUT_COLIS, TYPE_COLIS, TYPE_EXPEDITION } from '@/app/models/partenaire.model';
 import * as XLSX from 'xlsx';
 import { Subscription, interval } from 'rxjs';
 import { Router } from '@angular/router';
@@ -98,8 +98,10 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
 
   private subscription: Subscription | null = null;
 
-  // Template reference for confirmation modal
-  @ViewChild('confirmExitModal') confirmExitModal!: TemplateRef<any>;
+  @Output() sacsImported = new EventEmitter<Sac[]>();
+
+  reference: string = '';
+  colisData: string = '';
 
   @HostListener('window:beforeunload', ['$event'])
   onWindowClose($event: BeforeUnloadEvent) {
@@ -328,7 +330,8 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
         const sacGroup = this.sacGroups[i];
 
         try {
-          const sacData: Omit<sac, 'id'> = {
+          // Créer un objet sac
+          const newSac: Omit<Sac, 'id'> = {
             reference: sacGroup.reference,
             colis: []
           };
@@ -502,5 +505,24 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
 
   truncateText(text: string, maxLength: number): string {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  }
+
+  onSubmit() {
+    try {
+      const colis = JSON.parse(this.colisData);
+      const sac: Sac = {
+        reference: this.reference,
+        colis: colis
+      };
+
+      this.sacsImported.emit([sac]);
+
+      // Reset form
+      this.reference = '';
+      this.colisData = '';
+    } catch (error) {
+      console.error('Erreur lors du parsing des données:', error);
+      alert('Format de données invalide. Veuillez vérifier le format JSON.');
+    }
   }
 }

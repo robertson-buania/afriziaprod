@@ -1,26 +1,30 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColisImportSacsFormComponent } from './components/colis-import-sacs-form/colis-import-sacs-form.component';
-import { Observable } from 'rxjs';
+import { SacsListComponent } from './components/sacs-list/sacs-list.component';
+import { Sac } from '@/app/models/partenaire.model';
 
 @Component({
   selector: 'app-colis-import-sacs',
   standalone: true,
-  imports: [CommonModule, ColisImportSacsFormComponent],
+  imports: [
+    CommonModule,
+    ColisImportSacsFormComponent,
+    SacsListComponent
+  ],
   templateUrl: './colis-import-sacs.component.html',
   styleUrl: './colis-import-sacs.component.scss'
 })
-export class ColisImportSacsComponent {
-  @ViewChild(ColisImportSacsFormComponent) formComponent!: ColisImportSacsFormComponent;
+export class ColisImportSacsComponent implements OnInit {
+  sacs: Sac[] = [];
 
   constructor() {}
 
-  // Method used by the can-deactivate guard
-  canDeactivate(): Observable<boolean> | Promise<boolean> | boolean {
-    // Delegate to the form component if it exists
-    if (this.formComponent) {
-      return this.formComponent.canDeactivate();
-    }
-    return true;
+  ngOnInit(): void {
+    // Initialize data
+  }
+
+  onSacsImported(newSacs: Sac[]): void {
+    this.sacs = [...this.sacs, ...newSacs];
   }
 }
