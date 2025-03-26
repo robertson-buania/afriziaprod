@@ -5,6 +5,7 @@ import { ColisLivraisonListComponent } from "./colis-livraison-list/colis-livrai
 import { ColisArchivesListComponent } from "./colis-archives-list/colis-archives-list.component";
 import { ColisImportExcelComponent } from "./colis-import-excel/colis-import-excel.component";
 import { ColisImportSacsComponent } from "./colis-import-sacs/colis-import-sacs.component";
+import { ImportDeactivateGuard } from "./colis-import-sacs/guards/can-deactivate.guard";
 
 export const COLIS_ROUTES: Route[] = [
   {
@@ -40,6 +41,7 @@ export const COLIS_ROUTES: Route[] = [
   {
     path: 'import-sacs',
     component: ColisImportSacsComponent,
+    canDeactivate: [ImportDeactivateGuard],
     data: { title: 'Importation de colis arrivés' }
   }
 ];

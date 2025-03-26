@@ -1,11 +1,12 @@
-import { Component, OnInit, signal, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, HostListener, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FirebaseService } from '@/app/core/services/firebase.service';
 import { Colis, sac, STATUT_COLIS, TYPE_COLIS, TYPE_EXPEDITION } from '@/app/models/partenaire.model';
 import * as XLSX from 'xlsx';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { Router } from '@angular/router';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 // Interface pour les données Excel originales avec des en-têtes en chinois
 interface ExcelSacOriginal {
@@ -68,7 +69,7 @@ interface ImportError {
   templateUrl: './colis-import-sacs-form.component.html',
   styleUrl: './colis-import-sacs-form.component.scss'
 })
-export class ColisImportSacsFormComponent implements OnInit {
+export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
   importForm!: FormGroup;
   file: File | null = null;
   extractedData: ExcelSacOriginal[] = [];
@@ -97,157 +98,133 @@ export class ColisImportSacsFormComponent implements OnInit {
 
   private subscription: Subscription | null = null;
 
+  // Template reference for confirmation modal
+  @ViewChild('confirmExitModal') confirmExitModal!: TemplateRef<any>;
+
   @HostListener('window:beforeunload', ['$event'])
   onWindowClose($event: BeforeUnloadEvent) {
     if (this.importInProgress()) {
-      $event.returnValue = true;
-      return true;
+      $event.preventDefault();
+      $event.returnValue = 'Importation en cours. Êtes-vous sûr de vouloir quitter la page?';
+      return $event;
     }
-    return false;
+    return true;
   }
 
   constructor(
     private fb: FormBuilder,
     private firebaseService: FirebaseService,
-    private router: Router
+    private router: Router,
+    private modalService: NgbModal
   ) {}
 
   ngOnInit(): void {
     this.initForm();
+    this.restoreImportStateIfExists();
+  }
+
+  ngOnDestroy(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
   }
 
   initForm(): void {
     this.importForm = this.fb.group({
-      excelFile: [null, Validators.required]
+      file: ['', Validators.required]
     });
   }
 
   onFileChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const files = target.files;
+    const element = event.target as HTMLInputElement;
+    if (element.files && element.files.length > 0) {
+      this.file = element.files[0];
 
-    if (files && files.length > 0) {
-      this.file = files[0];
-      this.importForm.patchValue({ excelFile: this.file });
-      this.extractedData = [];
-      this.previewData = [];
-      this.showPreview.set(false);
-      this.isSuccess.set(false);
+      if (!this.file.name.endsWith('.xlsx') && !this.file.name.endsWith('.xls')) {
+        this.isError.set(true);
+        this.errorMessage.set('Veuillez sélectionner un fichier Excel valide (.xlsx ou .xls)');
+        this.file = null;
+        return;
+      }
+
       this.isError.set(false);
-      this.resetStats();
-      this.invalidRows = [];
-      this.showInvalidRows.set(false);
-      this.sacGroups = [];
-    }
-  }
-
-  /**
-   * Prévisualiser le fichier Excel
-   */
-  previewExcel(): void {
-    if (!this.file) {
-      this.errorMessage.set('Veuillez sélectionner un fichier Excel');
-      return;
-    }
-
-    try {
-      this.isLoading.set(true);
       this.errorMessage.set('');
-      this.previewData = [];
-      this.invalidRows = [];
-      this.showInvalidRows.set(false);
-      this.sacGroups = [];
 
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-
-          if (workbook.SheetNames.length === 0) {
-            this.errorMessage.set('Le fichier Excel ne contient aucune feuille de calcul.');
-            this.isLoading.set(false);
-            return;
-          }
-
-          // Extract data from all sheets
-          let allValidData: ExcelSacOriginal[] = [];
-          let allInvalidRows: any[] = [];
-          let totalRowCount = 0;
-
-          workbook.SheetNames.forEach(sheetName => {
-            const result = this.extractSheetData(workbook, sheetName);
-            totalRowCount += result.totalRowCount;
-            allValidData = [...allValidData, ...result.validData];
-            allInvalidRows = [...allInvalidRows, ...result.invalidRows];
-          });
-
-          // Convertir les données du format original au format d'affichage
-          this.extractedData = allValidData;
-          this.previewData = allValidData.map(item => this.convertToDisplayFormat(item));
-          this.invalidRows = allInvalidRows;
-          this.showInvalidRows.set(this.invalidRows.length > 0);
-
-          // Grouper les colis par sac
-          this.groupColisBySac();
-
-          // Mise à jour des statistiques
-          this.stats.set({
-            totalReaded: totalRowCount,
-            totalValid: allValidData.length,
-            totalInvalid: allInvalidRows.length,
-            currentProcessed: 0,
-            currentSuccessCount: 0,
-            currentErrorCount: 0
-          });
-
-          // Afficher la prévisualisation
-          this.showPreview.set(this.previewData.length > 0);
-
-          // Reset other variables
-          this.importInProgress.set(false);
-          this.isSuccess.set(false);
-          this.isError.set(false);
-          this.importErrors = [];
-
-          this.isLoading.set(false);
-        } catch (error) {
-          console.error('Erreur lors de la lecture du fichier Excel:', error);
-          this.errorMessage.set('Erreur lors de la lecture du fichier Excel. Vérifiez le format du fichier.');
-          this.isLoading.set(false);
-        }
-      };
-
-      reader.onerror = (error) => {
-        console.error('Erreur lors de la lecture du fichier:', error);
-        this.errorMessage.set('Erreur lors de la lecture du fichier.');
-        this.isLoading.set(false);
-      };
-
-      reader.readAsArrayBuffer(this.file);
-    } catch (error) {
-      console.error('Erreur lors de la prévisualisation:', error);
-      this.errorMessage.set('Erreur lors de la prévisualisation du fichier.');
-      this.isLoading.set(false);
+      this.previewExcel();
     }
   }
 
-  /**
-   * Extraire les données d'une feuille Excel
-   */
+  previewExcel(): void {
+    if (!this.file) return;
+
+    this.isLoading.set(true);
+    this.showPreview.set(false);
+    this.showInvalidRows.set(false);
+    this.isSuccess.set(false);
+    this.isError.set(false);
+
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+
+        this.extractedData = [];
+        this.invalidRows = [];
+        let totalRowCount = 0;
+
+        for (const sheetName of workbook.SheetNames) {
+          const result = this.extractSheetData(workbook, sheetName);
+          this.extractedData = [...this.extractedData, ...result.validData];
+          this.invalidRows = [...this.invalidRows, ...result.invalidRows];
+          totalRowCount += result.totalRowCount;
+        }
+
+        this.stats.update(state => ({
+          ...state,
+          totalReaded: totalRowCount,
+          totalValid: this.extractedData.length,
+          totalInvalid: this.invalidRows.length
+        }));
+
+        this.previewData = this.extractedData.map(item => this.convertToDisplayFormat(item));
+
+        this.groupColisBySac();
+
+        this.showPreview.set(true);
+        if (this.invalidRows.length > 0) {
+          this.showInvalidRows.set(true);
+        }
+
+      } catch (error) {
+        console.error('Erreur lors de la lecture du fichier Excel:', error);
+        this.isError.set(true);
+        this.errorMessage.set('Erreur lors de la lecture du fichier Excel. Vérifiez que le format est correct.');
+      } finally {
+        this.isLoading.set(false);
+      }
+    };
+
+    reader.onerror = () => {
+      this.isLoading.set(false);
+      this.isError.set(true);
+      this.errorMessage.set('Erreur lors de la lecture du fichier.');
+    };
+
+    reader.readAsArrayBuffer(this.file);
+  }
+
   private extractSheetData(workbook: XLSX.WorkBook, sheetName: string): { validData: ExcelSacOriginal[], invalidRows: any[], totalRowCount: number } {
     const worksheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json<any>(worksheet, { defval: '', raw: false });
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
     const validData: ExcelSacOriginal[] = [];
     const invalidRows: any[] = [];
 
-    rawData.forEach((row, index) => {
-      // Ajouter des métadonnées pour faciliter le traçage
-      row.__rowNum = index + 2; // +2 car la première ligne est l'en-tête et les indices commencent à 0
+    jsonData.forEach((row: any, index: number) => {
+      row.__rowNum = index + 2;
       row.__sheetName = sheetName;
 
-      // Valider que la ligne a les champs requis
       if (this.isValidSacRow(row)) {
         validData.push(row as ExcelSacOriginal);
       } else {
@@ -258,208 +235,272 @@ export class ColisImportSacsFormComponent implements OnInit {
     return {
       validData,
       invalidRows,
-      totalRowCount: rawData.length
+      totalRowCount: jsonData.length
     };
   }
 
-  /**
-   * Vérifier si une ligne contient les données requises pour un sac
-   */
   private isValidSacRow(row: any): boolean {
-    // Vérifier que les champs obligatoires existent
-    return (
-      row['袋号'] !== undefined && row['袋号'] !== '' &&
-      row['运单编号'] !== undefined && row['运单编号'] !== '' &&
-      row['收件人'] !== undefined && row['收件人'] !== ''
+    return Boolean(
+      row['袋号'] &&
+      row['运单编号'] &&
+      row['收件人'] &&
+      row['目的地']
     );
   }
 
-  /**
-   * Convertir les données du format original au format d'affichage
-   */
   private convertToDisplayFormat(item: ExcelSacOriginal): ExcelSacDisplay {
     return {
-      bagNo: String(item['袋号'] || ''),
-      trackingNo: String(item['运单编号'] || ''),
-      recipient: String(item['收件人'] || ''),
-      destination: String(item['目的地'] || ''),
-      quantity: String(item['数量'] || ''),
-      weight: String(item['重量'] || ''),
-      itemName: String(item['物品名称'] || ''),
-      shipmentNo: String(item['转运单号'] || ''),
-      carrier: String(item['承运商'] || ''),
+      bagNo: String(item.袋号 || ''),
+      trackingNo: String(item.运单编号 || ''),
+      recipient: String(item.收件人 || ''),
+      destination: String(item.目的地 || ''),
+      quantity: String(item.数量 || ''),
+      weight: String(item.重量 || ''),
+      itemName: String(item.物品名称 || ''),
+      shipmentNo: String(item.转运单号 || ''),
+      carrier: String(item.承运商 || ''),
       rowNum: item.__rowNum,
       sheetName: item.__sheetName
     };
   }
 
-  /**
-   * Grouper les colis par sac
-   */
   private groupColisBySac(): void {
+    this.sacGroups = [];
+
     const sacMap = new Map<string, Colis[]>();
 
-    // Grouper les colis par numéro de sac
     this.extractedData.forEach(item => {
-      const sacReference = String(item['袋号']).trim();
+      const sacReference = String(item.袋号).trim();
+
+      const colis: Colis = {
+        partenaireId: '',
+        clientNom: String(item.收件人 || '').split(' ')[0] || '',
+        clientPrenom: String(item.收件人 || '').split(' ')[1] || '',
+        clientTelephone: 0,
+        clientEmail: '',
+        type: 0,
+        statut: STATUT_COLIS.EN_ATTENTE_VERIFICATION,
+        typeExpedition: 0,
+        codeSuivi: String(item.运单编号 || ''),
+        destinataire: String(item.收件人 || ''),
+        destination: String(item.目的地 || ''),
+        quantite: String(item.数量 || ''),
+        poids: Number(item.重量) || 0,
+        nature: String(item.物品名称 || ''),
+        codeexpedition: String(item.转运单号 || ''),
+        transporteur: String(item.承运商 || '')
+      };
 
       if (!sacMap.has(sacReference)) {
         sacMap.set(sacReference, []);
       }
-
-      const colis: Colis = {
-        codeSuivi: String(item['运单编号'] || ''),
-        destinataire: String(item['收件人'] || ''),
-        destination: String(item['目的地'] || ''),
-        quantite: String(item['数量'] || '1'),
-        poids: Number(item['重量']) || 0,
-        nature: String(item['物品名称'] || ''),
-        codeexpedition: String(item['转运单号'] || ''),
-        transporteur: String(item['承运商'] || ''),
-        dateCreation: new Date().toISOString(),
-        statut: STATUT_COLIS.EN_ATTENTE_VERIFICATION,
-        type: TYPE_COLIS.ORDINAIRE,
-        typeExpedition: TYPE_EXPEDITION.STANDARD,
-        partenaireId: '', // À remplir si nécessaire
-        clientNom: '', // À remplir si nécessaire
-        clientPrenom: '', // À remplir si nécessaire
-        clientTelephone: 0, // À remplir si nécessaire
-        clientEmail: '' // À remplir si nécessaire
-      };
-
       sacMap.get(sacReference)?.push(colis);
     });
 
-    // Convertir la Map en tableau de SacGroup
-    this.sacGroups = Array.from(sacMap.entries()).map(([reference, colis]) => ({
-      reference,
-      colis
-    }));
+    sacMap.forEach((colis, reference) => {
+      this.sacGroups.push({
+        reference,
+        colis
+      });
+    });
   }
 
-  /**
-   * Importer les données dans Firebase
-   */
   async importExcel(): Promise<void> {
     if (this.extractedData.length === 0) {
-      this.errorMessage.set('Aucune donnée valide à importer. Veuillez d\'abord prévisualiser le fichier.');
+      this.isError.set(true);
+      this.errorMessage.set('Aucune donnée valide à importer.');
       return;
     }
 
     try {
       this.importInProgress.set(true);
+      this.resetStats();
       this.importErrors = [];
       this.showErrors.set(false);
-      this.isSuccess.set(false);
-      this.isError.set(false);
 
-      // Mettre à jour les statistiques
-      const currentStats = this.stats();
-      this.stats.set({
-        ...currentStats,
-        currentProcessed: 0,
-        currentSuccessCount: 0,
-        currentErrorCount: 0
+      this.saveImportState();
+
+      this.subscription = interval(300).subscribe(() => {
+        this.saveImportState();
       });
 
-      // Traiter chaque groupe de sac
       for (let i = 0; i < this.sacGroups.length; i++) {
         const sacGroup = this.sacGroups[i];
 
         try {
-          // Créer un objet sac
-          const newSac: Omit<sac, 'id'> = {
+          const sacData: Omit<sac, 'id'> = {
             reference: sacGroup.reference,
-            colis: sacGroup.colis
+            colis: []
           };
 
-          // Ajouter le sac à Firebase
-          await this.firebaseService.addSac(newSac);
+          const sacId = await this.firebaseService.addSac(sacData);
 
-          // Mettre à jour les statistiques
-          const stats = this.stats();
-          this.stats.set({
-            ...stats,
-            currentProcessed: i + 1,
-            currentSuccessCount: stats.currentSuccessCount + 1
-          });
+          for (let j = 0; j < sacGroup.colis.length; j++) {
+            try {
+              this.stats.update(state => ({
+                ...state,
+                currentProcessed: state.currentProcessed + 1
+              }));
+
+              const colis = sacGroup.colis[j];
+              const colisId = await this.firebaseService.addColis(colis);
+
+              await this.firebaseService.updateSac(sacId, {
+                colis: [...sacGroup.colis]
+              });
+
+              this.stats.update(state => ({
+                ...state,
+                currentSuccessCount: state.currentSuccessCount + 1
+              }));
+
+              await new Promise(resolve => setTimeout(resolve, 50));
+
+            } catch (error) {
+              console.error('Erreur lors de l\'importation d\'un colis:', error);
+              this.importErrors.push({
+                item: sacGroup.colis[j],
+                error: 'Erreur lors de l\'importation: ' + (error instanceof Error ? error.message : String(error))
+              });
+
+              this.stats.update(state => ({
+                ...state,
+                currentErrorCount: state.currentErrorCount + 1
+              }));
+            }
+          }
+
         } catch (error) {
-          console.error(`Erreur lors de l'ajout du sac ${sacGroup.reference}:`, error);
-
-          // Ajouter l'erreur à la liste
+          console.error('Erreur lors de la création du sac:', error);
           this.importErrors.push({
-            item: { reference: sacGroup.reference, nombreColis: sacGroup.colis.length },
-            error: `Erreur lors de l'ajout du sac: ${(error as Error).message || 'Erreur inconnue'}`
+            item: sacGroup,
+            error: 'Erreur lors de la création du sac: ' + (error instanceof Error ? error.message : String(error))
           });
 
-          // Mettre à jour les statistiques
-          const stats = this.stats();
-          this.stats.set({
-            ...stats,
-            currentProcessed: i + 1,
-            currentErrorCount: stats.currentErrorCount + 1
-          });
+          this.stats.update(state => ({
+            ...state,
+            currentProcessed: state.currentProcessed + sacGroup.colis.length,
+            currentErrorCount: state.currentErrorCount + sacGroup.colis.length
+          }));
         }
       }
 
-      // Vérifier s'il y a eu des erreurs
+      this.isSuccess.set(true);
       if (this.importErrors.length > 0) {
         this.showErrors.set(true);
-        this.isError.set(true);
-      } else {
-        this.isSuccess.set(true);
       }
+
+      sessionStorage.removeItem('importSacsState');
+
     } catch (error) {
-      console.error('Erreur globale lors de l\'importation:', error);
-      this.errorMessage.set(`Erreur lors de l'importation: ${(error as Error).message || 'Erreur inconnue'}`);
+      console.error('Erreur lors de l\'importation:', error);
       this.isError.set(true);
+      this.errorMessage.set('Erreur lors de l\'importation: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       this.importInProgress.set(false);
+      if (this.subscription) {
+        this.subscription.unsubscribe();
+        this.subscription = null;
+      }
     }
   }
 
-  /**
-   * Réinitialiser les statistiques
-   */
   private resetStats(): void {
     this.stats.set({
-      totalReaded: 0,
-      totalValid: 0,
-      totalInvalid: 0,
+      totalReaded: this.stats().totalReaded,
+      totalValid: this.stats().totalValid,
+      totalInvalid: this.stats().totalInvalid,
       currentProcessed: 0,
       currentSuccessCount: 0,
       currentErrorCount: 0
     });
   }
 
-  /**
-   * Calculer le pourcentage de progression
-   */
+  private saveImportState(): void {
+    if (this.importInProgress()) {
+      const state = {
+        file: this.file ? { name: this.file.name, size: this.file.size } : null,
+        extractedDataCount: this.extractedData.length,
+        sacGroupsCount: this.sacGroups.length,
+        stats: this.stats(),
+        importInProgress: true,
+        errors: this.importErrors,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('importSacsState', JSON.stringify(state));
+    }
+  }
+
+  private restoreImportStateIfExists(): void {
+    const savedState = sessionStorage.getItem('importSacsState');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+
+        if (state.importInProgress && state.timestamp && Date.now() - state.timestamp < 3600000) {
+          this.stats.set(state.stats);
+          this.importErrors = state.errors || [];
+          this.importInProgress.set(true);
+          this.showErrors.set(this.importErrors.length > 0);
+
+          if (this.stats().currentErrorCount > 0 || this.importErrors.length > 0) {
+            this.isError.set(true);
+            this.errorMessage.set('L\'importation précédente a rencontré des erreurs.');
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la restauration de l\'état:', error);
+        sessionStorage.removeItem('importSacsState');
+      }
+    }
+  }
+
+  canDeactivate(): boolean | Promise<boolean> {
+    if (this.importInProgress()) {
+      return new Promise<boolean>(resolve => {
+        const modalRef = this.modalService.open(this.confirmExitModal, { centered: true, backdrop: 'static' });
+        modalRef.result.then(
+          result => resolve(result === 'confirm'),
+          () => resolve(false)
+        );
+      });
+    }
+    return true;
+  }
+
   getProgressPercentage(): number {
-    const { currentProcessed, totalValid } = this.stats();
-    if (totalValid === 0) return 0;
-    return Math.round((currentProcessed / totalValid) * 100);
+    const total = this.stats().totalValid;
+    const current = this.stats().currentProcessed;
+
+    if (total === 0) return 0;
+    return Math.round((current / total) * 100);
   }
 
-  /**
-   * Retourner à la liste des colis
-   */
   goToColisList(): void {
-    this.router.navigate(['/colis/verification']);
+    if (this.importInProgress()) {
+      const modalRef = this.modalService.open(this.confirmExitModal, { centered: true, backdrop: 'static' });
+      modalRef.result.then(
+        result => {
+          if (result === 'confirm') {
+            this.router.navigate(['/colis/verification']);
+          }
+        },
+        () => {}
+      );
+    } else {
+      this.router.navigate(['/colis/verification']);
+    }
   }
 
-  /**
-   * Récupérer une propriété à partir de son nom chinois
-   */
   getChineseProperty(item: any, property: string): string {
-    return item[property] || '';
+    const mapping: { [key: string]: string } = {
+      'bagNo': '袋号',
+      'trackingNo': '运单编号'
+    };
+    return mapping[property] || property;
   }
 
-  /**
-   * Tronquer un texte s'il est trop long
-   */
   truncateText(text: string, maxLength: number): string {
-    if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   }
 }
