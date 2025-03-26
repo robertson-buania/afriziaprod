@@ -15,12 +15,14 @@ import {
   addDoc,
   deleteDoc,
   collectionData,
-  limit
+  limit,
+  getDoc
 } from '@angular/fire/firestore';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Colis, Facture, Partenaire, Paiement, Sac } from '@/app/models/partenaire.model';
 import { Client } from '@/app/models/client.model';
+import { Utilisateur, DemandeUtilisateur, TokenUtilisateur } from '@/app/models/utilisateur.model';
 
 @Injectable({
   providedIn: 'root'
@@ -272,5 +274,103 @@ export class FirebaseService {
   async deleteSac(id: string): Promise<void> {
     const docRef = doc(this.firestore, 'sacs', id);
     await deleteDoc(docRef);
+  }
+
+  // ===== MÉTHODES UTILISATEURS =====
+  getUtilisateurs(): Observable<Utilisateur[]> {
+    const userCollection = collection(this.firestore, 'utilisateurs');
+    return collectionData(userCollection, { idField: 'id' }) as Observable<Utilisateur[]>;
+  }
+
+  async getUtilisateurById(id: string): Promise<Utilisateur | null> {
+    if (!id) return null;
+    const userRef = doc(this.firestore, 'utilisateurs', id);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      return { id: userSnap.id, ...userSnap.data() } as Utilisateur;
+    }
+    return null;
+  }
+
+  async getUtilisateurByEmail(email: string): Promise<Utilisateur | null> {
+    if (!email) return null;
+    const userCollection = collection(this.firestore, 'utilisateurs');
+    const q = query(userCollection, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Utilisateur;
+    }
+    return null;
+  }
+
+  async addUtilisateur(utilisateur: Omit<Utilisateur, 'id'>): Promise<string> {
+    const userCollection = collection(this.firestore, 'utilisateurs');
+    const docRef = await addDoc(userCollection, {
+      ...utilisateur,
+      dateCreation: new Date().toISOString(),
+      estActif: true
+    });
+    return docRef.id;
+  }
+
+  async updateUtilisateur(id: string, data: Partial<Utilisateur>): Promise<void> {
+    const userRef = doc(this.firestore, 'utilisateurs', id);
+    await updateDoc(userRef, data);
+  }
+
+  async deleteUtilisateur(id: string): Promise<void> {
+    const userRef = doc(this.firestore, 'utilisateurs', id);
+    await deleteDoc(userRef);
+  }
+
+  // Gestion des demandes d'utilisateur
+  getDemandesUtilisateurs(): Observable<DemandeUtilisateur[]> {
+    const requestCollection = collection(this.firestore, 'demandesUtilisateurs');
+    return collectionData(requestCollection, { idField: 'id' }) as Observable<DemandeUtilisateur[]>;
+  }
+
+  async addDemandeUtilisateur(demande: Omit<DemandeUtilisateur, 'id'>): Promise<string> {
+    const requestCollection = collection(this.firestore, 'demandesUtilisateurs');
+    const docRef = await addDoc(requestCollection, {
+      ...demande,
+      dateCreation: new Date().toISOString(),
+      statut: 'en_attente'
+    });
+    return docRef.id;
+  }
+
+  async updateDemandeUtilisateur(id: string, data: Partial<DemandeUtilisateur>): Promise<void> {
+    const requestRef = doc(this.firestore, 'demandesUtilisateurs', id);
+    await updateDoc(requestRef, data);
+  }
+
+  async deleteDemandeUtilisateur(id: string): Promise<void> {
+    const requestRef = doc(this.firestore, 'demandesUtilisateurs', id);
+    await deleteDoc(requestRef);
+  }
+
+  // Gestion des tokens
+  async addToken(token: Omit<TokenUtilisateur, 'id'>): Promise<string> {
+    const tokenCollection = collection(this.firestore, 'tokens');
+    const docRef = await addDoc(tokenCollection, token);
+    return docRef.id;
+  }
+
+  async getTokenByValue(tokenValue: string): Promise<TokenUtilisateur | null> {
+    if (!tokenValue) return null;
+    const tokenCollection = collection(this.firestore, 'tokens');
+    const q = query(tokenCollection, where('token', '==', tokenValue));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as TokenUtilisateur;
+    }
+    return null;
+  }
+
+  async updateToken(id: string, data: Partial<TokenUtilisateur>): Promise<void> {
+    const tokenRef = doc(this.firestore, 'tokens', id);
+    await updateDoc(tokenRef, data);
   }
 }

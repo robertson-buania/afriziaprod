@@ -159,18 +159,20 @@
           </div>
 
           <!-- Message de succès -->
-          <div class="row mb-4" *ngIf="isSuccess()">
-            <div class="col-12">
-              <div class="alert alert-success">
-                <div class="d-flex align-items-center">
-                  <i class="las la-check-circle fs-2 me-2"></i>
-                  <div>
-                    <h5 class="alert-heading mb-1">Importation réussie</h5>
-                    <p class="mb-0">
-                      {{ stats().currentSuccessCount }} sacs ont été importés avec succès.
-                      <a href="javascript:void(0)" (click)="goToColisList()" class="alert-link">Voir les colis importés</a>
-                    </p>
-                  </div>
+          <div class="alert alert-success mb-4" *ngIf="isSuccess() && !importInProgress()">
+            <div class="d-flex align-items-center">
+              <i class="las la-check-circle me-3 fs-2"></i>
+              <div>
+                <h5 class="mb-1">Importation réussie</h5>
+                <p class="mb-2">Les colis ont été importés avec succès.</p>
+
+                <div class="mt-3">
+                  <a class="btn btn-sm btn-primary me-2" (click)="goToColisList()">
+                    <i class="las la-inbox me-1"></i>Voir les sacs importés
+                  </a>
+                  <button class="btn btn-sm btn-outline-primary" (click)="previewExcel()" *ngIf="file">
+                    <i class="las la-sync me-1"></i>Réimporter le fichier
+                  </button>
                 </div>
               </div>
             </div>

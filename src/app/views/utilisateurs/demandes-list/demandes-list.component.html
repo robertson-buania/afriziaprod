@@ -1,0 +1,231 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <h4 class="card-title">
+              <i class="las la-user-clock me-2 text-primary"></i>Demandes d'utilisateurs
+            </h4>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary" (click)="retourListe()">
+              <i class="las la-arrow-left me-1"></i>Retour à la liste
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Filtres -->
+        <div class="row mb-4">
+          <div class="col-md-6 col-sm-12">
+            <div class="input-group">
+              <span class="input-group-text"><i class="las la-search"></i></span>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Rechercher une demande..."
+                [(ngModel)]="searchTerm"
+                (input)="onSearchChange()">
+              <button
+                *ngIf="searchTerm"
+                class="btn btn-outline-secondary"
+                type="button"
+                (click)="searchTerm = ''; onSearchChange()">
+                <i class="las la-times"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4 col-sm-12">
+            <select class="form-select" [(ngModel)]="selectedStatut" (change)="onStatutChange()">
+              <option value="tous">Tous les statuts</option>
+              <option value="en_attente">En attente</option>
+              <option value="approuvee">Approuvées</option>
+              <option value="rejetee">Rejetées</option>
+            </select>
+          </div>
+          <div class="col-md-2 col-sm-12 text-end">
+            <button class="btn btn-outline-secondary" (click)="chargerDemandes()">
+              <i class="las la-sync-alt"></i> Actualiser
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicateur de chargement -->
+        <div class="text-center my-5" *ngIf="isLoading">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+          <p class="mt-2 text-muted">Chargement des demandes...</p>
+        </div>
+
+        <!-- Tableau des demandes -->
+        <div class="table-responsive" *ngIf="!isLoading && demandesFiltrees.length > 0">
+          <table class="table table-centered table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Rôle demandé</th>
+                <th>Date demande</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let demande of demandesFiltrees">
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar avatar-sm me-2 bg-soft-primary">
+                      <span class="avatar-text">{{ demande.prenom.charAt(0) }}{{ demande.nom.charAt(0) }}</span>
+                    </div>
+                    <div>
+                      <h6 class="mb-0">{{ getNomComplet(demande) }}</h6>
+                      <small *ngIf="demande.telephone" class="text-muted">{{ demande.telephone }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ demande.email }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getRoleClass(demande.role)">
+                    {{ getLabelRole(demande.role) }}
+                  </span>
+                </td>
+                <td>{{ getDateFormatee(demande.dateCreation) }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getStatutClass(demande.statut)">
+                    {{ getStatutLabel(demande.statut) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="d-flex">
+                    <button
+                      class="btn btn-sm btn-success me-1"
+                      (click)="ouvrirModalApprobation(approvalModal, demande)"
+                      *ngIf="demande.statut === 'en_attente'">
+                      <i class="las la-check"></i> Approuver
+                    </button>
+                    <button
+                      class="btn btn-sm btn-danger"
+                      (click)="ouvrirModalRejet(rejectionModal, demande)"
+                      *ngIf="demande.statut === 'en_attente'">
+                      <i class="las la-times"></i> Rejeter
+                    </button>
+                    <span *ngIf="demande.statut !== 'en_attente'" class="text-muted">
+                      Traité
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Message si aucune demande -->
+        <div class="alert alert-info" *ngIf="!isLoading && demandesFiltrees.length === 0">
+          <div class="d-flex align-items-center">
+            <i class="las la-info-circle fs-2 me-2"></i>
+            <div>
+              <h5 class="alert-heading mb-1">Aucune demande trouvée</h5>
+              <p class="mb-0" *ngIf="searchTerm || selectedStatut !== 'tous'">
+                Aucune demande ne correspond à vos critères de recherche.
+                <a href="javascript:void(0)" (click)="searchTerm = ''; selectedStatut = 'tous'; onSearchChange()">Réinitialiser les filtres</a>
+              </p>
+              <p class="mb-0" *ngIf="!searchTerm && selectedStatut === 'tous'">
+                Aucune demande n'a été soumise pour le moment.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal d'approbation -->
+<ng-template #approvalModal let-modal>
+  <div class="modal-header bg-success">
+    <h5 class="modal-title text-white">Approuver la demande</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div class="text-center mb-3">
+      <i class="las la-user-check text-success fs-1"></i>
+    </div>
+    <p class="text-center mb-3">
+      Vous êtes sur le point d'approuver la demande de<br>
+      <strong>{{ demandeSelectionnee?.prenom }} {{ demandeSelectionnee?.nom }}</strong>
+    </p>
+
+    <div class="card bg-light mb-3">
+      <div class="card-body">
+        <h6 class="mb-2">Détails de la demande:</h6>
+        <table class="table table-sm">
+          <tr>
+            <td><strong>Email:</strong></td>
+            <td>{{ demandeSelectionnee?.email }}</td>
+          </tr>
+          <tr>
+            <td><strong>Rôle:</strong></td>
+            <td>
+              <span class="badge" [ngClass]="getRoleClass(demandeSelectionnee?.role || ROLE_UTILISATEUR.WEBSITE)">
+                {{ getLabelRole(demandeSelectionnee?.role || ROLE_UTILISATEUR.WEBSITE) }}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Date de demande:</strong></td>
+            <td>{{ getDateFormatee(demandeSelectionnee?.dateCreation) }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <p class="text-center">
+      Un mot de passe temporaire sera généré et l'utilisateur sera créé avec les informations fournies.
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="modal.dismiss()">Annuler</button>
+    <button type="button" class="btn btn-success" [disabled]="isProcessing" (click)="approuverDemande()">
+      <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+      <i *ngIf="!isProcessing" class="las la-check me-1"></i>
+      Approuver
+    </button>
+  </div>
+</ng-template>
+
+<!-- Modal de rejet -->
+<ng-template #rejectionModal let-modal>
+  <div class="modal-header bg-danger">
+    <h5 class="modal-title text-white">Rejeter la demande</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div class="text-center mb-3">
+      <i class="las la-user-times text-danger fs-1"></i>
+    </div>
+    <p class="text-center mb-3">
+      Vous êtes sur le point de rejeter la demande de<br>
+      <strong>{{ demandeSelectionnee?.prenom }} {{ demandeSelectionnee?.nom }}</strong>
+    </p>
+
+    <div class="form-group">
+      <label class="form-label">Motif du rejet (optionnel):</label>
+      <textarea
+        class="form-control"
+        rows="3"
+        placeholder="Indiquez la raison du rejet..."
+        [(ngModel)]="rejectionMessage"
+      ></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="modal.dismiss()">Annuler</button>
+    <button type="button" class="btn btn-danger" [disabled]="isProcessing" (click)="rejeterDemande()">
+      <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+      <i *ngIf="!isProcessing" class="las la-times me-1"></i>
+      Rejeter
+    </button>
+  </div>
+</ng-template>

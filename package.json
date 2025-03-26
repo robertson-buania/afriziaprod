@@ -71,6 +71,7 @@
     "ngx-intl-tel-input": "^17.0.0",
     "ngx-progressbar": "^11.1.0",
     "ngx-quill": "^26.0.4",
+    "ngx-toastr": "^19.0.0",
     "nouislider": "^15.8.0",
     "prettier": "^3.3.2",
     "print-js": "^1.6.0",

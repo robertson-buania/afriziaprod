@@ -1,0 +1,163 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <h4 class="card-title">
+              <i class="las la-users me-2 text-primary"></i>Gestion des utilisateurs
+            </h4>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary me-2" (click)="creerUtilisateur()">
+              <i class="las la-plus me-1"></i>Nouvel utilisateur
+            </button>
+            <button class="btn btn-info" (click)="voirDemandes()">
+              <i class="las la-user-clock me-1"></i>Demandes d'accès
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Filtres -->
+        <div class="row mb-4">
+          <div class="col-md-6 col-sm-12">
+            <div class="input-group">
+              <span class="input-group-text"><i class="las la-search"></i></span>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Rechercher un utilisateur..."
+                [(ngModel)]="searchTerm"
+                (input)="onSearchChange()">
+              <button
+                *ngIf="searchTerm"
+                class="btn btn-outline-secondary"
+                type="button"
+                (click)="searchTerm = ''; onSearchChange()">
+                <i class="las la-times"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4 col-sm-12">
+            <select class="form-select" [(ngModel)]="selectedRole" (change)="onRoleChange()">
+              <option value="tous">Tous les rôles</option>
+              <option [value]="ROLE_UTILISATEUR.ADMINISTRATEUR">Administrateurs</option>
+              <option [value]="ROLE_UTILISATEUR.PERSONNEL">Personnel</option>
+              <option [value]="ROLE_UTILISATEUR.WEBSITE">Utilisateurs website</option>
+            </select>
+          </div>
+          <div class="col-md-2 col-sm-12 text-end">
+            <button class="btn btn-outline-secondary" (click)="chargerUtilisateurs()">
+              <i class="las la-sync-alt"></i> Actualiser
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicateur de chargement -->
+        <div class="text-center my-5" *ngIf="isLoading">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+          <p class="mt-2 text-muted">Chargement des utilisateurs...</p>
+        </div>
+
+        <!-- Tableau des utilisateurs -->
+        <div class="table-responsive" *ngIf="!isLoading && utilisateursFiltres.length > 0">
+          <table class="table table-centered table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Création</th>
+                <th>Dernière connexion</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let utilisateur of utilisateursFiltres">
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar avatar-sm me-2 bg-soft-primary">
+                      <span class="avatar-text">{{ utilisateur.prenom.charAt(0) }}{{ utilisateur.nom.charAt(0) }}</span>
+                    </div>
+                    <div>
+                      <h6 class="mb-0">{{ getNomComplet(utilisateur) }}</h6>
+                      <small *ngIf="utilisateur.telephone" class="text-muted">{{ utilisateur.telephone }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ utilisateur.email }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getRoleClass(utilisateur.role)">
+                    {{ getLabelRole(utilisateur.role) }}
+                  </span>
+                </td>
+                <td>{{ getDateFormatee(utilisateur.dateCreation) }}</td>
+                <td>{{ utilisateur.derniereConnexion ? getDateFormatee(utilisateur.derniereConnexion) : 'Jamais' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="utilisateur.estActif ? 'bg-success' : 'bg-danger'">
+                    {{ utilisateur.estActif ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="d-flex">
+                    <button class="btn btn-sm btn-light me-1" (click)="modifierUtilisateur(utilisateur.id!)">
+                      <i class="las la-pen"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light" (click)="ouvrirModalSuppression(deleteModal, utilisateur)">
+                      <i class="las la-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Message si aucun utilisateur -->
+        <div class="alert alert-info" *ngIf="!isLoading && utilisateursFiltres.length === 0">
+          <div class="d-flex align-items-center">
+            <i class="las la-info-circle fs-2 me-2"></i>
+            <div>
+              <h5 class="alert-heading mb-1">Aucun utilisateur trouvé</h5>
+              <p class="mb-0" *ngIf="searchTerm || selectedRole !== 'tous'">
+                Aucun utilisateur ne correspond à vos critères de recherche.
+                <a href="javascript:void(0)" (click)="searchTerm = ''; selectedRole = 'tous'; onSearchChange()">Réinitialiser les filtres</a>
+              </p>
+              <p class="mb-0" *ngIf="!searchTerm && selectedRole === 'tous'">
+                Aucun utilisateur n'a été créé. Cliquez sur "Nouvel utilisateur" pour en créer un.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de suppression -->
+<ng-template #deleteModal let-modal>
+  <div class="modal-header bg-danger">
+    <h5 class="modal-title text-white">Confirmation de suppression</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div class="text-center mb-3">
+      <i class="las la-exclamation-triangle text-danger fs-1"></i>
+    </div>
+    <p class="text-center mb-0">
+      Êtes-vous sûr de vouloir supprimer l'utilisateur<br>
+      <strong>{{ utilisateurASupprimer?.prenom }} {{ utilisateurASupprimer?.nom }}</strong> ?
+    </p>
+    <p class="text-center text-muted small">Cette action est irréversible.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="modal.dismiss()">Annuler</button>
+    <button type="button" class="btn btn-danger" (click)="confirmerSuppression()">
+      <i class="las la-trash me-1"></i>Supprimer
+    </button>
+  </div>
+</ng-template>

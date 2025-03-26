@@ -63,7 +63,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
-  
+
   // {
   //   key: 'apps',
   //   icon: 'iconoir-view-grid',
@@ -244,7 +244,7 @@ export const MENU_ITEMS: MenuItem[] = [
         url: '/colis/import-excel',
         icon: 'iconoir-list'
       },
-     
+
       {
         key: 'colis-verification',
         label: 'Colis enregistré',
@@ -812,4 +812,33 @@ export const MENU_ITEMS: MenuItem[] = [
   //     },
   //   ],
   // },
+  {
+    key: 'utilisateurs',
+    icon: 'iconoir-user',
+    collapsed: true,
+    label: 'Utilisateurs',
+    subMenu: [
+      {
+        key: 'utilisateurs-list',
+        label: 'Gestion utilisateurs',
+        parentKey: 'utilisateurs',
+        url: '/utilisateurs/list',
+        icon: 'iconoir-users-group'
+      },
+      {
+        key: 'utilisateurs-new',
+        label: 'Nouvel utilisateur',
+        parentKey: 'utilisateurs',
+        url: '/utilisateurs/new',
+        icon: 'iconoir-user-plus'
+      },
+      {
+        key: 'utilisateurs-demandes',
+        label: 'Demandes d\'accès',
+        parentKey: 'utilisateurs',
+        url: '/utilisateurs/demandes',
+        icon: 'iconoir-user-circle'
+      },
+    ],
+  },
 ]

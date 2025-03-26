@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, HostListener, EventEmitter, Output, OnDestroy } from '@angular/core';
+import { Component, OnInit, signal, HostListener, EventEmitter, Output, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FirebaseService } from '@/app/core/services/firebase.service';
@@ -44,6 +44,7 @@ interface ExcelSacDisplay {
 interface SacGroup {
   reference: string; // Numéro de sac
   colis: Colis[]; // Liste des colis dans ce sac
+  dateCreation?: string; // Date de création
 }
 
 // Interface pour les statistiques
@@ -99,9 +100,7 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
   private subscription: Subscription | null = null;
 
   @Output() sacsImported = new EventEmitter<Sac[]>();
-
-  reference: string = '';
-  colisData: string = '';
+  @ViewChild('confirmExitModal') confirmExitModal!: TemplateRef<any>;
 
   @HostListener('window:beforeunload', ['$event'])
   onWindowClose($event: BeforeUnloadEvent) {
@@ -270,6 +269,7 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
     this.sacGroups = [];
 
     const sacMap = new Map<string, Colis[]>();
+    const now = new Date().toISOString();
 
     this.extractedData.forEach(item => {
       const sacReference = String(item.袋号).trim();
@@ -281,7 +281,7 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
         clientTelephone: 0,
         clientEmail: '',
         type: 0,
-        statut: STATUT_COLIS.EN_ATTENTE_VERIFICATION,
+        statut: STATUT_COLIS.COLIS_ARRIVE,
         typeExpedition: 0,
         codeSuivi: String(item.运单编号 || ''),
         destinataire: String(item.收件人 || ''),
@@ -290,7 +290,8 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
         poids: Number(item.重量) || 0,
         nature: String(item.物品名称 || ''),
         codeexpedition: String(item.转运单号 || ''),
-        transporteur: String(item.承运商 || '')
+        transporteur: String(item.承运商 || ''),
+        dateCreation: now
       };
 
       if (!sacMap.has(sacReference)) {
@@ -302,7 +303,8 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
     sacMap.forEach((colis, reference) => {
       this.sacGroups.push({
         reference,
-        colis
+        colis,
+        dateCreation: now
       });
     });
   }
@@ -333,10 +335,11 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
           // Créer un objet sac
           const newSac: Omit<Sac, 'id'> = {
             reference: sacGroup.reference,
-            colis: []
+            colis: [],
+            dateCreation: sacGroup.dateCreation || new Date().toISOString()
           };
 
-          const sacId = await this.firebaseService.addSac(sacData);
+          const sacId = await this.firebaseService.addSac(newSac);
 
           for (let j = 0; j < sacGroup.colis.length; j++) {
             try {
@@ -440,16 +443,31 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
       try {
         const state = JSON.parse(savedState);
 
+        // Only restore if import was in progress and within the last hour
         if (state.importInProgress && state.timestamp && Date.now() - state.timestamp < 3600000) {
           this.stats.set(state.stats);
           this.importErrors = state.errors || [];
           this.importInProgress.set(true);
           this.showErrors.set(this.importErrors.length > 0);
 
-          if (this.stats().currentErrorCount > 0 || this.importErrors.length > 0) {
+          // If import is complete, show success message
+          if (state.stats.currentProcessed === state.stats.totalValid) {
+            this.isSuccess.set(true);
+            this.importInProgress.set(false);
+            sessionStorage.removeItem('importSacsState');
+          } else if (state.stats.currentErrorCount > 0 || this.importErrors.length > 0) {
+            // If there were errors, show error message
             this.isError.set(true);
-            this.errorMessage.set('L\'importation précédente a rencontré des erreurs.');
+            this.errorMessage.set('L\'importation précédente a rencontré des erreurs mais se poursuit en arrière-plan.');
+          } else {
+            // Otherwise, just show a message about import in progress
+            this.isError.set(false);
+            this.isSuccess.set(false);
+            this.errorMessage.set('Une importation est en cours en arrière-plan.');
           }
+        } else {
+          // Clear old state data
+          sessionStorage.removeItem('importSacsState');
         }
       } catch (error) {
         console.error('Erreur lors de la restauration de l\'état:', error);
@@ -485,13 +503,13 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
       modalRef.result.then(
         result => {
           if (result === 'confirm') {
-            this.router.navigate(['/colis/verification']);
+            this.router.navigate(['/colis/liste-arrive']);
           }
         },
         () => {}
       );
     } else {
-      this.router.navigate(['/colis/verification']);
+      this.router.navigate(['/colis/liste-arrive']);
     }
   }
 
@@ -505,24 +523,5 @@ export class ColisImportSacsFormComponent implements OnInit, OnDestroy {
 
   truncateText(text: string, maxLength: number): string {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-  }
-
-  onSubmit() {
-    try {
-      const colis = JSON.parse(this.colisData);
-      const sac: Sac = {
-        reference: this.reference,
-        colis: colis
-      };
-
-      this.sacsImported.emit([sac]);
-
-      // Reset form
-      this.reference = '';
-      this.colisData = '';
-    } catch (error) {
-      console.error('Erreur lors du parsing des données:', error);
-      alert('Format de données invalide. Veuillez vérifier le format JSON.');
-    }
   }
 }
