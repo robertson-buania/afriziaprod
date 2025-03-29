@@ -1,0 +1,124 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-lg rounded-3 border-0">
+        <div class="card-header bg-primary text-white py-3">
+          <h2 class="h4 mb-0 text-center">Recherche de Colis</h2>
+        </div>
+
+        <div class="card-body p-4">
+          <!-- Messages d'information -->
+          <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
+            <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+          </div>
+
+          <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="las la-check-circle me-2"></i>{{ successMessage }}
+            <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+          </div>
+
+          <!-- Formulaire de recherche -->
+          <form [formGroup]="searchForm" (ngSubmit)="onSubmit()" class="mb-4">
+            <div class="mb-3">
+              <label for="codeSuivi" class="form-label">Code de suivi du colis</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="las la-search"></i></span>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="codeSuivi"
+                  formControlName="codeSuivi"
+                  placeholder="Saisissez le code de suivi de votre colis"
+                  [ngClass]="{'is-invalid': searchForm.get('codeSuivi')?.invalid && searchForm.get('codeSuivi')?.touched}">
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  [disabled]="searchForm.invalid || isLoading">
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Rechercher
+                </button>
+              </div>
+              <div *ngIf="searchForm.get('codeSuivi')?.invalid && searchForm.get('codeSuivi')?.touched" class="invalid-feedback d-block">
+                <span *ngIf="searchForm.get('codeSuivi')?.errors?.['required']">Le code de suivi est requis</span>
+                <span *ngIf="searchForm.get('codeSuivi')?.errors?.['minlength']">Le code de suivi doit contenir au moins 5 caractères</span>
+              </div>
+              <small class="form-text text-muted mt-2">
+                <i class="las la-info-circle me-1"></i>Veuillez saisir le code de suivi fourni lors de l'enregistrement de votre colis.
+              </small>
+            </div>
+          </form>
+
+          <!-- Résultat de recherche -->
+          <div *ngIf="colis" class="result-container">
+            <h3 class="h5 mb-3 border-bottom pb-2">Détails du colis</h3>
+
+            <div class="row">
+              <div class="col-md-6">
+                <ul class="list-group mb-3">
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Code de suivi:</span>
+                    <span>{{ colis.codeSuivi }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Type:</span>
+                    <span>{{ getTypeColisLabel(colis.type) }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Expédition:</span>
+                    <span>{{ getTypeExpeditionLabel(colis.typeExpedition) }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Statut:</span>
+                    <span class="badge rounded-pill {{ getStatutClass(colis.statut) }}">
+                      {{ getStatutLabel(colis.statut) }}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="col-md-6">
+                <ul class="list-group mb-3">
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Destinataire:</span>
+                    <span>{{ colis.destinataire }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Destination:</span>
+                    <span>{{ colis.destination }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Poids:</span>
+                    <span>{{ colis.poids }} kg</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Coût:</span>
+                    <span class="fw-bold text-primary">{{ colis.cout }} $</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="text-center mt-3">
+              <button
+                class="btn btn-success"
+                *ngIf="peutEtreAjouteAuPanier()"
+                (click)="ajouterAuPanier()">
+                <i class="las la-shopping-cart me-2"></i>Ajouter au panier
+              </button>
+
+              <div *ngIf="!peutEtreAjouteAuPanier()" class="alert alert-info">
+                <i class="las la-info-circle me-2"></i>
+                Ce colis n'est pas en attente de facturation et ne peut pas être ajouté au panier.
+              </div>
+
+              <a routerLink="/panier" class="btn btn-outline-primary ms-2">
+                <i class="las la-shopping-cart me-2"></i>Voir mon panier
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

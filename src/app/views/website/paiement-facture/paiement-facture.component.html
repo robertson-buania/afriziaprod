@@ -1,0 +1,160 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-lg rounded-3 border-0">
+        <div class="card-header bg-primary text-white py-3">
+          <h2 class="h4 mb-0 text-center">Paiement de Facture</h2>
+        </div>
+
+        <div class="card-body p-4">
+          <!-- Messages d'information -->
+          <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
+            <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+          </div>
+
+          <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="las la-check-circle me-2"></i>{{ successMessage }}
+            <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+          </div>
+
+          <!-- Loader -->
+          <div *ngIf="isLoading" class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2 text-muted">Chargement des détails de la facture...</p>
+          </div>
+
+          <!-- Contenu principal -->
+          <div *ngIf="!isLoading && facture" class="facture-details">
+            <!-- Informations facture -->
+            <div class="card mb-4 border-0 bg-light">
+              <div class="card-body">
+                <h3 class="h5 mb-3 d-flex justify-content-between align-items-center">
+                  <span>Récapitulatif de la facture</span>
+                  <span class="badge bg-primary">{{ facture.id }}</span>
+                </h3>
+
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <div class="detail-item">
+                      <span class="detail-label">Montant total</span>
+                      <span class="detail-value text-primary fw-bold">{{ facture.montant }} $</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">Montant payé</span>
+                      <span class="detail-value">{{ facture.montantPaye }} $</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">Reste à payer</span>
+                      <span class="detail-value fw-bold" [ngClass]="getMontantRestant() > 0 ? 'text-danger' : 'text-success'">
+                        {{ getMontantRestant() }} $
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="detail-item">
+                      <span class="detail-label">Date de création</span>
+                      <span class="detail-value">{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">Nombre de colis</span>
+                      <span class="detail-value">{{ facture.colis?.length || 0 }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">Paiements effectués</span>
+                      <span class="detail-value">{{ facture.paiements?.length || 0 }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress">
+                  <div
+                    class="progress-bar"
+                    role="progressbar"
+                    [style.width.%]="getMontantProgressPercentage()"
+                    [ngClass]="facture.montantPaye >= facture.montant ? 'bg-success' : 'bg-primary'"
+                    [attr.aria-valuenow]="getMontantProgressPercentage()"
+                    aria-valuemin="0"
+                    aria-valuemax="100">
+                    {{ getMontantProgressPercentage() | number:'1.0-0' }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Formulaire de paiement -->
+            <div *ngIf="getMontantRestant() > 0" class="payment-form">
+              <h3 class="h5 mb-3">Effectuer un paiement</h3>
+
+              <form [formGroup]="paiementForm" (ngSubmit)="onSubmit()">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="montant" class="form-label">Montant à payer ($)</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="montant"
+                      formControlName="montant"
+                      [ngClass]="{'is-invalid': paiementForm.get('montant')?.invalid && paiementForm.get('montant')?.touched}"
+                      min="1"
+                      [max]="getMontantRestant()">
+                    <div *ngIf="paiementForm.get('montant')?.invalid && paiementForm.get('montant')?.touched" class="invalid-feedback">
+                      <span *ngIf="paiementForm.get('montant')?.errors?.['required']">Le montant est requis</span>
+                      <span *ngIf="paiementForm.get('montant')?.errors?.['min']">Le montant doit être supérieur à 0</span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <label for="typePaiement" class="form-label">Méthode de paiement</label>
+                    <select class="form-select" id="typePaiement" formControlName="typePaiement">
+                      <option [value]="TYPE_PAIEMENT.ESPECE">{{ getTypePaiementLabel(TYPE_PAIEMENT.ESPECE) }}</option>
+                      <option [value]="TYPE_PAIEMENT.CARTE">{{ getTypePaiementLabel(TYPE_PAIEMENT.CARTE) }}</option>
+                      <option [value]="TYPE_PAIEMENT.MPESA">{{ getTypePaiementLabel(TYPE_PAIEMENT.MPESA) }}</option>
+                      <option [value]="TYPE_PAIEMENT.ORANGE_MONEY">{{ getTypePaiementLabel(TYPE_PAIEMENT.ORANGE_MONEY) }}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                  <a routerLink="/panier" class="btn btn-outline-secondary">
+                    <i class="las la-arrow-left me-2"></i>Retour au panier
+                  </a>
+                  <button type="submit" class="btn btn-success" [disabled]="paiementForm.invalid || isProcessing">
+                    <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <i *ngIf="!isProcessing" class="las la-credit-card me-2"></i>Payer
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Message de succès si tout est payé -->
+            <div *ngIf="getMontantRestant() === 0" class="text-center my-5">
+              <div class="success-icon mb-4">
+                <i class="las la-check-circle la-5x text-success"></i>
+              </div>
+              <h3 class="h5 mb-3">Facture entièrement payée</h3>
+              <p class="text-muted mb-4">Merci pour votre paiement. Cette facture a été entièrement réglée.</p>
+              <a routerLink="/recherche-colis" class="btn btn-primary">
+                <i class="las la-search me-2"></i>Rechercher un autre colis
+              </a>
+            </div>
+          </div>
+
+          <!-- Message d'erreur si la facture n'est pas trouvée -->
+          <div *ngIf="!isLoading && !facture && !errorMessage" class="text-center my-5">
+            <div class="empty-cart-icon mb-4">
+              <i class="las la-file-invoice-dollar la-5x text-muted"></i>
+            </div>
+            <h3 class="h5 mb-3">Facture non trouvée</h3>
+            <p class="text-muted mb-4">La facture demandée n'existe pas ou a été supprimée.</p>
+            <a routerLink="/recherche-colis" class="btn btn-primary">
+              <i class="las la-search me-2"></i>Rechercher un colis
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

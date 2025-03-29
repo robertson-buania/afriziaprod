@@ -2,14 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { Utilisateur, ROLE_UTILISATEUR } from '@/app/models/utilisateur.model';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-utilisateurs-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule, NgbModalModule],
   templateUrl: './utilisateurs-list.component.html',
   styleUrl: './utilisateurs-list.component.scss'
 })

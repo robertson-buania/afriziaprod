@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { PanierService } from '@/app/core/services/panier.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-website-navbar',
@@ -25,6 +27,17 @@ import { RouterModule } from '@angular/router';
             <li class="nav-item">
               <a class="nav-link" routerLink="/tracking" routerLinkActive="active">
                 <i class="las la-search me-1"></i>Suivre un colis
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/recherche-colis" routerLinkActive="active">
+                <i class="las la-box me-1"></i>Rechercher un colis
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link position-relative" routerLink="/panier" routerLinkActive="active">
+                <i class="las la-shopping-cart me-1"></i>Panier
+                <span *ngIf="nombreArticles > 0" class="cart-counter">{{ nombreArticles }}</span>
               </a>
             </li>
             <li class="nav-item">
@@ -69,6 +82,39 @@ import { RouterModule } from '@angular/router';
       font-weight: 700;
       color: #333;
     }
+    .cart-counter {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background-color: #ff5252;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transform: translate(50%, -30%);
+    }
   `]
 })
-export class WebsiteNavbarComponent {}
+export class WebsiteNavbarComponent implements OnInit, OnDestroy {
+  nombreArticles = 0;
+  private subscription: Subscription = new Subscription();
+
+  constructor(private panierService: PanierService) {}
+
+  ngOnInit(): void {
+    this.subscription.add(
+      this.panierService.panier$.subscribe(colis => {
+        this.nombreArticles = colis.length;
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+}

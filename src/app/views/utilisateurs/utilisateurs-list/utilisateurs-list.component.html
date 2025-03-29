@@ -104,11 +104,14 @@
                 </td>
                 <td>
                   <div class="d-flex">
-                    <button class="btn btn-sm btn-light me-1" (click)="modifierUtilisateur(utilisateur.id!)">
-                      <i class="las la-pen"></i>
-                    </button>
-                    <button class="btn btn-sm btn-light" (click)="ouvrirModalSuppression(deleteModal, utilisateur)">
-                      <i class="las la-trash"></i>
+                    <a [routerLink]="['/utilisateurs/detail', utilisateur.id]" class="btn btn-sm btn-info me-2">
+                      <i class="las la-eye"></i>
+                    </a>
+                    <a [routerLink]="['/utilisateurs/edit', utilisateur.id]" class="btn btn-sm btn-primary me-2">
+                      <i class="las la-edit"></i>
+                    </a>
+                    <button class="btn btn-sm btn-danger" (click)="ouvrirModalSuppression(deleteModal, utilisateur)">
+                      <i class="las la-trash-alt"></i>
                     </button>
                   </div>
                 </td>

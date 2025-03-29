@@ -1,0 +1,146 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Détails de l'utilisateur</h5>
+        <div>
+          <button class="btn btn-light me-2" routerLink="/utilisateurs/list">
+            <i class="las la-arrow-left me-1"></i>Retour
+          </button>
+          <button class="btn btn-primary me-2" (click)="onEdit()" *ngIf="utilisateur">
+            <i class="las la-edit me-1"></i>Modifier
+          </button>
+          <button class="btn btn-danger" (click)="onDelete(deleteModal)" *ngIf="utilisateur">
+            <i class="las la-trash-alt me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Loader -->
+        <div *ngIf="isLoading" class="d-flex justify-content-center my-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div *ngIf="errorMessage" class="alert alert-danger">
+          {{ errorMessage }}
+        </div>
+
+        <!-- User details -->
+        <div *ngIf="utilisateur && !isLoading" class="row">
+          <!-- Informations personnelles -->
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">Informations personnelles</h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3 d-flex align-items-center">
+                  <div class="avatar-circle bg-primary text-white me-3">
+                    {{ utilisateur.prenom?.charAt(0) }}{{ utilisateur.nom?.charAt(0) }}
+                  </div>
+                  <div>
+                    <h5 class="mb-0">{{ utilisateur.prenom }} {{ utilisateur.nom }}</h5>
+                    <span class="badge {{ getStatusClass(utilisateur.estActif) }} mt-1">
+                      {{ getStatusLabel(utilisateur.estActif) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <span class="detail-label">Email:</span>
+                  <span class="detail-value">{{ utilisateur.email }}</span>
+                </div>
+
+                <div class="detail-item">
+                  <span class="detail-label">Téléphone:</span>
+                  <span class="detail-value">{{ utilisateur.telephone || 'Non renseigné' }}</span>
+                </div>
+
+                <div class="detail-item">
+                  <span class="detail-label">Date de création:</span>
+                  <span class="detail-value">{{ formatDate(utilisateur.dateCreation) }}</span>
+                </div>
+
+                <div class="detail-item">
+                  <span class="detail-label">Dernière connexion:</span>
+                  <span class="detail-value">{{ utilisateur.derniereConnexion ? formatDate(utilisateur.derniereConnexion) : 'Jamais connecté' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rôle et permissions -->
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">Rôle et associations</h6>
+              </div>
+              <div class="card-body">
+                <div class="detail-item">
+                  <span class="detail-label">Rôle:</span>
+                  <span class="detail-value">
+                    <span class="badge bg-info">{{ getRoleLabel(utilisateur.role) }}</span>
+                  </span>
+                </div>
+
+                <div class="detail-item" *ngIf="utilisateur.partenaireId">
+                  <span class="detail-label">Partenaire associé:</span>
+                  <span class="detail-value" *ngIf="partenaire">
+                    <a [routerLink]="['/partenaires/detail', partenaire.id]">
+                      {{ partenaire.prenom }} {{ partenaire.nom }}
+                    </a>
+                  </span>
+                  <span class="detail-value" *ngIf="!partenaire">
+                    ID: {{ utilisateur.partenaireId }} (Détails non disponibles)
+                  </span>
+                </div>
+
+                <div class="detail-item" *ngIf="!utilisateur.partenaireId">
+                  <span class="detail-label">Partenaire associé:</span>
+                  <span class="detail-value text-muted">Aucun partenaire associé</span>
+                </div>
+
+                <div class="mt-4">
+                  <h6 class="mb-3">Permissions</h6>
+                  <ul class="list-group">
+                    <li class="list-group-item" *ngIf="utilisateur.role === ROLE_UTILISATEUR.ADMINISTRATEUR">
+                      <i class="las la-check-circle text-success me-2"></i> Accès complet au système
+                    </li>
+                    <li class="list-group-item" *ngIf="utilisateur.role === ROLE_UTILISATEUR.ADMINISTRATEUR || utilisateur.role === ROLE_UTILISATEUR.PERSONNEL">
+                      <i class="las la-check-circle text-success me-2"></i> Gestion des utilisateurs
+                    </li>
+                    <li class="list-group-item" *ngIf="utilisateur.role === ROLE_UTILISATEUR.ADMINISTRATEUR || utilisateur.role === ROLE_UTILISATEUR.PERSONNEL">
+                      <i class="las la-check-circle text-success me-2"></i> Gestion des partenaires
+                    </li>
+                    <li class="list-group-item" *ngIf="utilisateur.role === ROLE_UTILISATEUR.WEBSITE">
+                      <i class="las la-check-circle text-success me-2"></i> Consultation du profil utilisateur
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<ng-template #deleteModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Confirmation de suppression</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p>Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>{{ utilisateur?.prenom }} {{ utilisateur?.nom }}</strong> ?</p>
+    <p class="text-danger"><strong>Attention:</strong> Cette action est irréversible et supprimera définitivement cet utilisateur du système.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="modal.dismiss()">Annuler</button>
+    <button type="button" class="btn btn-danger" (click)="modal.close('confirm')">Confirmer la suppression</button>
+  </div>
+</ng-template>

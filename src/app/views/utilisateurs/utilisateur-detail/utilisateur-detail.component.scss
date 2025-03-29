@@ -1,0 +1,43 @@
+.avatar-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.detail-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: baseline;
+}
+
+.detail-label {
+  min-width: 140px;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.detail-value {
+  flex: 1;
+}
+
+// Pour les badges
+.badge {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 5px 10px;
+}
+
+// Amélioration des cartes internes
+.card .card {
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header.bg-light {
+  background-color: #f8f9fa !important;
+}

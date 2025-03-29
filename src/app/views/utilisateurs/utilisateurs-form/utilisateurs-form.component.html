@@ -1,137 +1,114 @@
 <div class="row">
-  <div class="col-lg-8 col-md-10 mx-auto">
+  <div class="col-12">
     <div class="card">
       <div class="card-header">
-        <h4 class="card-title">
-          <i class="las la-user me-2 text-primary"></i>
-          {{ isEditMode ? 'Modifier un utilisateur' : 'Nouvel utilisateur' }}
-        </h4>
+        <h5 class="card-title">{{ isEditMode ? 'Modifier un utilisateur' : 'Nouvel utilisateur' }}</h5>
       </div>
       <div class="card-body">
-        <!-- Indicateur de chargement -->
-        <div class="text-center my-5" *ngIf="isLoading">
+        <div *ngIf="isLoading" class="d-flex justify-content-center my-4">
           <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Chargement...</span>
           </div>
-          <p class="mt-2 text-muted">Chargement des données...</p>
         </div>
 
-        <!-- Message d'erreur -->
-        <div class="alert alert-danger mb-4" *ngIf="errorMessage">
-          <div class="d-flex align-items-center">
-            <i class="las la-exclamation-circle me-2 fs-5"></i>
-            <span>{{ errorMessage }}</span>
-          </div>
+        <div *ngIf="errorMessage" class="alert alert-danger">
+          {{ errorMessage }}
         </div>
 
-        <!-- Formulaire -->
         <form [formGroup]="utilisateurForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <label class="form-label">Email <span class="text-danger">*</span></label>
-              <input
-                type="email"
-                class="form-control"
-                formControlName="email"
-                [ngClass]="{'is-invalid': emailControl?.invalid && emailControl?.touched}">
-              <div class="invalid-feedback" *ngIf="emailControl?.invalid && emailControl?.touched">
-                <div *ngIf="emailControl?.errors?.['required']">L'email est requis</div>
-                <div *ngIf="emailControl?.errors?.['email']">L'email n'est pas valide</div>
+          <!-- Informations personnelles -->
+          <div class="mb-4">
+            <h6 class="text-primary mb-3">Informations personnelles</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="nom" formControlName="nom"
+                       [ngClass]="{'is-invalid': nomControl?.invalid && nomControl?.touched}">
+                <div class="invalid-feedback" *ngIf="nomControl?.invalid && nomControl?.touched">
+                  Le nom est requis
+                </div>
               </div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">
-                Mot de passe
-                <span class="text-danger" *ngIf="!isEditMode">*</span>
-                <small *ngIf="isEditMode">(Laisser vide pour ne pas modifier)</small>
-              </label>
-              <input
-                type="password"
-                class="form-control"
-                formControlName="password"
-                [ngClass]="{'is-invalid': passwordControl?.invalid && passwordControl?.touched}">
-              <div class="invalid-feedback" *ngIf="passwordControl?.invalid && passwordControl?.touched">
-                <div *ngIf="passwordControl?.errors?.['required']">Le mot de passe est requis</div>
-                <div *ngIf="passwordControl?.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</div>
+              <div class="col-md-6">
+                <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="prenom" formControlName="prenom"
+                       [ngClass]="{'is-invalid': prenomControl?.invalid && prenomControl?.touched}">
+                <div class="invalid-feedback" *ngIf="prenomControl?.invalid && prenomControl?.touched">
+                  Le prénom est requis
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="telephone" class="form-label">Téléphone</label>
+                <input type="tel" class="form-control" id="telephone" formControlName="telephone">
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <label class="form-label">Nom <span class="text-danger">*</span></label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="nom"
-                [ngClass]="{'is-invalid': nomControl?.invalid && nomControl?.touched}">
-              <div class="invalid-feedback" *ngIf="nomControl?.invalid && nomControl?.touched">
-                Le nom est requis
+          <!-- Informations de compte -->
+          <div class="mb-4">
+            <h6 class="text-primary mb-3">Informations de compte</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="email" formControlName="email"
+                       [ngClass]="{'is-invalid': emailControl?.invalid && emailControl?.touched}">
+                <div class="invalid-feedback" *ngIf="emailControl?.invalid && emailControl?.touched">
+                  <span *ngIf="emailControl?.errors?.['required']">L'email est requis</span>
+                  <span *ngIf="emailControl?.errors?.['email']">Format d'email invalide</span>
+                </div>
               </div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Prénom <span class="text-danger">*</span></label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="prenom"
-                [ngClass]="{'is-invalid': prenomControl?.invalid && prenomControl?.touched}">
-              <div class="invalid-feedback" *ngIf="prenomControl?.invalid && prenomControl?.touched">
-                Le prénom est requis
-              </div>
-            </div>
-          </div>
-
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <label class="form-label">Téléphone</label>
-              <input type="tel" class="form-control" formControlName="telephone">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Rôle <span class="text-danger">*</span></label>
-              <select
-                class="form-select"
-                formControlName="role"
-                [ngClass]="{'is-invalid': roleControl?.invalid && roleControl?.touched}">
-                <option [value]="ROLE_UTILISATEUR.WEBSITE">{{ getRoleLabel(ROLE_UTILISATEUR.WEBSITE) }}</option>
-                <option [value]="ROLE_UTILISATEUR.PERSONNEL">{{ getRoleLabel(ROLE_UTILISATEUR.PERSONNEL) }}</option>
-                <option [value]="ROLE_UTILISATEUR.ADMINISTRATEUR">{{ getRoleLabel(ROLE_UTILISATEUR.ADMINISTRATEUR) }}</option>
-              </select>
-              <div class="invalid-feedback" *ngIf="roleControl?.invalid && roleControl?.touched">
-                Le rôle est requis
+              <div class="col-md-6">
+                <label for="password" class="form-label">
+                  Mot de passe <span class="text-danger" *ngIf="!isEditMode">*</span>
+                  <small *ngIf="isEditMode">(Laisser vide pour conserver)</small>
+                </label>
+                <input type="password" class="form-control" id="password" formControlName="password"
+                       [ngClass]="{'is-invalid': passwordControl?.invalid && passwordControl?.touched}">
+                <div class="invalid-feedback" *ngIf="passwordControl?.invalid && passwordControl?.touched">
+                  <span *ngIf="passwordControl?.errors?.['required']">Le mot de passe est requis</span>
+                  <span *ngIf="passwordControl?.errors?.['minlength']">Minimum 6 caractères</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <label class="form-label">Partenaire (optionnel)</label>
-              <select class="form-select" formControlName="partenaireId">
-                <option value="">Aucun</option>
-                <option *ngFor="let partenaire of partenaires" [value]="partenaire.id">
-                  {{ partenaire.prenom }} {{ partenaire.nom }}
-                </option>
-              </select>
-              <small class="form-text text-muted">
-                Associer l'utilisateur à un partenaire existant
-              </small>
-            </div>
-            <div class="col-md-6">
-              <div class="form-check form-switch mt-4">
-                <input class="form-check-input" type="checkbox" formControlName="estActif" id="switchActif">
-                <label class="form-check-label" for="switchActif">Compte actif</label>
+          <!-- Paramètres de rôle -->
+          <div class="mb-4">
+            <h6 class="text-primary mb-3">Paramètres de rôle</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="role" class="form-label">Rôle <span class="text-danger">*</span></label>
+                <select class="form-select" id="role" formControlName="role">
+                  <option [value]="ROLE_UTILISATEUR.WEBSITE">{{ getRoleLabel(ROLE_UTILISATEUR.WEBSITE) }}</option>
+                  <option [value]="ROLE_UTILISATEUR.PERSONNEL">{{ getRoleLabel(ROLE_UTILISATEUR.PERSONNEL) }}</option>
+                  <option [value]="ROLE_UTILISATEUR.ADMINISTRATEUR">{{ getRoleLabel(ROLE_UTILISATEUR.ADMINISTRATEUR) }}</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="partenaireId" class="form-label">Partenaire associé</label>
+                <select class="form-select" id="partenaireId" formControlName="partenaireId">
+                  <option value="">Aucun partenaire</option>
+                  <option *ngFor="let partenaire of partenaires" [value]="partenaire.id">
+                    {{ partenaire.nom }} {{ partenaire.prenom }}
+                  </option>
+                </select>
+                <small class="form-text text-muted">Associer l'utilisateur à un partenaire existant</small>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check form-switch mt-4">
+                  <input class="form-check-input" type="checkbox" id="estActif" formControlName="estActif">
+                  <label class="form-check-label" for="estActif">Compte actif</label>
+                </div>
+                <small class="form-text text-muted">Désactiver pour suspendre l'accès de l'utilisateur</small>
               </div>
             </div>
           </div>
 
+          <!-- Boutons d'action -->
           <div class="d-flex justify-content-end gap-2 mt-4">
-            <button type="button" class="btn btn-light" (click)="onCancel()">
-              Annuler
-            </button>
+            <button type="button" class="btn btn-light" (click)="onCancel()">Annuler</button>
             <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
-              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
-              <i *ngIf="!isSubmitting" class="las la-save me-1"></i>
-              {{ isEditMode ? 'Mettre à jour' : 'Enregistrer' }}
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
             </button>
           </div>
         </form>

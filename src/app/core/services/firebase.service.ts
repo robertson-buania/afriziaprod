@@ -60,6 +60,16 @@ export class FirebaseService {
     await deleteDoc(docRef);
   }
 
+  async getPartenaireById(id: string): Promise<Partenaire | null> {
+    if (!id) return null;
+    const docRef = doc(this.firestore, 'partenaires', id);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return { id: snapshot.id, ...snapshot.data() } as Partenaire;
+    }
+    return null;
+  }
+
   async searchPartenaires(searchTerm: string): Promise<Partenaire[]> {
     const colRef = collection(this.firestore, 'partenaires');
     const snapshot = await getDocs(colRef);
@@ -99,6 +109,16 @@ export class FirebaseService {
     await updateDoc(docRef, data as DocumentData);
   }
 
+  async getColisById(id: string): Promise<Colis | null> {
+    if (!id) return null;
+    const docRef = doc(this.firestore, 'colis', id);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return { id: snapshot.id, ...snapshot.data() } as Colis;
+    }
+    return null;
+  }
+
   async deleteColis(id: string): Promise<void> {
     const docRef = doc(this.firestore, 'colis', id);
     await deleteDoc(docRef);
@@ -125,9 +145,33 @@ export class FirebaseService {
     } as DocumentData);
   }
 
+  async createFactureFromColis(facture: Omit<Facture, 'id'>): Promise<string> {
+    const factureId = String(Date.now());
+    const docRef = doc(this.firestore, 'factures', factureId);
+    await setDoc(docRef, {
+      ...facture,
+      paiements: facture.paiements || [],
+      colis: facture.colis.map(colis => {
+        if (typeof colis === 'string') return colis;
+        return colis.id || null;
+      }).filter(id => id !== null)
+    } as DocumentData);
+    return factureId;
+  }
+
   async updateFacture(id: string, data: Partial<Facture>): Promise<void> {
     const docRef = doc(this.firestore, 'factures', id);
     await updateDoc(docRef, data as DocumentData);
+  }
+
+  async getFactureById(id: string): Promise<Facture | null> {
+    if (!id) return null;
+    const docRef = doc(this.firestore, 'factures', id);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return { id: snapshot.id, ...snapshot.data() } as Facture;
+    }
+    return null;
   }
 
   // Méthodes pour les paiements
