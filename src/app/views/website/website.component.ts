@@ -18,13 +18,20 @@ import { WebsiteHomeComponent } from './components/website-home/website-home.com
   template: `
     <div class="website-container">
       <app-website-navbar />
-      <router-outlet />
+      <div class="main-content">
+        <router-outlet />
+      </div>
     </div>
   `,
   styles: [`
     .website-container {
       min-height: 100vh;
       background-color: #f8f9fa;
+      position: relative;
+    }
+
+    .main-content {
+      padding-top: 10px; /* Espace supplémentaire pour éviter que le contenu ne soit caché sous la navbar */
     }
   `]
 })

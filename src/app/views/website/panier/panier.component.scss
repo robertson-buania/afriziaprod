@@ -1,5 +1,6 @@
 .card {
   transition: all 0.3s ease;
+  margin-bottom: 1rem;
 
   &:hover {
     transform: translateY(-5px);
@@ -7,8 +8,9 @@
 }
 
 .empty-cart-icon {
+  margin-top: -10px;
   font-size: 5rem;
-  color: #e0e0e0;
+  color: #e9ecef;
   animation: pulse 2s infinite;
 }
 
@@ -49,8 +51,14 @@
 }
 
 .table {
+  font-size: 0.95rem;
   thead th {
     font-weight: 600;
+  }
+
+  th, td {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
   }
 }
 
@@ -58,4 +66,59 @@
 .badge {
   padding: 0.5rem 0.8rem;
   font-weight: 500;
+}
+
+.text-center.my-3 {
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.card-body .d-flex {
+  margin-bottom: 0.5rem;
+}
+
+/* Styles pour les options d'expédition */
+.form-check {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 10px;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #e9ecef;
+  }
+
+  &-input:checked + .form-check-label {
+    font-weight: 600;
+  }
+}
+
+.form-check-input:checked + .form-check-label {
+  color: #0d6efd;
+}
+
+/* Personnalisation de l'accordéon des tarifs */
+.expedition-info {
+  .accordion-button {
+    font-size: 0.85rem;
+    color: #6c757d;
+
+    &:not(.collapsed) {
+      background-color: #f8f9fa;
+      color: #0d6efd;
+    }
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+
+  .table-sm {
+    font-size: 0.8rem;
+
+    th, td {
+      padding: 0.4rem 0.5rem;
+    }
+  }
 }

@@ -4,53 +4,61 @@ import { RouterModule, Router } from '@angular/router';
 import { PanierService } from '@/app/core/services/panier.service';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { Subscription } from 'rxjs';
-import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDropdownModule, NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
 import { Utilisateur } from '@/app/models/utilisateur.model';
 import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.service';
 
 @Component({
   selector: 'app-website-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgbDropdownModule],
+  imports: [CommonModule, RouterModule, NgbDropdownModule, NgbCollapseModule],
   template: `
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
       <div class="container">
         <a class="navbar-brand" routerLink="/">
           <img src="assets/images/logo-sm.png" alt="Kamba Agency" height="40">
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <button class="navbar-toggler" type="button" (click)="isMenuCollapsed = !isMenuCollapsed"
+                aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
+
+        <div class="collapse navbar-collapse" [ngbCollapse]="isMenuCollapsed">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+              <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
+                 (click)="isMenuCollapsed = true">
                 <i class="las la-home me-1"></i>Accueil
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/tracking" routerLinkActive="active">
+              <a class="nav-link" routerLink="/tracking" routerLinkActive="active"
+                 (click)="isMenuCollapsed = true">
                 <i class="las la-search me-1"></i>Suivre un colis
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/recherche-colis" routerLinkActive="active">
+              <a class="nav-link" routerLink="/recherche-colis" routerLinkActive="active"
+                 (click)="isMenuCollapsed = true">
                 <i class="las la-box me-1"></i>Rechercher un colis
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link position-relative" routerLink="/panier" routerLinkActive="active">
+              <a class="nav-link position-relative" routerLink="/panier" routerLinkActive="active"
+                 (click)="isMenuCollapsed = true">
                 <i class="las la-shopping-cart me-1"></i>Panier
                 <span *ngIf="nombreArticles > 0" class="cart-counter">{{ nombreArticles }}</span>
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/about" routerLinkActive="active">
+              <a class="nav-link" routerLink="/about" routerLinkActive="active"
+                 (click)="isMenuCollapsed = true">
                 <i class="las la-info-circle me-1"></i>À propos
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/contact" routerLinkActive="active">
+              <a class="nav-link" routerLink="/contact" routerLinkActive="active"
+                 (click)="isMenuCollapsed = true">
                 <i class="las la-envelope me-1"></i>Contact
               </a>
             </li>
@@ -72,13 +80,13 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
                   </div>
                 </div>
                 <div class="dropdown-divider"></div>
-                <a ngbDropdownItem routerLink="/profil">
+                <a ngbDropdownItem routerLink="/profil" (click)="isMenuCollapsed = true">
                   <i class="las la-user me-2"></i>Mon profil
                 </a>
-                <a ngbDropdownItem routerLink="/mes-commandes">
+                <a ngbDropdownItem routerLink="/mes-commandes" (click)="isMenuCollapsed = true">
                   <i class="las la-file-invoice me-2"></i>Mes commandes
                 </a>
-                <a ngbDropdownItem routerLink="/dashboard/analytics" *ngIf="estAdmin() || estPersonnel()">
+                <a ngbDropdownItem routerLink="/dashboard/analytics" *ngIf="estAdmin() || estPersonnel()" (click)="isMenuCollapsed = true">
                   <i class="las la-tachometer-alt me-2"></i>Tableau de bord
                 </a>
                 <div class="dropdown-divider"></div>
@@ -106,10 +114,15 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
         </div>
       </div>
     </nav>
+    <div class="navbar-spacer"></div>
   `,
   styles: [`
     .navbar {
       padding: 1rem 0;
+      z-index: 1030;
+    }
+    .navbar-spacer {
+      height: 80px; /* Ajustez cette valeur selon la hauteur de votre navbar */
     }
     .nav-link {
       font-weight: 500;
@@ -161,11 +174,25 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
     .user-info {
       line-height: 1.2;
     }
+    /* Améliorations pour la navbar responsive */
+    @media (max-width: 991.98px) {
+      .navbar-collapse {
+        background: white;
+        padding: 1rem;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-top: 0.5rem;
+      }
+      .navbar-nav .nav-item {
+        margin: 0.25rem 0;
+      }
+    }
   `]
 })
 export class WebsiteNavbarComponent implements OnInit, OnDestroy {
   nombreArticles = 0;
   utilisateur: Utilisateur | null = null;
+  isMenuCollapsed = true;
   private subscription: Subscription = new Subscription();
 
   constructor(
@@ -196,6 +223,7 @@ export class WebsiteNavbarComponent implements OnInit, OnDestroy {
   deconnecter(): void {
     this.utilisateurService.deconnecter();
     this.router.navigate(['/']);
+    this.isMenuCollapsed = true;
   }
 
   estAdmin(): boolean {
@@ -208,9 +236,11 @@ export class WebsiteNavbarComponent implements OnInit, OnDestroy {
 
   ouvrirModalConnexion(): void {
     this.authModalService.openAuthModal(AuthModalType.LOGIN);
+    this.isMenuCollapsed = true;
   }
 
   ouvrirModalInscription(): void {
     this.authModalService.openAuthModal(AuthModalType.REGISTER);
+    this.isMenuCollapsed = true;
   }
 }

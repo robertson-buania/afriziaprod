@@ -1,0 +1,43 @@
+// Styles pour le composant de détail de facture
+.table {
+  th, td {
+    vertical-align: middle;
+  }
+}
+
+.card {
+  border-radius: 0.5rem;
+  overflow: hidden;
+
+  .card-header {
+    padding: 1rem 1.25rem;
+  }
+}
+
+.badge {
+  padding: 0.35em 0.65em;
+  &.bg-success {
+    background-color: #28a745 !important;
+  }
+  &.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529;
+  }
+  &.bg-danger {
+    background-color: #dc3545 !important;
+  }
+  &.bg-secondary {
+    background-color: #6c757d !important;
+  }
+}
+
+.alert-info {
+  color: #0c5460;
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+}
+
+// Effet de surbrillance au survol sur les lignes du tableau
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}

@@ -1,8 +1,8 @@
 export const environment = {
   production: false,
   cinetpay: {
-    apiKey: 'YOUR_APIKEY',
-    siteId: 'YOUR_SITEID'
+    apiKey: '207383812367daecdb724d28.45072634',
+    siteId: '105890259'
   },
   whatsapp: {
     apiUrl: 'https://graph.facebook.com/v22.0/572091615993833/messages',

@@ -1,0 +1,195 @@
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12 mb-4 d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-0">Détail de la commande</h1>
+        <p class="text-muted">Visualisez les informations de votre commande</p>
+      </div>
+      <button class="btn btn-outline-secondary" (click)="retourListe()">
+        <i class="las la-arrow-left me-1"></i>Retour aux commandes
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages d'information -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="las la-check-circle me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
+
+  <!-- Indicateur de paiement en cours -->
+  <div *ngIf="isPaiementEnCours" class="alert alert-info text-center">
+    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <span>Redirection vers la page de paiement sécurisée...</span>
+  </div>
+
+  <!-- Loader principal -->
+  <div *ngIf="isLoading" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <p class="mt-2 text-muted">Chargement des informations de la commande...</p>
+  </div>
+
+  <!-- Contenu principal - Détail de la facture -->
+  <div *ngIf="!isLoading && facture" class="card shadow-sm">
+    <div class="card-header bg-light">
+      <h5 class="card-title mb-0">
+        Commande <span class="text-primary">#{{facture.id?.substring(0, 8)}}</span>
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <h6 class="fw-bold">Informations générales</h6>
+          <p class="mb-1"><strong>Date de création:</strong> {{facture.dateCreation | date:'dd/MM/yyyy à HH:mm'}}</p>
+          <p class="mb-1"><strong>Montant total:</strong> {{facture.montant | currency:'USD':'symbol'}}</p>
+          <p class="mb-1"><strong>Montant payé:</strong> {{facture.montantPaye | currency:'USD':'symbol'}}</p>
+          <p class="mb-1">
+            <strong>Statut:</strong>
+            <span class="badge rounded-pill ms-1" [ngClass]="getClassStatutPaiement()">
+              {{getStatutFacture()}}
+            </span>
+          </p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="fw-bold">Résumé des colis</h6>
+          <p class="mb-1"><strong>Nombre de colis:</strong> {{facture.colis?.length || 0}}</p>
+
+          <!-- Bouton de paiement pour les factures non payées -->
+          <div *ngIf="facture.montant > facture.montantPaye" class="mt-3">
+            <div class="alert alert-info mb-2">
+              <i class="las la-info-circle me-2"></i>
+              Le paiement sera effectué via CinetPay, notre partenaire de paiement sécurisé.
+            </div>
+            <button class="btn btn-success"
+                    [disabled]="isPaiementEnCours"
+                    (click)="payerFactureCinetPay()">
+              <i class="las la-credit-card me-1"></i>
+              <span *ngIf="!isPaiementEnCours">Payer {{getMontantRestant() | currency:'USD':'symbol'}} avec CinetPay</span>
+              <span *ngIf="isPaiementEnCours">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Initialisation du paiement...
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste des colis -->
+      <h6 class="fw-bold mb-3">Liste des colis</h6>
+
+      <!-- Indicateur de chargement des colis -->
+      <div *ngIf="isLoadingColis" class="text-center my-4">
+        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+        <span class="text-muted">Chargement des informations des colis...</span>
+      </div>
+
+      <div *ngIf="!isLoadingColis" class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>Code de suivi</th>
+              <th>Description</th>
+              <th>Destinataire</th>
+              <th>Destination</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let colis of facture.colis">
+              <td>
+                <span class="fw-medium" *ngIf="colis && typeof colis !== 'string'">{{colis.codeSuivi || 'Non défini'}}</span>
+                <span class="fw-medium" *ngIf="!colis || typeof colis === 'string'">ID: {{colis}}</span>
+              </td>
+              <td>
+                <div *ngIf="colis && typeof colis !== 'string'">{{colis.nature || 'N/A'}}</div>
+                <div *ngIf="!colis || typeof colis === 'string'">-</div>
+                <small *ngIf="colis && typeof colis !== 'string' && colis.description" class="text-muted">{{colis.description}}</small>
+              </td>
+              <td>
+                <span *ngIf="colis && typeof colis !== 'string'">{{colis.destinataire || 'N/A'}}</span>
+                <span *ngIf="!colis || typeof colis === 'string'">-</span>
+              </td>
+              <td>
+                <span *ngIf="colis && typeof colis !== 'string'">{{colis.destination || 'N/A'}}</span>
+                <span *ngIf="!colis || typeof colis === 'string'">-</span>
+              </td>
+              <td>
+                <span *ngIf="colis && typeof colis !== 'string'" class="badge rounded-pill bg-primary">
+                  {{colis.statut || 'En attente'}}
+                </span>
+                <span *ngIf="!colis || typeof colis === 'string'" class="badge rounded-pill bg-secondary">
+                  Statut inconnu
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="!facture.colis || facture.colis.length === 0">
+              <td colspan="5" class="text-center py-3">
+                <p class="text-muted mb-0">Aucun colis associé à cette commande</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Historique des paiements s'il y en a -->
+      <div *ngIf="facture.paiements && facture.paiements.length > 0" class="mt-4">
+        <h6 class="fw-bold mb-3">Historique des paiements</h6>
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Méthode</th>
+                <th>Référence</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let paiement of facture.paiements">
+                <td>
+                  <span *ngIf="paiement.datepaiement">
+                    {{paiement.datepaiement | date:'dd/MM/yyyy à HH:mm'}}
+                  </span>
+                  <span *ngIf="!paiement.datepaiement">
+                    Date inconnue
+                  </span>
+                </td>
+                <td>{{paiement.montant_paye | currency:'USD':'symbol'}}</td>
+                <td>
+                  <span *ngIf="paiement.typepaiement !== undefined">
+                    {{paiement.typepaiement === 1 ? 'CinetPay' : paiement.typepaiement}}
+                  </span>
+                  <span *ngIf="paiement.typepaiement === undefined">
+                    Non spécifié
+                  </span>
+                </td>
+                <td>{{paiement.facture_reference || 'N/A'}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si facture non trouvée -->
+  <div *ngIf="!isLoading && !facture && !errorMessage" class="alert alert-warning">
+    <i class="las la-exclamation-triangle me-2"></i>La facture demandée n'a pas été trouvée.
+    <div class="mt-3">
+      <button class="btn btn-outline-primary" (click)="retourListe()">
+        <i class="las la-arrow-left me-1"></i>Retourner à la liste des commandes
+      </button>
+    </div>
+  </div>
+</div>

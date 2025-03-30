@@ -48,6 +48,13 @@ export const WEBSITE_ROUTES: Route[] = [
         data: { title: 'Paiement de facture' }
       },
       {
+        path: 'paiement/resultat/:id',
+        loadComponent: () =>
+          import('./paiement/paiement-resultat/paiement-resultat.component')
+            .then(m => m.PaiementResultatComponent),
+        data: { title: 'Résultat du paiement' }
+      },
+      {
         path: 'profil',
         loadComponent: () =>
           import('./profil/profil.component')

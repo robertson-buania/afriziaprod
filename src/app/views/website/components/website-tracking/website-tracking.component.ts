@@ -26,11 +26,7 @@ import { HttpClientModule } from '@angular/common/http';
                   <i class="las la-search me-2"></i>Suivre un colis
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" [class.active]="activeTab === 'register'" (click)="setActiveTab('register')">
-                  <i class="las la-box me-2"></i>Enregistrer un colis
-                </a>
-              </li>
+
             </ul>
 
             <!-- Formulaire de suivi -->
@@ -155,231 +151,7 @@ import { HttpClientModule } from '@angular/common/http';
               }
             }
 
-            <!-- Formulaire d'enregistrement -->
-            @if (activeTab === 'register') {
-              <div class="register-form">
-                <div class="card">
-                  <div class="card-body">
-                    <h2 class="text-center mb-4">Enregistrer un nouveau colis</h2>
 
-                    @if (registrationSuccess) {
-                      <div class="alert alert-success">
-                        <i class="las la-check-circle me-2"></i>
-                        Votre colis a été enregistré avec succès !<br>
-                        Code de suivi : <strong>{{ registrationSuccess }}</strong>
-                      </div>
-                    }
-
-                    <!-- Étape 1 : Recherche ou enregistrement du client -->
-                    @if (registrationStep === 'client') {
-                      <div class="client-step">
-                        <h5 class="mb-4">Étape 1 : Informations du client</h5>
-
-                        @if (clientSearchMode) {
-                          <div class="mb-4">
-                            <div class="input-group">
-                              <input
-                                type="email"
-                                class="form-control"
-                                formControlName="email"
-                                placeholder="Entrez votre email"
-                              >
-                              <button
-                                class="btn btn-outline-primary"
-                                type="button"
-                                (click)="searchClient()"
-                                [disabled]="isLoading || !clientForm.get('email')?.valid"
-                              >
-                                <i class="las" [ngClass]="{'la-search': !isLoading, 'la-spinner la-spin': isLoading}"></i>
-                                Rechercher
-                              </button>
-                            </div>
-                            @if (clientSearchError) {
-                              <div class="alert alert-danger mt-3">
-                                {{ clientSearchError }}
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <form [formGroup]="clientForm" (ngSubmit)="onClientSubmit()">
-                          <div class="row mb-4">
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Nom</label>
-                              <input type="text" class="form-control" formControlName="nom">
-                              @if (clientForm.get('nom')?.invalid && clientForm.get('nom')?.touched) {
-                                <div class="text-danger mt-1">Le nom est requis</div>
-                              }
-                            </div>
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Prénom</label>
-                              <input type="text" class="form-control" formControlName="prenom">
-                              @if (clientForm.get('prenom')?.invalid && clientForm.get('prenom')?.touched) {
-                                <div class="text-danger mt-1">Le prénom est requis</div>
-                              }
-                            </div>
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Email</label>
-                              <input type="email" class="form-control" formControlName="email">
-                              @if (clientForm.get('email')?.invalid && clientForm.get('email')?.touched) {
-                                <div class="text-danger mt-1">Email invalide</div>
-                              }
-                            </div>
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Téléphone</label>
-                              <div class="input-group">
-                                <select class="form-select" style="max-width: 200px;" formControlName="countryCode" (change)="onCountryChange()">
-                                  @for(country of countries; track country.code) {
-                                    <option [value]="country.code">{{ country.name }} ({{ country.dialCode }})</option>
-                                  }
-                                </select>
-                                <input type="tel" class="form-control" formControlName="telephone" [placeholder]="getPhonePlaceholder()">
-                              </div>
-                              @if (clientForm.get('telephone')?.invalid && clientForm.get('telephone')?.touched) {
-                                <div class="text-danger mt-1">Format de téléphone invalide pour le pays sélectionné</div>
-                              }
-                            </div>
-                            <div class="col-12 mb-3">
-                              <label class="form-label">Adresse</label>
-                              <input type="text" class="form-control" formControlName="adresse">
-                            </div>
-                          </div>
-
-                          <div class="d-flex justify-content-between">
-                            <button
-                              type="button"
-                              class="btn btn-outline-primary"
-                              (click)="toggleClientSearchMode()"
-                            >
-                              <i class="las" [ngClass]="{'la-search': !clientSearchMode, 'la-user-plus': clientSearchMode}"></i>
-                              {{ clientSearchMode ? 'Nouveau client' : 'Client existant' }}
-                            </button>
-                            <button
-                              type="submit"
-                              class="btn btn-primary"
-                              [disabled]="clientForm.invalid || isSubmitting"
-                            >
-                              <i class="las" [ngClass]="{'la-arrow-right': !isSubmitting, 'la-spinner la-spin': isSubmitting}"></i>
-                              {{ isSubmitting ? 'Enregistrement...' : 'Suivant' }}
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    }
-
-                    <!-- Étape 2 : Informations du colis -->
-                    @if (registrationStep === 'colis') {
-                      <div class="colis-step">
-                        <h5 class="mb-4">Étape 2 : Informations du colis</h5>
-
-                        <form [formGroup]="colisForm" (ngSubmit)="onColisSubmit()">
-                          <div class="row mb-4">
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Code de suivi</label>
-                              <input type="text" class="form-control" formControlName="codeSuivi" placeholder="Ex: KA123456">
-                              @if (colisForm.get('codeSuivi')?.invalid && colisForm.get('codeSuivi')?.touched) {
-                                <div class="text-danger mt-1">Le code de suivi est requis (minimum 3 caractères)</div>
-                              }
-                            </div>
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Type de colis</label>
-                              <select class="form-select" formControlName="type">
-                                @for (type of getTypeColis(); track type.value) {
-                                  <option [value]="type.value">{{ type.label }}</option>
-                                }
-                              </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Type d'expédition</label>
-                              <select class="form-select" formControlName="typeExpedition">
-                                @for (type of getTypeExpedition(); track type.value) {
-                                  <option [value]="type.value">{{ type.label }}</option>
-                                }
-                              </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                              <label class="form-label">Poids (kg)</label>
-                              <input type="number" class="form-control" formControlName="poids">
-                            </div>
-                            <div class="col-md-6 mb-3" *ngIf="showUnites()">
-                              <label class="form-label">Nombre d'unités</label>
-                              <input type="number" class="form-control" formControlName="nombreUnites">
-                            </div>
-                            <div class="col-12">
-                              <label class="form-label">Description</label>
-                              <textarea class="form-control" rows="3" formControlName="description"></textarea>
-                            </div>
-                          </div>
-
-                          <div class="d-flex justify-content-between">
-                            <button
-                              type="button"
-                              class="btn btn-outline-secondary"
-                              (click)="registrationStep = 'client'"
-                            >
-                              <i class="las la-arrow-left me-2"></i>Retour
-                            </button>
-                            <div>
-                              <button
-                                type="button"
-                                class="btn btn-outline-primary me-2"
-                                (click)="addAnotherColis()"
-                                [disabled]="colisForm.invalid || isSubmitting"
-                              >
-                                <i class="las la-plus me-2"></i>Ajouter un autre colis
-                              </button>
-                              <button
-                                type="submit"
-                                class="btn btn-primary"
-                                [disabled]="colisForm.invalid || isSubmitting"
-                              >
-                                <i class="las" [ngClass]="{'la-paper-plane': !isSubmitting, 'la-spinner la-spin': isSubmitting}"></i>
-                                {{ isSubmitting ? 'Enregistrement...' : 'Terminer' }}
-                              </button>
-                            </div>
-                          </div>
-                        </form>
-
-                        @if (colisList.length > 0) {
-                          <div class="mt-4">
-                            <h6 class="mb-3">Colis enregistrés</h6>
-                            <div class="table-responsive">
-                              <table class="table table-sm">
-                                <thead>
-                                  <tr>
-                                    <th>Type</th>
-                                    <th>Poids</th>
-                                    <th>Description</th>
-                                    <th class="text-end">Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  @for (colis of colisList; track colis.codeSuivi) {
-                                    <tr>
-                                      <td>{{ getTypeColisLabel(colis.type) }}</td>
-                                      <td>{{ colis.poids }} kg</td>
-                                      <td>{{ colis.description }}</td>
-                                      <td class="text-end">
-                                        <button
-                                          class="btn btn-sm btn-outline-danger"
-                                          (click)="removeColis(colis)"
-                                        >
-                                          <i class="las la-trash"></i>
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  }
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
           </div>
         </div>
       </div>
@@ -899,9 +671,47 @@ export class WebsiteTrackingComponent implements OnInit {
       // Obtenir l'URL de retour
       const returnUrl = `${window.location.origin}/tracking?payment=success`;
 
+      // Préparer les articles pour le paiement
+      const items = this.colisList.map(colis => ({
+        id: colis.codeSuivi || '',
+        name: colis.nature || `Colis ${colis.type}`,
+        price: colis.cout || 0,
+        quantity: 1
+      }));
+
+      // Préparer les informations client
+      const customer = {
+        customer_name: this.selectedClient.nom || '',
+        customer_surname: this.selectedClient.prenom || '',
+        customer_email: this.selectedClient.email || '',
+        customer_phone_number: String(this.selectedClient.telephone || ''),
+        customer_address: this.selectedClient.adresse || '',
+        customer_city: this.selectedClient.adresse || '', // Utiliser l'adresse comme ville si la propriété ville n'existe pas
+        customer_country: 'CM', // Code pays par défaut pour le Cameroun
+        customer_state: '',
+        customer_zip_code: ''
+      };
+
+      // Calculer le montant total
+      const totalAmount = this.getTotalCost();
+
       // Initier le paiement
       const response = await firstValueFrom(
-        this.paymentService.initiatePayment(this.colisList, this.selectedClient, returnUrl)
+        this.paymentService.initiatePayment({
+          factureId: `tracking-${Date.now()}`,
+          amount: totalAmount,
+          currency: 'USD',
+          customer: customer,
+          items: items,
+          return_url: returnUrl,
+          notify_url: `${window.location.origin}/api/payment-notification`,
+          channels: 'ALL',
+          metadata: {
+            factureId: '',
+            clientId: this.selectedClient.id || '',
+            colisIds: this.colisList.map(c => c.codeSuivi)
+          }
+        })
       );
 
       // Rediriger vers la page de paiement

@@ -6,6 +6,7 @@ import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
 import { Facture, Colis, STATUT_COLIS, Paiement } from '@/app/models/partenaire.model';
 import { Subscription } from 'rxjs';
+import { PaymentService } from '@/app/core/services/payment.service';
 
 @Component({
   selector: 'app-mes-commandes',
@@ -30,24 +31,37 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   isLoading = true;
   isLoadingColis = false;
   errorMessage = '';
+  successMessage = '';
+  isPaiementEnCours = false;
   activeTab = 1; // 1: Toutes, 2: Payées, 3: Non payées
 
   // États pour le détail d'une facture
   detailsVisible = false;
 
   private subscription = new Subscription();
+  private utilisateurConnecte: any = null;
 
   constructor(
     private utilisateurService: UtilisateurService,
-    private firebaseService: FirebaseService
+    private firebaseService: FirebaseService,
+    private paymentService: PaymentService
   ) {}
 
   ngOnInit(): void {
     this.chargerFactures();
+    this.chargerUtilisateur();
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+  }
+
+  private chargerUtilisateur(): void {
+    this.subscription.add(
+      this.utilisateurService.utilisateurCourant$.subscribe(user => {
+        this.utilisateurConnecte = user;
+      })
+    );
   }
 
   private chargerFactures(): void {
@@ -262,10 +276,110 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     this.isLoadingColis = false;
   }
 
-  // Navigation vers la page de paiement
-  payerFacture(facture: Facture): void {
-    if (facture.id) {
-      window.location.href = `/paiement/${facture.id}`;
+  /**
+   * Calcule le montant restant à payer pour une facture
+   */
+  getMontantRestant(facture: Facture): number {
+    return facture.montant - facture.montantPaye;
+  }
+
+  /**
+   * Paie une facture via CinetPay
+   */
+  async payerFactureCinetPay(facture: Facture): Promise<void> {
+    if (!facture.id) {
+      this.errorMessage = "Identifiant de facture non trouvé";
+      return;
+    }
+
+    if (facture.montant <= facture.montantPaye) {
+      this.successMessage = "Cette facture est déjà entièrement payée";
+      return;
+    }
+
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.isPaiementEnCours = true;
+
+    try {
+      // Préparer les informations client pour CinetPay
+      const customer = {
+        customer_name: this.utilisateurConnecte?.nom || 'Client',
+        customer_surname: this.utilisateurConnecte?.prenom || '',
+        customer_email: this.utilisateurConnecte?.email || 'client@example.com',
+        customer_phone_number: this.utilisateurConnecte?.telephone || '0',
+        customer_address: this.utilisateurConnecte?.partenaire?.adresse || '',
+        customer_city: '',
+        customer_country: 'CM',
+        customer_state: '',
+        customer_zip_code: ''
+      };
+
+      // URL de retour après paiement
+      const returnUrl = `${window.location.origin}/paiement/resultat/${facture.id}?success=true`;
+
+      // Récupérer les objets de colis
+      let colis: Colis[] = [];
+      if (facture.colisObjets && Array.isArray(facture.colisObjets)) {
+        colis = facture.colisObjets;
+      } else if (facture.colis && Array.isArray(facture.colis)) {
+        // Filtrer pour obtenir uniquement les objets Colis
+        colis = facture.colis.filter(item =>
+          typeof item !== 'string' && item !== null
+        ) as Colis[];
+
+        // Si ce sont tous des IDs, charger les objets Colis
+        if (colis.length === 0 && facture.colis.length > 0) {
+          const colisIds = facture.colis.filter(id => typeof id === 'string') as string[];
+          const colisPromises = colisIds.map(id => this.firebaseService.getColisById(id));
+          const colisObjets = await Promise.all(colisPromises);
+          colis = colisObjets.filter(c => c !== null) as Colis[];
+        }
+      }
+
+      // Préparer les articles pour le paiement
+      const items = colis.map(c => ({
+        id: c.id || '',
+        name: c.nature || `Colis #${c.id?.substring(0, 8) || ''}`,
+        price: this.getMontantRestant(facture) / colis.length,
+        quantity: 1
+      }));
+
+      // Initialiser le paiement avec CinetPay
+      this.paymentService.initiatePayment({
+        factureId: facture.id,
+        amount: this.getMontantRestant(facture),
+        currency: 'USD',
+        customer: customer,
+        items: items,
+        return_url: returnUrl,
+        notify_url: `${window.location.origin}/api/payment-notification`,
+        channels: 'ALL',
+        metadata: {
+          factureId: facture.id,
+          clientId: this.utilisateurConnecte?.id || facture.partenaireId || '',
+          colisIds: colis.map(c => c.id)
+        }
+      }).subscribe(
+        (response) => {
+          if (response && response.code === '201' && response.data && response.data.payment_url) {
+            // Rediriger vers la page de paiement CinetPay
+            window.location.href = response.data.payment_url;
+          } else {
+            this.errorMessage = 'Erreur lors de l\'initialisation du paiement: ' + (response.message || 'Erreur inconnue');
+            this.isPaiementEnCours = false;
+          }
+        },
+        (error) => {
+          console.error('Erreur lors de l\'initialisation du paiement:', error);
+          this.errorMessage = 'Une erreur est survenue lors de l\'initialisation du paiement.';
+          this.isPaiementEnCours = false;
+        }
+      );
+    } catch (error) {
+      console.error('Erreur lors de la préparation du paiement:', error);
+      this.errorMessage = 'Une erreur est survenue lors de la préparation du paiement.';
+      this.isPaiementEnCours = false;
     }
   }
 

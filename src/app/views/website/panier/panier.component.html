@@ -1,146 +1,257 @@
-<div class="container py-5">
-  <div class="row">
+<div class="container py-3">
+  <div class="row mb-2">
     <div class="col-12">
-      <div class="card shadow-lg rounded-3 border-0">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
-          <h2 class="h4 mb-0">Mon Panier</h2>
-          <span class="badge bg-light text-primary">{{ colis.length }} article(s)</span>
-        </div>
+      <h1 class="h3 mb-0">Mon Panier</h1>
+      <p class="text-muted">Liste des colis en attente de facturation</p>
+    </div>
+  </div>
 
-        <div class="card-body p-4">
-          <!-- Messages d'information -->
-          <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
-            <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
-          </div>
+  <!-- Messages d'information -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
 
-          <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="las la-check-circle me-2"></i>{{ successMessage }}
-            <button type="button" class="btn-close" (click)="successMessage = ''"></button>
-          </div>
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+    <i class="las la-check-circle me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
 
-          <!-- Loader -->
-          <div *ngIf="isLoading" class="text-center my-5">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Chargement...</span>
+  <!-- Indicateur de paiement en cours -->
+  <div *ngIf="isPaiementEnCours" class="alert alert-info text-center mb-3">
+    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <span>Redirection vers la page de paiement sécurisée...</span>
+  </div>
+
+  <!-- Loader -->
+  <div *ngIf="isLoading" class="text-center my-3">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <p class="mt-2 text-muted">Chargement du panier...</p>
+  </div>
+
+  <!-- Contenu principal - Panier vide ou non -->
+  <div *ngIf="!isLoading">
+    <!-- Panier vide -->
+    <div *ngIf="colis.length === 0" class="text-center my-3">
+      <div class="empty-cart-icon mb-2">
+        <i class="las la-shopping-cart la-3x text-muted"></i>
+      </div>
+      <h3 class="h5 mb-2">Votre panier est vide</h3>
+      <p class="text-muted mb-3">Vous n'avez aucun colis dans votre panier.</p>
+      <a routerLink="/recherche-colis" class="btn btn-primary">
+        <i class="las la-search me-2"></i>Rechercher un colis
+      </a>
+    </div>
+
+    <!-- Panier avec des articles -->
+    <div *ngIf="colis.length > 0">
+      <div class="row">
+        <!-- Liste des colis -->
+        <div class="col-lg-8">
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light py-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Colis dans le panier ({{ colis.length }})</h5>
+                <button class="btn btn-sm btn-outline-danger" (click)="viderPanier()">
+                  <i class="las la-trash-alt me-1"></i>Vider le panier
+                </button>
+              </div>
             </div>
-            <p class="mt-2 text-muted">Chargement de votre panier...</p>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="ps-3" style="width: 40%">Colis</th>
+                      <th style="width: 20%">Statut</th>
+                      <th style="width: 20%">Coût</th>
+                      <th class="text-end pe-3" style="width: 20%">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of colis">
+                      <td class="ps-3">
+                        <div class="d-flex align-items-center">
+                          <div class="colis-icon me-3">
+                            <i class="las la-box text-primary"></i>
+                          </div>
+                          <div class="colis-details">
+                            <div class="fw-bold text-truncate" style="max-width: 200px;" [title]="item.description || 'Aucune description'">
+                              {{ item.description || 'Colis #' + item.id?.substring(0, 8) }}
+                            </div>
+                            <div class="small text-muted">
+                              {{ item.codeSuivi }}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge bg-info">{{ getStatutLabel(item.statut) }}</span>
+                      </td>
+                      <td>
+                        <span class="fw-bold">{{ item.cout | currency:'USD':'symbol' }}</span>
+                      </td>
+                      <td class="text-end pe-3">
+                        <button class="btn btn-sm btn-outline-danger"
+                                (click)="confirmerSuppression(confirmDeleteModal, item.id || '')">
+                          <i class="las la-trash-alt"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <!-- Panier vide -->
-          <div *ngIf="!isLoading && colis.length === 0" class="text-center my-5">
-            <div class="empty-cart-icon mb-4">
-              <i class="las la-shopping-cart la-5x text-muted"></i>
-            </div>
-            <h3 class="h5 mb-3">Votre panier est vide</h3>
-            <p class="text-muted mb-4">Ajoutez des colis à votre panier pour créer une facture.</p>
-            <a routerLink="/recherche-colis" class="btn btn-primary">
-              <i class="las la-search me-2"></i>Rechercher un colis
+          <!-- Bouton pour continuer les achats -->
+          <div class="mb-3">
+            <a routerLink="/recherche-colis" class="btn btn-outline-primary">
+              <i class="las la-search me-2"></i>Rechercher d'autres colis
             </a>
           </div>
+        </div>
 
-          <!-- Liste des colis dans le panier -->
-          <div *ngIf="!isLoading && colis.length > 0 && !isFacturationFormVisible">
-            <div class="mb-4 d-flex justify-content-between align-items-center">
-              <h3 class="h5 mb-0">Articles dans votre panier</h3>
-              <button class="btn btn-outline-danger btn-sm" (click)="viderPanier()">
-                <i class="las la-trash me-1"></i>Vider le panier
-              </button>
+        <!-- Résumé du panier et facturation -->
+        <div class="col-lg-4">
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light py-3">
+              <h5 class="card-title mb-0">Résumé</h5>
             </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between mb-2">
+                <span>Nombre de colis</span>
+                <span class="fw-bold">{{ colis.length }}</span>
+              </div>
+              <div class="d-flex justify-content-between mb-3">
+                <span>Total</span>
+                <span class="fw-bold text-primary">{{ total | currency:'USD':'symbol' }}</span>
+              </div>
 
-            <div class="table-responsive">
-              <table class="table table-hover align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th>Colis</th>
-                    <th>Destinataire</th>
-                    <th>Destination</th>
-                    <th class="text-end">Coût</th>
-                    <th class="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let item of colis">
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="colis-icon me-3 bg-light p-2 rounded">
-                          <i class="las la-box la-2x text-primary"></i>
-                        </div>
-                        <div>
-                          <h6 class="mb-0">{{ item.codeSuivi }}</h6>
-                          <small class="text-muted">{{ getTypeExpeditionLabel(item.typeExpedition) }}</small>
+              <hr class="my-3">
+
+              <!-- Type d'expédition -->
+              <div class="mb-3">
+                <label class="form-label fw-medium">Type d'expédition</label>
+                <div class="d-flex gap-2">
+                  <div class="form-check flex-grow-1">
+                    <input class="form-check-input" type="radio" name="typeExpedition" id="expeditionStandard"
+                           [value]="TYPE_EXPEDITION.STANDARD" [(ngModel)]="selectedExpeditionType"
+                           (change)="onExpeditionTypeChange()">
+                    <label class="form-check-label d-flex justify-content-between align-items-center" for="expeditionStandard">
+                      <span>Standard</span>
+                      <span class="badge bg-secondary">Régulier</span>
+                    </label>
+                  </div>
+                  <div class="form-check flex-grow-1">
+                    <input class="form-check-input" type="radio" name="typeExpedition" id="expeditionExpress"
+                           [value]="TYPE_EXPEDITION.EXPRESS" [(ngModel)]="selectedExpeditionType"
+                           (change)="onExpeditionTypeChange()">
+                    <label class="form-check-label d-flex justify-content-between align-items-center" for="expeditionExpress">
+                      <span>Express</span>
+                      <span class="badge bg-primary">Rapide</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Tableau informatif des tarifs -->
+                <div class="expedition-info mt-2">
+                  <div class="accordion-item">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed py-2" type="button"
+                              data-bs-toggle="collapse" data-bs-target="#expeditionTarifInfo"
+                              aria-expanded="false" aria-controls="expeditionTarifInfo">
+                        Voir les détails des tarifs
+                      </button>
+                    </h2>
+                    <div id="expeditionTarifInfo" class="accordion-collapse collapse">
+                      <div class="accordion-body p-2">
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Type de colis</th>
+                                <th>Standard ($/kg)</th>
+                                <th>Express ($/kg)</th>
+                                <th>Frais supplémentaires</th>
+                              </tr>
+                            </thead>
+                            <tbody class="small">
+                              <tr>
+                                <td>Ordinaire</td>
+                                <td>17</td>
+                                <td>18</td>
+                                <td>Aucun</td>
+                              </tr>
+                              <tr>
+                                <td>Avec batterie</td>
+                                <td>20</td>
+                                <td>20</td>
+                                <td>Aucun</td>
+                              </tr>
+                              <tr>
+                                <td>Ordinateur</td>
+                                <td>20</td>
+                                <td>20</td>
+                                <td>+30$ par unité</td>
+                              </tr>
+                              <tr>
+                                <td>Téléphone</td>
+                                <td>20</td>
+                                <td>20</td>
+                                <td>+10$ par unité</td>
+                              </tr>
+                            </tbody>
+                          </table>
                         </div>
                       </div>
-                    </td>
-                    <td>{{ item.destinataire }}</td>
-                    <td>{{ item.destination }}</td>
-                    <td class="text-end fw-bold">{{ item.cout }} $</td>
-                    <td class="text-center">
-                      <button class="btn btn-sm btn-outline-danger" (click)="confirmerSuppression(deleteModal, item.id!)">
-                        <i class="las la-times"></i>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot class="table-light">
-                  <tr>
-                    <td colspan="3" class="text-end fw-bold">Total</td>
-                    <td class="text-end fw-bold fs-5 text-primary">{{ total }} $</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-            <div class="d-flex justify-content-between mt-4">
-              <a routerLink="/recherche-colis" class="btn btn-outline-primary">
-                <i class="las la-arrow-left me-2"></i>Continuer mes recherches
-              </a>
-              <button class="btn btn-success" (click)="afficherFormulaireFacturation()">
-                <i class="las la-file-invoice-dollar me-2"></i>Procéder au paiement
+              <button class="btn btn-success w-100" (click)="afficherFormulaireFacturation()">
+                <i class="las la-credit-card me-2"></i>Payer maintenant
               </button>
             </div>
           </div>
 
           <!-- Formulaire de facturation -->
-          <div *ngIf="!isLoading && isFacturationFormVisible" class="facturation-form">
-            <h3 class="h5 mb-3">Finaliser la commande</h3>
-
-            <form [formGroup]="facturationForm" (ngSubmit)="creerFacture()">
-              <div class="alert alert-info mb-3">
-                <i class="las la-user-check me-2"></i>
-                La facture sera générée pour votre compte partenaire connecté.
-              </div>
-
-              <!-- Champ caché pour le partenaireId -->
-              <input type="hidden" formControlName="partenaireId">
-
-              <div class="card mb-4">
-                <div class="card-header bg-light">
-                  <h5 class="card-title mb-0">Récapitulatif de la commande</h5>
-                </div>
-                <div class="card-body">
-                  <div class="d-flex justify-content-between mb-2">
-                    <span>Nombre d'articles</span>
-                    <span>{{ colis.length }}</span>
-                  </div>
-                  <div class="d-flex justify-content-between">
-                    <span class="fw-bold">Total à payer</span>
-                    <span class="fw-bold text-primary">{{ total }} $</span>
+          <div *ngIf="isFacturationFormVisible" class="card shadow-sm mb-4">
+            <div class="card-header bg-light py-3">
+              <h5 class="card-title mb-0">Confirmation de paiement</h5>
+            </div>
+            <div class="card-body">
+              <form [formGroup]="facturationForm" (ngSubmit)="creerFacture()">
+                <div class="mb-3" *ngIf="!partenaireId">
+                  <label for="partenaireId" class="form-label">ID du partenaire</label>
+                  <input type="text" id="partenaireId" class="form-control" formControlName="partenaireId">
+                  <div *ngIf="facturationForm.get('partenaireId')?.invalid && facturationForm.get('partenaireId')?.touched" class="text-danger small mt-1">
+                    L'ID du partenaire est requis.
                   </div>
                 </div>
-              </div>
 
-              <div class="d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" (click)="annulerFacturation()">
-                  <i class="las la-arrow-left me-2"></i>Retour au panier
-                </button>
-                <button type="submit" class="btn btn-success" [disabled]="facturationForm.invalid || isProcessing">
-                  <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  <i *ngIf="!isProcessing" class="las la-check-circle me-2"></i>Confirmer et payer
-                </button>
-              </div>
-            </form>
+                <div class="mb-3">
+                  <div class="alert alert-info">
+                    <i class="las la-info-circle me-2"></i> Vous allez être redirigé vers une page de paiement sécurisée.
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-3">
+                  <button type="button" class="btn btn-outline-secondary" (click)="annulerFacturation()">
+                    <i class="las la-times me-1"></i>Annuler
+                  </button>
+                  <button type="submit" class="btn btn-primary" [disabled]="facturationForm.invalid || isProcessing">
+                    <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    <i *ngIf="!isProcessing" class="las la-credit-card me-1"></i>Procéder au paiement
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
@@ -149,50 +260,20 @@
 </div>
 
 <!-- Modal de confirmation de suppression -->
-<ng-template #deleteModal let-modal>
-  <div class="modal-header bg-danger">
-    <h5 class="modal-title text-white">Confirmation</h5>
-    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+<ng-template #confirmDeleteModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Supprimer le colis</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
   </div>
-  <div class="modal-body text-center">
-    <i class="las la-exclamation-triangle text-danger fs-1 mb-3"></i>
-    <p>Êtes-vous sûr de vouloir supprimer cet article de votre panier ?</p>
+  <div class="modal-body">
+    <p>Êtes-vous sûr de vouloir supprimer ce colis de votre panier ?</p>
   </div>
   <div class="modal-footer">
-    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Annuler</button>
-    <button type="button" class="btn btn-danger" (click)="modal.close('confirm')">
-      <i class="las la-trash me-1"></i>Supprimer
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel click')">
+      <i class="las la-times me-1"></i>Annuler
     </button>
-  </div>
-</ng-template>
-
-<!-- Modal de connexion requise -->
-<ng-template #connexionRequiseModal let-modal>
-  <div class="modal-header bg-primary">
-    <h5 class="modal-title text-white">Connexion requise</h5>
-    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
-  </div>
-  <div class="modal-body text-center">
-    <i class="las la-user-lock fs-1 text-primary mb-3"></i>
-    <h4 class="mb-3">Vous n'êtes pas connecté</h4>
-    <p class="mb-4">Pour procéder au paiement, vous devez être connecté en tant que partenaire.</p>
-
-    <div class="d-flex flex-column gap-3">
-      <div class="border rounded p-3 bg-light">
-        <h5 class="mb-2">Déjà partenaire ?</h5>
-        <p class="text-muted mb-3">Connectez-vous à votre compte existant</p>
-        <button type="button" class="btn btn-primary w-100" (click)="modal.close(); ouvrirModalConnexion()">
-          <i class="las la-sign-in-alt me-2"></i>Se connecter
-        </button>
-      </div>
-
-      <div class="border rounded p-3">
-        <h5 class="mb-2">Nouveau partenaire ?</h5>
-        <p class="text-muted mb-3">Créez un compte et devenez partenaire</p>
-        <button type="button" class="btn btn-outline-primary w-100" (click)="modal.close(); ouvrirModalInscription()">
-          <i class="las la-user-plus me-2"></i>Créer un compte
-        </button>
-      </div>
-    </div>
+    <button type="button" class="btn btn-danger" (click)="modal.close('confirm')">
+      <i class="las la-trash-alt me-1"></i>Supprimer
+    </button>
   </div>
 </ng-template>
