@@ -18,7 +18,7 @@ import {
   limit,
   getDoc
 } from '@angular/fire/firestore';
-import { Observable, from } from 'rxjs';
+import { Observable, from, switchMap } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Colis, Facture, Partenaire, Paiement, Sac } from '@/app/models/partenaire.model';
 import { Client } from '@/app/models/client.model';
@@ -43,9 +43,25 @@ export class FirebaseService {
     );
   }
 
-  async addPartenaire(partenaire: Omit<Partenaire, 'id'>): Promise<void> {
+  async addPartenaire(partenaire: Omit<Partenaire, 'id'>): Promise<string> {
     const colRef = collection(this.firestore, 'partenaires');
-    await addDoc(colRef, partenaire);
+    const docRef = await addDoc(colRef, {
+      ...partenaire,
+      factures: partenaire.factures || []
+    });
+    return docRef.id;
+  }
+
+  async getPartenaireByEmail(email: string): Promise<Partenaire | null> {
+    if (!email) return null;
+    const partenaireCollection = collection(this.firestore, 'partenaires');
+    const q = query(partenaireCollection, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Partenaire;
+    }
+    return null;
   }
 
   async updatePartenaire(partenaire: Partenaire): Promise<void> {
@@ -124,16 +140,51 @@ export class FirebaseService {
     await deleteDoc(docRef);
   }
 
+  // Méthode privée pour traiter une facture et convertir les IDs de colis en objets
+  private async processFacture(facture: Facture): Promise<Facture> {
+    const processedFacture = { ...facture };
+
+    // Convertir les IDs de colis en objets
+    if (facture.colis && facture.colis.length > 0) {
+      const colisObjets: Colis[] = [];
+
+      for (const colis of facture.colis) {
+        if (typeof colis === 'string') {
+          try {
+            const colisObj = await this.getColisById(colis);
+            if (colisObj) {
+              colisObjets.push(colisObj);
+            }
+          } catch (error) {
+            console.error(`Erreur lors du chargement du colis ${colis}:`, error);
+          }
+        } else {
+          colisObjets.push(colis);
+        }
+      }
+
+      processedFacture.colisObjets = colisObjets;
+    } else {
+      processedFacture.colisObjets = [];
+    }
+
+    return processedFacture;
+  }
+
   // Méthodes pour les factures
   getFactures(): Observable<Facture[]> {
     const colRef = collection(this.firestore, 'factures');
     return from(getDocs(colRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map((doc:any) => ({
+        const factures = snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Facture[];
-      })
+
+        // Convertir les factures pour ajouter colisObjets
+        return from(Promise.all(factures.map(facture => this.processFacture(facture))));
+      }),
+      switchMap(factures => factures)
     );
   }
 
@@ -207,16 +258,31 @@ export class FirebaseService {
     const colRef = collection(this.firestore, 'factures');
     const q = query(
       colRef,
-      where('partenaireId', '==', partenaireId),
-      orderBy('dateCreation', 'desc')
+      where('partenaireId', '==', partenaireId)
     );
     return from(getDocs(q)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        return snapshot.docs.map((doc:any) => ({
+        const factures = snapshot.docs.map((doc:any) => ({
           id: doc.id,
           ...doc.data()
         })) as Facture[];
-      })
+
+        // Trier les factures par date
+        const sortedFactures = factures.sort((a: Facture, b: Facture): number => {
+          if (!a.dateCreation && !b.dateCreation) return 0;
+          if (!a.dateCreation) return 1;
+          if (!b.dateCreation) return -1;
+
+          const dateA = new Date(a.dateCreation).getTime();
+          const dateB = new Date(b.dateCreation).getTime();
+
+          return dateB - dateA;
+        });
+
+        // Convertir les factures pour ajouter colisObjets
+        return from(Promise.all(sortedFactures.map(facture => this.processFacture(facture))));
+      }),
+      switchMap(factures => factures)
     );
   }
 

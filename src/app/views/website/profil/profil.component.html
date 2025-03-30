@@ -1,0 +1,155 @@
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12 mb-4">
+      <h1 class="h3 mb-0">Mon Profil</h1>
+      <p class="text-muted">Gérez vos informations personnelles et vos préférences</p>
+    </div>
+  </div>
+
+  <!-- Messages d'information -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="las la-check-circle me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
+
+  <!-- Loader -->
+  <div *ngIf="isLoading" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <p class="mt-2 text-muted">Chargement de vos informations...</p>
+  </div>
+
+  <div *ngIf="!isLoading" class="row">
+    <!-- Informations personnelles -->
+    <div class="col-lg-8 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Informations Personnelles</h5>
+          <button *ngIf="!isEditMode" type="button" class="btn btn-sm btn-primary" (click)="toggleEditMode()">
+            <i class="las la-edit me-1"></i>Modifier
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Mode affichage (par défaut) -->
+          <div *ngIf="!isEditMode">
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <p class="text-muted mb-1">Prénom</p>
+                <p class="fw-bold">{{ utilisateur?.prenom || '-' }}</p>
+              </div>
+              <div class="col-md-6">
+                <p class="text-muted mb-1">Nom</p>
+                <p class="fw-bold">{{ utilisateur?.nom || '-' }}</p>
+              </div>
+            </div>
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <p class="text-muted mb-1">Email</p>
+                <p class="fw-bold">{{ utilisateur?.email || '-' }}</p>
+              </div>
+              <div class="col-md-6">
+                <p class="text-muted mb-1">Téléphone</p>
+                <p class="fw-bold">{{ utilisateur?.telephone || '-' }}</p>
+              </div>
+            </div>
+            <div *ngIf="estPartenaire" class="mb-2">
+              <p class="text-muted mb-1">Adresse</p>
+              <p class="fw-bold">{{ partenaire?.adresse || 'Non spécifiée' }}</p>
+            </div>
+          </div>
+
+          <!-- Mode édition (affiché après clic sur le bouton Modifier) -->
+          <form *ngIf="isEditMode" [formGroup]="profilForm" (ngSubmit)="onSubmitProfile()">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="prenom" class="form-label">Prénom</label>
+                <input type="text" class="form-control" id="prenom" formControlName="prenom"
+                  [ngClass]="{'is-invalid': profilForm.get('prenom')?.invalid && profilForm.get('prenom')?.touched}">
+                <div *ngIf="profilForm.get('prenom')?.invalid && profilForm.get('prenom')?.touched" class="invalid-feedback">
+                  Le prénom est requis
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="nom" class="form-label">Nom</label>
+                <input type="text" class="form-control" id="nom" formControlName="nom"
+                  [ngClass]="{'is-invalid': profilForm.get('nom')?.invalid && profilForm.get('nom')?.touched}">
+                <div *ngIf="profilForm.get('nom')?.invalid && profilForm.get('nom')?.touched" class="invalid-feedback">
+                  Le nom est requis
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" formControlName="email"
+                [ngClass]="{'is-invalid': profilForm.get('email')?.invalid && profilForm.get('email')?.touched}">
+              <div *ngIf="profilForm.get('email')?.invalid && profilForm.get('email')?.touched" class="invalid-feedback">
+                <span *ngIf="profilForm.get('email')?.errors?.['required']">L'email est requis</span>
+                <span *ngIf="profilForm.get('email')?.errors?.['email']">Veuillez entrer un email valide</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="telephone" class="form-label">Téléphone</label>
+              <input type="tel" class="form-control" id="telephone" formControlName="telephone"
+                [ngClass]="{'is-invalid': profilForm.get('telephone')?.invalid && profilForm.get('telephone')?.touched}">
+              <div *ngIf="profilForm.get('telephone')?.invalid && profilForm.get('telephone')?.touched" class="invalid-feedback">
+                Le numéro de téléphone est requis
+              </div>
+            </div>
+
+            <div *ngIf="estPartenaire" class="mb-3">
+              <label for="adresse" class="form-label">Adresse</label>
+              <textarea class="form-control" id="adresse" formControlName="adresse" rows="3"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end">
+              <button type="button" class="btn btn-outline-secondary me-2" (click)="toggleEditMode()">
+                <i class="las la-times me-1"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary" [disabled]="profilForm.invalid || isUpdating">
+                <span *ngIf="isUpdating" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <i *ngIf="!isUpdating" class="las la-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informations du compte -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h5 class="card-title mb-0">Informations du Compte</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="user-avatar me-3 bg-primary text-white rounded-circle">
+              <i class="las la-user-circle fs-1"></i>
+            </div>
+            <div>
+              <h5 class="mb-0">{{ utilisateur?.prenom }} {{ utilisateur?.nom }}</h5>
+              <p class="text-muted mb-0">{{ utilisateur?.email }}</p>
+            </div>
+          </div>
+          <div class="mb-2">
+            <span *ngIf="estPartenaire" class="badge bg-primary">Partenaire</span>
+            <span *ngIf="!estPartenaire" class="badge bg-secondary">Utilisateur</span>
+            <span *ngIf="utilisateur?.estActif" class="badge bg-success ms-1">Actif</span>
+            <span *ngIf="!utilisateur?.estActif" class="badge bg-danger ms-1">Inactif</span>
+          </div>
+          <p class="text-muted small mb-0">
+            Membre depuis {{ utilisateur?.dateCreation | date:'mediumDate' }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

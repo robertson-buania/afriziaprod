@@ -14,7 +14,8 @@ export interface Facture{
   id?:string
   montant:number
   montantPaye:number
-  colis:Colis[]
+  colis:(Colis | string)[]
+  colisObjets?:Colis[]
   paiements:Paiement[]
   dateCreation?: string
   partenaireId?: string

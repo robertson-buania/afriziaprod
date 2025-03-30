@@ -29,6 +29,7 @@ import { initializeApp, provideFirebaseApp } from '@angular/fire/app'
 import { getFirestore, provideFirestore } from '@angular/fire/firestore'
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap'
 import { provideAnimations } from '@angular/platform-browser/animations'
+import { AuthModalService } from './core/services/auth-modal.service'
 
 const firebaseConfig = {
   apiKey: "AIzaSyBxspYrMsyjpIinpuIjOqHMqS2cRX7cZ0c",
@@ -54,6 +55,7 @@ export const appConfig: ApplicationConfig = {
     FakeBackendProvider,
     DatePipe,
     DecimalPipe,
+    AuthModalService,
     provideZoneChangeDetection({
       eventCoalescing: false,
       runCoalescing: false,

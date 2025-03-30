@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -6,15 +6,20 @@ import { NgbAlertModule, NgbModal, NgbModalModule } from '@ng-bootstrap/ng-boots
 import { PanierService } from '@/app/core/services/panier.service';
 import { Colis, STATUT_COLIS, TYPE_EXPEDITION } from '@/app/models/partenaire.model';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
+import { Subscription } from 'rxjs';
+import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.service';
+import { AuthModalModule } from '@/app/views/website/components/auth-modal/auth-modal.module';
 
 @Component({
   selector: 'app-panier',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, NgbAlertModule, NgbModalModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, NgbAlertModule, NgbModalModule, AuthModalModule],
   templateUrl: './panier.component.html',
   styleUrl: './panier.component.scss'
 })
-export class PanierComponent implements OnInit {
+export class PanierComponent implements OnInit, OnDestroy {
+  @ViewChild('connexionRequiseModal') connexionRequiseModal!: TemplateRef<any>;
+
   colis: Colis[] = [];
   total = 0;
   isLoading = false;
@@ -23,18 +28,39 @@ export class PanierComponent implements OnInit {
   facturationForm!: FormGroup;
   isFacturationFormVisible = false;
   isProcessing = false;
+  partenaireId: string | null = null;
+  private subscription = new Subscription();
 
   constructor(
     private panierService: PanierService,
     private utilisateurService: UtilisateurService,
     private router: Router,
     private fb: FormBuilder,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private authModalService: AuthModalService
   ) {}
 
   ngOnInit(): void {
     this.chargerPanier();
     this.initFacturationForm();
+    this.verifierUtilisateurConnecte();
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  private verifierUtilisateurConnecte(): void {
+    this.subscription.add(
+      this.utilisateurService.utilisateurCourant$.subscribe(utilisateur => {
+        if (utilisateur) {
+          this.partenaireId = utilisateur.partenaireId || null;
+          if (this.partenaireId) {
+            this.facturationForm.get('partenaireId')?.setValue(this.partenaireId);
+          }
+        }
+      })
+    );
   }
 
   private initFacturationForm(): void {
@@ -101,12 +127,27 @@ export class PanierComponent implements OnInit {
   }
 
   afficherFormulaireFacturation(): void {
+    if (!this.utilisateurService.estConnecte()) {
+      // Au lieu de rediriger, ouvrir le modal de connexion
+      this.ouvrirModalConnexion();
+      return;
+    }
+
+    // L'utilisateur est connecté mais n'est pas un partenaire
+    if (!this.partenaireId) {
+      this.errorMessage = 'Votre compte n\'est pas associé à un partenaire. Veuillez contacter l\'administrateur.';
+      return;
+    }
+
     this.isFacturationFormVisible = true;
   }
 
   annulerFacturation(): void {
     this.isFacturationFormVisible = false;
     this.facturationForm.reset();
+    if (this.partenaireId) {
+      this.facturationForm.get('partenaireId')?.setValue(this.partenaireId);
+    }
   }
 
   async creerFacture(): Promise<void> {
@@ -119,7 +160,14 @@ export class PanierComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      const partenaireId = this.facturationForm.get('partenaireId')?.value;
+      const partenaireId = this.facturationForm.get('partenaireId')?.value || this.partenaireId;
+
+      if (!partenaireId) {
+        this.errorMessage = 'ID de partenaire non spécifié';
+        this.isProcessing = false;
+        return;
+      }
+
       const factureId = await this.panierService.creerFactureDepuisPanier(partenaireId);
 
       if (factureId) {
@@ -151,5 +199,14 @@ export class PanierComponent implements OnInit {
         }
       }
     );
+  }
+
+  // Nouvelles méthodes pour ouvrir les modals d'authentification
+  ouvrirModalConnexion(): void {
+    this.authModalService.openAuthModal(AuthModalType.LOGIN);
+  }
+
+  ouvrirModalInscription(): void {
+    this.authModalService.openAuthModal(AuthModalType.REGISTER);
   }
 }

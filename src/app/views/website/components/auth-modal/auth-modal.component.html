@@ -1,0 +1,202 @@
+<div class="modal-header bg-primary text-white">
+  <h5 class="modal-title">
+    <span *ngIf="activeTab === 1">Connexion</span>
+    <span *ngIf="activeTab === 2">Inscription</span>
+    <span *ngIf="activeTab === 3">Récupération de mot de passe</span>
+  </h5>
+  <button type="button" class="btn-close btn-close-white" aria-label="Fermer" (click)="close()"></button>
+</div>
+
+<div class="modal-body">
+  <!-- Navigation des onglets -->
+  <ul ngbNav #authNav="ngbNav" [activeId]="activeTab" class="nav-tabs mb-4" (navChange)="onTabChange($event.nextId)">
+    <li [ngbNavItem]="1">
+      <a ngbNavLink>Connexion</a>
+    </li>
+    <li [ngbNavItem]="2">
+      <a ngbNavLink>Inscription</a>
+    </li>
+    <li [ngbNavItem]="3">
+      <a ngbNavLink>Mot de passe oublié</a>
+    </li>
+  </ul>
+
+  <!-- Messages -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="las la-exclamation-circle me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+    <i class="las la-check-circle me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
+
+  <!-- Contenu des onglets -->
+  <div [ngbNavOutlet]="authNav"></div>
+
+  <!-- Formulaire de Connexion -->
+  <div *ngIf="activeTab === 1">
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="las la-envelope"></i></span>
+          <input type="email" class="form-control" id="email" formControlName="email"
+            [ngClass]="{'is-invalid': loginForm.get('email')?.invalid && loginForm.get('email')?.touched}"
+            placeholder="Votre adresse email">
+        </div>
+        <div *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched" class="invalid-feedback d-block">
+          <span *ngIf="loginForm.get('email')?.errors?.['required']">L'email est requis</span>
+          <span *ngIf="loginForm.get('email')?.errors?.['email']">Veuillez entrer un email valide</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Mot de passe</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="las la-lock"></i></span>
+          <input type="password" class="form-control" id="password" formControlName="password"
+            [ngClass]="{'is-invalid': loginForm.get('password')?.invalid && loginForm.get('password')?.touched}"
+            placeholder="Votre mot de passe">
+        </div>
+        <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="invalid-feedback d-block">
+          Le mot de passe est requis
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="form-check">
+          <input type="checkbox" class="form-check-input" id="rememberMe" formControlName="rememberMe">
+          <label class="form-check-label" for="rememberMe">Se souvenir de moi</label>
+        </div>
+        <a href="javascript:void(0)" (click)="activeTab = 3" class="text-decoration-none">Mot de passe oublié ?</a>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary" [disabled]="loginForm.invalid || isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <i *ngIf="!isLoading" class="las la-sign-in-alt me-2"></i>Se connecter
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="activeTab = 2">
+          <i class="las la-user-plus me-2"></i>Créer un compte
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Formulaire d'Inscription -->
+  <div *ngIf="activeTab === 2">
+    <form [formGroup]="registerForm" (ngSubmit)="onRegister()">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label for="prenom" class="form-label">Prénom</label>
+          <input type="text" class="form-control" id="prenom" formControlName="prenom"
+            [ngClass]="{'is-invalid': registerForm.get('prenom')?.invalid && registerForm.get('prenom')?.touched}"
+            placeholder="Votre prénom">
+          <div *ngIf="registerForm.get('prenom')?.invalid && registerForm.get('prenom')?.touched" class="invalid-feedback">
+            Le prénom est requis
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label for="nom" class="form-label">Nom</label>
+          <input type="text" class="form-control" id="nom" formControlName="nom"
+            [ngClass]="{'is-invalid': registerForm.get('nom')?.invalid && registerForm.get('nom')?.touched}"
+            placeholder="Votre nom">
+          <div *ngIf="registerForm.get('nom')?.invalid && registerForm.get('nom')?.touched" class="invalid-feedback">
+            Le nom est requis
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="register-email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="register-email" formControlName="email"
+          [ngClass]="{'is-invalid': registerForm.get('email')?.invalid && registerForm.get('email')?.touched}"
+          placeholder="Votre adresse email">
+        <div *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched" class="invalid-feedback">
+          <span *ngIf="registerForm.get('email')?.errors?.['required']">L'email est requis</span>
+          <span *ngIf="registerForm.get('email')?.errors?.['email']">Veuillez entrer un email valide</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="telephone" class="form-label">Téléphone</label>
+        <input type="tel" class="form-control" id="telephone" formControlName="telephone"
+          [ngClass]="{'is-invalid': registerForm.get('telephone')?.invalid && registerForm.get('telephone')?.touched}"
+          placeholder="Votre numéro de téléphone">
+        <div *ngIf="registerForm.get('telephone')?.invalid && registerForm.get('telephone')?.touched" class="invalid-feedback">
+          Le numéro de téléphone est requis
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="register-password" class="form-label">Mot de passe</label>
+        <input type="password" class="form-control" id="register-password" formControlName="password"
+          [ngClass]="{'is-invalid': registerForm.get('password')?.invalid && registerForm.get('password')?.touched}"
+          placeholder="Votre mot de passe">
+        <div *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched" class="invalid-feedback">
+          <span *ngIf="registerForm.get('password')?.errors?.['required']">Le mot de passe est requis</span>
+          <span *ngIf="registerForm.get('password')?.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
+        <input type="password" class="form-control" id="confirmPassword" formControlName="confirmPassword"
+          [ngClass]="{'is-invalid': (registerForm.get('confirmPassword')?.invalid || registerForm.hasError('notMatching')) && registerForm.get('confirmPassword')?.touched}"
+          placeholder="Confirmez votre mot de passe">
+        <div *ngIf="(registerForm.get('confirmPassword')?.invalid || registerForm.hasError('notMatching')) && registerForm.get('confirmPassword')?.touched" class="invalid-feedback">
+          <span *ngIf="registerForm.get('confirmPassword')?.errors?.['required']">La confirmation du mot de passe est requise</span>
+          <span *ngIf="registerForm.hasError('notMatching')">Les mots de passe ne correspondent pas</span>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary" [disabled]="registerForm.invalid || isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <i *ngIf="!isLoading" class="las la-user-plus me-2"></i>S'inscrire
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="activeTab = 1">
+          <i class="las la-sign-in-alt me-2"></i>Déjà inscrit ? Se connecter
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Formulaire de Récupération de mot de passe -->
+  <div *ngIf="activeTab === 3">
+    <div class="text-center mb-4">
+      <i class="las la-key fs-1 text-primary"></i>
+      <h5 class="mt-2">Réinitialisation de mot de passe</h5>
+      <p class="text-muted">Entrez votre adresse email pour recevoir un lien de réinitialisation</p>
+    </div>
+
+    <form [formGroup]="forgotPasswordForm" (ngSubmit)="onForgotPassword()">
+      <div class="mb-3">
+        <label for="recovery-email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="recovery-email" formControlName="email"
+          [ngClass]="{'is-invalid': forgotPasswordForm.get('email')?.invalid && forgotPasswordForm.get('email')?.touched}"
+          placeholder="Votre adresse email">
+        <div *ngIf="forgotPasswordForm.get('email')?.invalid && forgotPasswordForm.get('email')?.touched" class="invalid-feedback">
+          <span *ngIf="forgotPasswordForm.get('email')?.errors?.['required']">L'email est requis</span>
+          <span *ngIf="forgotPasswordForm.get('email')?.errors?.['email']">Veuillez entrer un email valide</span>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary" [disabled]="forgotPasswordForm.invalid || isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <i *ngIf="!isLoading" class="las la-paper-plane me-2"></i>Envoyer le lien
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="activeTab = 1">
+          <i class="las la-arrow-left me-2"></i>Retour à la connexion
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <small class="text-muted">Kamba Agency &copy; {{ currentYear }}</small>
+</div>

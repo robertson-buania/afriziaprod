@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Colis, Facture, Partenaire, TYPE_COLIS, TYPE_EXPEDITION } from '@/app/models/partenaire.model';
+import { Colis, Facture, Partenaire, TYPE_COLIS, TYPE_EXPEDITION, Paiement } from '@/app/models/partenaire.model';
 import { computed, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { FacturePaiementModalComponent } from '../facture-paiement-modal/facture-paiement-modal.component';
@@ -20,6 +20,8 @@ export class FactureDetailsModalComponent implements OnInit {
   @Output() paiementRequest = new EventEmitter<string>();
 
   facture = signal<Facture | null>(null);
+  // Signal dédié pour les colis avec le type correct
+  colis = signal<Colis[]>([]);
   client = signal<Partenaire | null>(null);
   isLoading = signal(true);
 
@@ -27,6 +29,34 @@ export class FactureDetailsModalComponent implements OnInit {
     const facture = this.facture();
     if (!facture || facture.montant === 0) return 100;
     return (facture.montantPaye / facture.montant) * 100;
+  });
+
+  // Propriété computée pour obtenir la date de création de manière sûre
+  dateCreation = computed(() => {
+    const facture = this.facture();
+    if (!facture) return null;
+
+    if (facture.colisObjets && facture.colisObjets.length > 0 && facture.colisObjets[0].dateCreation) {
+      return facture.colisObjets[0].dateCreation;
+    }
+
+    return null;
+  });
+
+  // Propriété computée pour obtenir les paiements de manière sûre
+  paiements = computed((): Paiement[] => {
+    const facture = this.facture();
+    if (!facture) return [];
+
+    return facture.paiements || [];
+  });
+
+  // Propriété computée pour obtenir les colis de manière sûre
+  colisObjets = computed((): Colis[] => {
+    const facture = this.facture();
+    if (!facture) return [];
+
+    return facture.colisObjets || [];
   });
 
   constructor(
@@ -60,15 +90,44 @@ export class FactureDetailsModalComponent implements OnInit {
         return;
       }
 
+      // Convertir les IDs de colis en objets complets si nécessaire
+      if (facture.colis && facture.colis.length > 0) {
+        const colisArray = facture.colis;
+        const updatedColis: Colis[] = [];
+
+        for (const colisDonnee of colisArray) {
+          if (typeof colisDonnee === 'string') {
+            try {
+              // Si c'est un ID, charger l'objet colis complet
+              const colis = await this.firebaseService.getColisById(colisDonnee);
+              if (colis) {
+                updatedColis.push(colis);
+              }
+            } catch (error) {
+              console.error(`Erreur lors du chargement du colis ${colisDonnee}:`, error);
+            }
+          } else {
+            // Si c'est déjà un objet colis, l'ajouter directement
+            updatedColis.push(colisDonnee);
+          }
+        }
+
+        // Mettre à jour le signal des colis et la propriété colisObjets de la facture
+        this.colis.set(updatedColis);
+        facture.colisObjets = updatedColis;
+      } else {
+        this.colis.set([]);
+        facture.colisObjets = [];
+      }
+
       this.facture.set(facture);
 
-      // Charger les informations du client si des colis sont disponibles
-      if (facture.colis && facture.colis.length > 0) {
-        const colis = facture.colis[0];
-        const partenaireId = colis.partenaireId;
-        if (partenaireId) {
+      // Charger les informations du client
+      if (this.colis().length > 0) {
+        const firstColis = this.colis()[0];
+        if (firstColis.partenaireId) {
           const partenaires = await firstValueFrom(this.firebaseService.getPartenaires());
-          const client = partenaires.find(p => p.id === partenaireId);
+          const client = partenaires.find(p => p.id === firstColis.partenaireId);
           this.client.set(client || null);
         }
       }
@@ -136,5 +195,10 @@ export class FactureDetailsModalComponent implements OnInit {
       },
       () => {}
     );
+  }
+
+  // Vérifie si un élément est un objet Colis ou une chaîne ID
+  isColisDynamic(colis: Colis | string): colis is Colis {
+    return typeof colis !== 'string' && colis !== null && typeof colis === 'object';
   }
 }

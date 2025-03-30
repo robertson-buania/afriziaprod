@@ -55,9 +55,13 @@ export class PaiementListComponent implements OnInit {
       // Enrichir les paiements avec les informations de la facture
       const paiementsEnrichis = paiements.map(paiement => {
         const facture = factures.find(f => f.id === paiement.id_facture);
-        const clientNom = facture?.colis && facture.colis.length > 0 ?
-          `${facture.colis[0].clientNom} ${facture.colis[0].clientPrenom}` :
-          'Client inconnu';
+
+        // Utiliser colisObjets s'il existe, sinon utiliser colis
+        const clientNom = facture?.colisObjets && facture.colisObjets.length > 0 ?
+          `${facture.colisObjets[0].clientNom} ${facture.colisObjets[0].clientPrenom}` :
+          (facture?.colis && facture.colis.length > 0 && typeof facture.colis[0] !== 'string' ?
+            `${(facture.colis[0] as any).clientNom} ${(facture.colis[0] as any).clientPrenom}` :
+            'Client inconnu');
 
         return {
           ...paiement,

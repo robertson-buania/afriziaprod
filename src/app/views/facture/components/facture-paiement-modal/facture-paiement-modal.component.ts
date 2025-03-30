@@ -6,6 +6,7 @@ import { FirebaseService } from '@/app/core/services/firebase.service';
 import { Facture, Partenaire, Paiement, TYPE_PAIEMENT } from '@/app/models/partenaire.model';
 import { computed, signal } from '@angular/core';
 import { STATUT_COLIS } from '@/app/models/partenaire.model';
+import { Colis } from '@/app/models/partenaire.model';
 
 interface PaiementForm {
   typePaiement: number;
@@ -25,6 +26,8 @@ export class FacturePaiementModalComponent implements OnInit {
   @Input() facture: Facture | null = null;
   @Input() client: Partenaire | null = null;
 
+  // Signal pour les colis
+  colisArray = signal<Colis[]>([]);
   paiementForm!: FormGroup;
   isSubmitting = signal(false);
   typePaiementOptions = Object.keys(TYPE_PAIEMENT)
@@ -45,8 +48,13 @@ export class FacturePaiementModalComponent implements OnInit {
     private firebaseService: FirebaseService
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.initForm();
+
+    // Charger les colis complets
+    if (this.facture && this.facture.colis) {
+      await this.loadColis();
+    }
   }
 
   initForm(): void {
@@ -135,21 +143,22 @@ export class FacturePaiementModalComponent implements OnInit {
 
   // Mettre à jour le statut des colis si la facture est complètement payée
   private async updateColisStatus(): Promise<void> {
-    if (!this.facture || !this.facture.colis) return;
+    const colis = this.colisArray();
+    if (colis.length === 0) return;
 
     try {
-      // Filtrer les colis qui doivent être mis à jour
-      const colisToUpdate = this.facture.colis.filter(colis =>
-        colis.id &&
-        (colis.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT || colis.statut === STATUT_COLIS.EN_ATTENTE_FACTURATION)
+      // Filtrer les colis qui doivent être mis à jour (uniquement ceux avec statut approprié)
+      const colisToUpdate = colis.filter(c =>
+        c.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT ||
+        c.statut === STATUT_COLIS.EN_ATTENTE_FACTURATION
       );
 
       if (colisToUpdate.length === 0) return;
 
       // Créer un tableau de promesses pour les mises à jour
-      const updatePromises = colisToUpdate.map(colis => {
-        console.log(`Mise à jour du statut du colis ${colis.id} vers EN_ATTENTE_LIVRAISON`);
-        return this.firebaseService.updateColis(colis.id!, {
+      const updatePromises = colisToUpdate.map(c => {
+        console.log(`Mise à jour du statut du colis ${c.id} vers EN_ATTENTE_LIVRAISON`);
+        return this.firebaseService.updateColis(c.id!, {
           statut: STATUT_COLIS.EN_ATTENTE_LIVRAISON
         });
       });
@@ -166,5 +175,39 @@ export class FacturePaiementModalComponent implements OnInit {
 
   onCancel(): void {
     this.activeModal.dismiss();
+  }
+
+  // Charger les colis complets (convertir les IDs en objets)
+  private async loadColis(): Promise<void> {
+    if (!this.facture || !this.facture.colis) return;
+
+    try {
+      const colisComplets: Colis[] = [];
+
+      for (const colisDonnee of this.facture.colis) {
+        if (typeof colisDonnee === 'string') {
+          try {
+            // Si c'est un ID, charger l'objet colis complet
+            const colis = await this.firebaseService.getColisById(colisDonnee);
+            if (colis) {
+              colisComplets.push(colis);
+            }
+          } catch (error) {
+            console.error(`Erreur lors du chargement du colis ${colisDonnee}:`, error);
+          }
+        } else {
+          // Si c'est déjà un objet colis, l'ajouter directement
+          colisComplets.push(colisDonnee);
+        }
+      }
+
+      // Mettre à jour le signal pour les colis et la propriété colisObjets
+      this.colisArray.set(colisComplets);
+      if (this.facture) {
+        this.facture.colisObjets = colisComplets;
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des colis:', error);
+    }
   }
 }

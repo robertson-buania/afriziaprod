@@ -6,18 +6,11 @@ import { MaintenanceComponent } from './views/auth/maintenance/maintenance.compo
 import { inject } from '@angular/core'
 import { AuthenticationService } from './core/service/auth.service'
 import { WEBSITE_ROUTES } from './views/website/website.routes'
-import { AUTH_ROUTES } from './views/auth/auth.route'
 import { AuthGuard } from './core/guards/auth.guard'
 
 export const APP_ROUTES: Route[] = [
   // Routes du site web public
   ...WEBSITE_ROUTES,
-
-  // Routes d'authentification
-  {
-    path: 'auth',
-    children: AUTH_ROUTES
-  },
 
   // Routes protégées (dashboard)
   {

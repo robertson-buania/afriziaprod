@@ -1,13 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { PanierService } from '@/app/core/services/panier.service';
+import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { Subscription } from 'rxjs';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { Utilisateur } from '@/app/models/utilisateur.model';
+import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.service';
 
 @Component({
   selector: 'app-website-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, NgbDropdownModule],
   template: `
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
       <div class="container">
@@ -50,15 +54,53 @@ import { Subscription } from 'rxjs';
                 <i class="las la-envelope me-1"></i>Contact
               </a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/dashboard/analytics">
-                <i class="las la-tachometer-alt me-1"></i>Dashboard
+
+            <!-- Menu utilisateur -->
+            <li class="nav-item" ngbDropdown *ngIf="utilisateur">
+              <a class="nav-link user-link" role="button" ngbDropdownToggle id="userDropdown">
+                <i class="las la-user-circle me-1"></i>
+                <span class="user-name">{{ utilisateur.prenom }}</span>
               </a>
+              <div ngbDropdownMenu aria-labelledby="userDropdown" class="dropdown-menu-end">
+                <div class="dropdown-header d-flex align-items-center">
+                  <div class="user-avatar">
+                    <i class="las la-user-circle"></i>
+                  </div>
+                  <div class="user-info ms-2">
+                    <div class="fw-bold">{{ utilisateur.prenom }} {{ utilisateur.nom }}</div>
+                    <small class="text-muted">{{ utilisateur.email }}</small>
+                  </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a ngbDropdownItem routerLink="/profil">
+                  <i class="las la-user me-2"></i>Mon profil
+                </a>
+                <a ngbDropdownItem routerLink="/mes-commandes">
+                  <i class="las la-file-invoice me-2"></i>Mes commandes
+                </a>
+                <a ngbDropdownItem routerLink="/dashboard/analytics" *ngIf="estAdmin() || estPersonnel()">
+                  <i class="las la-tachometer-alt me-2"></i>Tableau de bord
+                </a>
+                <div class="dropdown-divider"></div>
+                <a ngbDropdownItem (click)="deconnecter()" class="text-danger">
+                  <i class="las la-sign-out-alt me-2"></i>Déconnexion
+                </a>
+              </div>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/auth/log-in">
+
+            <!-- Menu connexion/inscription si non connecté -->
+            <li class="nav-item" ngbDropdown *ngIf="!utilisateur">
+              <a class="nav-link" role="button" ngbDropdownToggle id="authDropdown">
                 <i class="las la-user me-1"></i>Compte
               </a>
+              <div ngbDropdownMenu aria-labelledby="authDropdown" class="dropdown-menu-end">
+                <a ngbDropdownItem (click)="ouvrirModalConnexion()">
+                  <i class="las la-sign-in-alt me-2"></i>Connexion
+                </a>
+                <a ngbDropdownItem (click)="ouvrirModalInscription()">
+                  <i class="las la-user-plus me-2"></i>Inscription
+                </a>
+              </div>
             </li>
           </ul>
         </div>
@@ -98,13 +140,40 @@ import { Subscription } from 'rxjs';
       font-weight: bold;
       transform: translate(50%, -30%);
     }
+    .user-link {
+      display: flex;
+      align-items: center;
+    }
+    .user-name {
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dropdown-header {
+      padding: 1rem;
+      background-color: #f8f9fa;
+    }
+    .user-avatar {
+      font-size: 2rem;
+      color: #4e73e1;
+    }
+    .user-info {
+      line-height: 1.2;
+    }
   `]
 })
 export class WebsiteNavbarComponent implements OnInit, OnDestroy {
   nombreArticles = 0;
+  utilisateur: Utilisateur | null = null;
   private subscription: Subscription = new Subscription();
 
-  constructor(private panierService: PanierService) {}
+  constructor(
+    private panierService: PanierService,
+    private utilisateurService: UtilisateurService,
+    private router: Router,
+    private authModalService: AuthModalService
+  ) {}
 
   ngOnInit(): void {
     this.subscription.add(
@@ -112,9 +181,36 @@ export class WebsiteNavbarComponent implements OnInit, OnDestroy {
         this.nombreArticles = colis.length;
       })
     );
+
+    this.subscription.add(
+      this.utilisateurService.utilisateurCourant$.subscribe(user => {
+        this.utilisateur = user;
+      })
+    );
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+  }
+
+  deconnecter(): void {
+    this.utilisateurService.deconnecter();
+    this.router.navigate(['/']);
+  }
+
+  estAdmin(): boolean {
+    return this.utilisateurService.estAdmin();
+  }
+
+  estPersonnel(): boolean {
+    return this.utilisateurService.estPersonnel();
+  }
+
+  ouvrirModalConnexion(): void {
+    this.authModalService.openAuthModal(AuthModalType.LOGIN);
+  }
+
+  ouvrirModalInscription(): void {
+    this.authModalService.openAuthModal(AuthModalType.REGISTER);
   }
 }

@@ -34,11 +34,25 @@ export const WEBSITE_ROUTES: Route[] = [
         data: { title: 'Mon panier' }
       },
       {
+        path: 'mes-commandes',
+        loadComponent: () =>
+          import('./mes-commandes/mes-commandes.component')
+            .then(m => m.MesCommandesComponent),
+        data: { title: 'Mes commandes' }
+      },
+      {
         path: 'paiement/:id',
         loadComponent: () =>
           import('./paiement-facture/paiement-facture.component')
             .then(m => m.PaiementFactureComponent),
         data: { title: 'Paiement de facture' }
+      },
+      {
+        path: 'profil',
+        loadComponent: () =>
+          import('./profil/profil.component')
+            .then(m => m.ProfilComponent),
+        data: { title: 'Mon profil' }
       },
       {
         path: 'about',

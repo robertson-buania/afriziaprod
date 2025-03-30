@@ -1,0 +1,109 @@
+:host ::ng-deep {
+  .auth-modal {
+    .modal-content {
+      border-radius: 0.5rem;
+      overflow: hidden;
+      border: none;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+      border-bottom: none;
+      padding: 1.25rem;
+    }
+
+    .modal-body {
+      padding: 1.25rem;
+    }
+
+    .modal-footer {
+      border-top: none;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .nav-tabs {
+      border-bottom: 1px solid #dee2e6;
+
+      .nav-link {
+        color: #6c757d;
+        border: none;
+        padding: 0.5rem 1rem;
+        margin-right: 0.5rem;
+        font-weight: 500;
+
+        &.active {
+          color: #4e73e1;
+          border-bottom: 2px solid #4e73e1;
+          background-color: transparent;
+        }
+
+        &:hover:not(.active) {
+          color: #4e73e1;
+          border-bottom: 2px solid #e9ecef;
+          background-color: transparent;
+        }
+      }
+    }
+  }
+}
+
+/* Animation du formulaire */
+form {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Styles des inputs */
+.form-control {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.25rem;
+
+  &:focus {
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 225, 0.25);
+  }
+}
+
+.input-group-text {
+  background-color: #f8f9fa;
+  border-right: none;
+}
+
+.form-control {
+  border-left: none;
+
+  &:focus + .input-group-text {
+    border-color: #80bdff;
+  }
+}
+
+/* Styles des boutons */
+.btn {
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+
+  &.btn-primary {
+    background-color: #4e73e1;
+    border-color: #4e73e1;
+
+    &:hover {
+      background-color: #3a60d2;
+      border-color: #3a60d2;
+    }
+  }
+}
+
+/* Icônes */
+.las {
+  font-size: 1.2rem;
+}

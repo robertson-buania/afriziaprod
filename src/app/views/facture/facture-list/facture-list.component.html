@@ -71,7 +71,7 @@
                 <tr>
                   <td>{{ facture.id }}</td>
                   <td>{{ getClientName(facture) }}</td>
-                  <td>{{ facture.colis && facture.colis.length > 0 ? (facture.colis[0].dateCreation | date:'dd/MM/yyyy') : 'N/A' }}</td>
+                  <td>{{ facture.colisObjets && facture.colisObjets.length > 0 ? (facture.colisObjets[0].dateCreation | date:'dd/MM/yyyy') : 'N/A' }}</td>
                   <td class="text-end">{{ facture.montant | currency:'USD':'symbol' }}</td>
                   <td class="text-end">{{ facture.montantPaye | currency:'USD':'symbol' }}</td>
                   <td>

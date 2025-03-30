@@ -107,20 +107,13 @@
             <h3 class="h5 mb-3">Finaliser la commande</h3>
 
             <form [formGroup]="facturationForm" (ngSubmit)="creerFacture()">
-              <div class="mb-3">
-                <label for="partenaireId" class="form-label">Sélectionnez un partenaire*</label>
-                <select
-                  class="form-select"
-                  id="partenaireId"
-                  formControlName="partenaireId"
-                  [ngClass]="{'is-invalid': facturationForm.get('partenaireId')?.invalid && facturationForm.get('partenaireId')?.touched}">
-                  <option value="">Choisir un partenaire</option>
-                  <!-- Liste des partenaires à charger dynamiquement -->
-                </select>
-                <div *ngIf="facturationForm.get('partenaireId')?.invalid && facturationForm.get('partenaireId')?.touched" class="invalid-feedback">
-                  Veuillez sélectionner un partenaire
-                </div>
+              <div class="alert alert-info mb-3">
+                <i class="las la-user-check me-2"></i>
+                La facture sera générée pour votre compte partenaire connecté.
               </div>
+
+              <!-- Champ caché pour le partenaireId -->
+              <input type="hidden" formControlName="partenaireId">
 
               <div class="card mb-4">
                 <div class="card-header bg-light">
@@ -170,5 +163,36 @@
     <button type="button" class="btn btn-danger" (click)="modal.close('confirm')">
       <i class="las la-trash me-1"></i>Supprimer
     </button>
+  </div>
+</ng-template>
+
+<!-- Modal de connexion requise -->
+<ng-template #connexionRequiseModal let-modal>
+  <div class="modal-header bg-primary">
+    <h5 class="modal-title text-white">Connexion requise</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body text-center">
+    <i class="las la-user-lock fs-1 text-primary mb-3"></i>
+    <h4 class="mb-3">Vous n'êtes pas connecté</h4>
+    <p class="mb-4">Pour procéder au paiement, vous devez être connecté en tant que partenaire.</p>
+
+    <div class="d-flex flex-column gap-3">
+      <div class="border rounded p-3 bg-light">
+        <h5 class="mb-2">Déjà partenaire ?</h5>
+        <p class="text-muted mb-3">Connectez-vous à votre compte existant</p>
+        <button type="button" class="btn btn-primary w-100" (click)="modal.close(); ouvrirModalConnexion()">
+          <i class="las la-sign-in-alt me-2"></i>Se connecter
+        </button>
+      </div>
+
+      <div class="border rounded p-3">
+        <h5 class="mb-2">Nouveau partenaire ?</h5>
+        <p class="text-muted mb-3">Créez un compte et devenez partenaire</p>
+        <button type="button" class="btn btn-outline-primary w-100" (click)="modal.close(); ouvrirModalInscription()">
+          <i class="las la-user-plus me-2"></i>Créer un compte
+        </button>
+      </div>
+    </div>
   </div>
 </ng-template>

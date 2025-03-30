@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FirebaseService } from '@/app/core/services/firebase.service'
-import { Facture, Partenaire } from '@/app/models/partenaire.model'
+import { Facture, Partenaire, Colis } from '@/app/models/partenaire.model'
 import { Router, ActivatedRoute } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
@@ -69,8 +69,44 @@ export class FactureListComponent implements OnInit {
       const facturesData = await firstValueFrom(
         this.firebaseService.getFactures()
       )
-      this.factures.set(facturesData || [])
-      this.filteredFactures.set(facturesData || [])
+
+      // Traitement des factures pour convertir les IDs de colis en objets
+      const processedFactures: Facture[] = [];
+      if (facturesData && facturesData.length > 0) {
+        for (const facture of facturesData) {
+          const processedFacture = { ...facture };
+
+          // Convertir les IDs de colis en objets
+          if (facture.colis && facture.colis.length > 0) {
+            const processedColis: Colis[] = [];
+
+            for (const colis of facture.colis) {
+              if (typeof colis === 'string') {
+                try {
+                  const colisObj = await this.firebaseService.getColisById(colis);
+                  if (colisObj) {
+                    processedColis.push(colisObj);
+                  }
+                } catch (error) {
+                  console.error(`Erreur lors du chargement du colis ${colis}:`, error);
+                }
+              } else {
+                processedColis.push(colis);
+              }
+            }
+
+            // Conserver les colis originaux et ajouter les colis objets
+            processedFacture.colisObjets = processedColis;
+          } else {
+            processedFacture.colisObjets = [];
+          }
+
+          processedFactures.push(processedFacture);
+        }
+      }
+
+      this.factures.set(processedFactures || []);
+      this.filteredFactures.set(processedFactures || []);
 
       // Charger les partenaires pour afficher leurs informations
       const partenairesData = await firstValueFrom(
@@ -90,6 +126,11 @@ export class FactureListComponent implements OnInit {
     }
   }
 
+  // Vérifie si un élément est un objet Colis ou une chaîne ID
+  isColisDynamic(colis: any): colis is (any & { partenaireId?: string; clientNom?: string; clientPrenom?: string; clientTelephone?: number }) {
+    return typeof colis !== 'string' && colis !== null && typeof colis === 'object';
+  }
+
   onSearch(): void {
     if (!this.searchTerm.trim()) {
       this.filteredFactures.set(this.factures())
@@ -106,8 +147,8 @@ export class FactureListComponent implements OnInit {
 
       // Recherche par client (si on a accès aux informations du client)
       let clientMatch = false
-      if (facture.colis && facture.colis.length > 0) {
-        const colis = facture.colis[0]
+      if (facture.colisObjets && facture.colisObjets.length > 0) {
+        const colis = facture.colisObjets[0]
         const partenaireId = colis.partenaireId
         if (partenaireId) {
           const partenaire = this.partenaires.get(partenaireId)
@@ -147,10 +188,12 @@ export class FactureListComponent implements OnInit {
     const facture = this.factures().find((f) => f.id === factureId)
     if (!facture) return
 
-    const partenaireId =
-      facture.colis && facture.colis.length > 0
-        ? facture.colis[0].partenaireId
-        : undefined
+    let partenaireId: string | undefined;
+    if (facture.colisObjets && facture.colisObjets.length > 0) {
+      const colis = facture.colisObjets[0];
+      partenaireId = colis.partenaireId;
+    }
+
     const client = partenaireId ? this.partenaires.get(partenaireId) : null
 
     // Ouvrir le modal de paiement
@@ -221,11 +264,11 @@ export class FactureListComponent implements OnInit {
 
   // Obtient le nom du client de la facture
   getClientName(facture: Facture): string {
-    if (!facture.colis || facture.colis.length === 0) {
+    if (!facture.colisObjets || facture.colisObjets.length === 0) {
       return 'Client inconnu'
     }
 
-    const colis = facture.colis[0]
+    const colis = facture.colisObjets[0]
     const partenaireId = colis.partenaireId
     const partenaire = partenaireId ? this.partenaires.get(partenaireId) : null
 
@@ -273,8 +316,8 @@ export class FactureListComponent implements OnInit {
       let phoneNumber = ''
       let clientName = ''
 
-      if (facture.colis && facture.colis.length > 0) {
-        const colis = facture.colis[0]
+      if (facture.colisObjets && facture.colisObjets.length > 0) {
+        const colis = facture.colisObjets[0]
         const partenaireId = colis.partenaireId
 
         if (partenaireId) {
@@ -307,7 +350,6 @@ export class FactureListComponent implements OnInit {
 
       const response = await firstValueFrom(
         this.notificationService.sendFactureNotification(
-
           phoneNumber,
           factureId,
           facture.montant

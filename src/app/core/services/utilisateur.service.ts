@@ -76,10 +76,21 @@ export class UtilisateurService {
         derniereConnexion: new Date().toISOString()
       });
 
-      // Mettre à jour l'état local
-      const utilisateurComplet = await this.firebaseService.getUtilisateurById(utilisateur.id!);
+      // Récupérer les informations complètes de l'utilisateur
+      let utilisateurComplet = await this.firebaseService.getUtilisateurById(utilisateur.id!);
       if (!utilisateurComplet) {
         throw new Error('Erreur lors de la récupération des données utilisateur');
+      }
+
+      // Si l'utilisateur est associé à un partenaire, récupérer les informations du partenaire
+      if (utilisateurComplet.partenaireId) {
+        const partenaire = await this.firebaseService.getPartenaireById(utilisateurComplet.partenaireId);
+        if (partenaire) {
+          utilisateurComplet = {
+            ...utilisateurComplet,
+            partenaire
+          };
+        }
       }
 
       this.utilisateurCourantSubject.next(utilisateurComplet);
@@ -95,7 +106,7 @@ export class UtilisateurService {
   deconnecter(): void {
     this.utilisateurCourantSubject.next(null);
     localStorage.removeItem('utilisateur_courant');
-    this.router.navigate(['/auth/log-in']);
+    this.router.navigate(['/']);
   }
 
   estConnecte(): boolean {
@@ -175,12 +186,18 @@ export class UtilisateurService {
     }
   }
 
-  async soumettreDemandeUtilisateur(demande: Omit<DemandeUtilisateur, 'id' | 'dateCreation' | 'statut'>): Promise<string> {
+  async soumettreDemandeUtilisateur(demande: Omit<DemandeUtilisateur, 'id' | 'dateCreation' | 'statut'>, password?: string): Promise<string> {
     try {
       // Vérifier si l'e-mail existe déjà
       const utilisateurExistant = await this.firebaseService.getUtilisateurByEmail(demande.email);
       if (utilisateurExistant) {
         throw new Error('Cette adresse e-mail est déjà utilisée');
+      }
+
+      // Vérifier si un partenaire existe déjà avec cet e-mail
+      const partenaireExistant = await this.firebaseService.getPartenaireByEmail(demande.email);
+      if (partenaireExistant) {
+        throw new Error('Cette adresse e-mail est déjà utilisée par un partenaire');
       }
 
       // Créer la demande
@@ -189,6 +206,31 @@ export class UtilisateurService {
         dateCreation: new Date().toISOString(),
         statut: 'en_attente'
       });
+
+      // Dans cette version simplifiée, nous créons aussi l'utilisateur et le partenaire immédiatement
+      if (password) {
+        // 1. Créer le partenaire
+        const partenaireId = await this.firebaseService.addPartenaire({
+          nom: demande.nom,
+          prenom: demande.prenom,
+          postnom: '', // Champ obligatoire, à remplir plus tard par l'utilisateur
+          telephone: Number(demande.telephone) || 0,
+          email: demande.email,
+          adresse: '',
+          factures: []
+        });
+
+        // 2. Créer l'utilisateur lié au partenaire
+        await this.creerUtilisateur({
+          email: demande.email,
+          nom: demande.nom,
+          prenom: demande.prenom,
+          telephone: demande.telephone,
+          role: demande.role,
+          password: password,
+          partenaireId: partenaireId // Lier l'utilisateur au partenaire
+        });
+      }
 
       return id;
     } catch (error) {
@@ -244,6 +286,66 @@ export class UtilisateurService {
       });
     } catch (error) {
       console.error('Erreur lors du rejet de la demande:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Met à jour simultanément les informations d'un utilisateur et du partenaire associé
+   * @param utilisateurId ID de l'utilisateur à mettre à jour
+   * @param partenaireId ID du partenaire à mettre à jour (optionnel)
+   * @param donnees Les données à mettre à jour
+   * @returns Promise résolu lorsque les mises à jour sont terminées
+   */
+  async mettreAJourProfilUtilisateur(
+    utilisateurId: string,
+    donnees: {
+      nom: string;
+      prenom: string;
+      email: string;
+      telephone: string;
+      adresse?: string;
+    },
+    partenaireId?: string
+  ): Promise<void> {
+    try {
+      // Mise à jour des informations de l'utilisateur
+      const donneesUtilisateur = {
+        nom: donnees.nom,
+        prenom: donnees.prenom,
+        email: donnees.email,
+        telephone: donnees.telephone,
+      };
+
+      await this.firebaseService.updateUtilisateur(utilisateurId, donneesUtilisateur);
+
+      // Si l'utilisateur est lié à un partenaire, mettre à jour celui-ci également
+      if (partenaireId) {
+        const partenaire = await this.firebaseService.getPartenaireById(partenaireId);
+        if (partenaire) {
+          const donneesPartenaire: Partenaire = {
+            ...partenaire,
+            nom: donnees.nom,
+            prenom: donnees.prenom,
+            email: donnees.email,
+            telephone: Number(donnees.telephone) || 0
+          };
+
+          if (donnees.adresse !== undefined) {
+            donneesPartenaire.adresse = donnees.adresse;
+          }
+
+          await this.firebaseService.updatePartenaire(donneesPartenaire);
+        }
+      }
+
+      // Rafraîchir les informations de l'utilisateur courant si nécessaire
+      const utilisateurCourant = this.utilisateurCourantSubject.value;
+      if (utilisateurCourant && utilisateurCourant.id === utilisateurId) {
+        this.rafraichirInformationsUtilisateur(utilisateurId).subscribe();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil utilisateur:', error);
       throw error;
     }
   }
