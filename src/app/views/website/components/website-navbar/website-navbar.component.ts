@@ -17,6 +17,7 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
       <div class="container">
         <a class="navbar-brand" routerLink="/">
           <img src="assets/images/logo-sm.png" alt="Kamba Agency" height="40">
+          AFRIZA
         </a>
         <button class="navbar-toggler" type="button" (click)="isMenuCollapsed = !isMenuCollapsed"
                 aria-label="Toggle navigation">
@@ -86,9 +87,9 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
                 <a ngbDropdownItem routerLink="/mes-commandes" (click)="isMenuCollapsed = true">
                   <i class="las la-file-invoice me-2"></i>Mes commandes
                 </a>
-                <a ngbDropdownItem routerLink="/dashboard/analytics" *ngIf="estAdmin() || estPersonnel()" (click)="isMenuCollapsed = true">
+                <!-- <a ngbDropdownItem routerLink="/dashboard/analytics" *ngIf="estAdmin() || estPersonnel()" (click)="isMenuCollapsed = true">
                   <i class="las la-tachometer-alt me-2"></i>Tableau de bord
-                </a>
+                </a> -->
                 <div class="dropdown-divider"></div>
                 <a ngbDropdownItem (click)="deconnecter()" class="text-danger">
                   <i class="las la-sign-out-alt me-2"></i>Déconnexion

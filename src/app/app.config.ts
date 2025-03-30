@@ -15,7 +15,7 @@ import { provideStoreDevtools } from '@ngrx/store-devtools'
 import { routes } from './app.routes'
 import { provideEffects } from '@ngrx/effects'
 import { rootReducer } from './store'
-import { DatePipe, DecimalPipe } from '@angular/common'
+import { DatePipe, DecimalPipe, HashLocationStrategy, LocationStrategy } from '@angular/common'
 import { AuthenticationEffects } from './store/authentication/authentication.effects'
 import {
   provideHttpClient,
@@ -52,6 +52,10 @@ const inMemoryScrollingFeatures: InMemoryScrollingFeature =
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    {
+      provide: LocationStrategy,
+      useClass: HashLocationStrategy
+    },
     FakeBackendProvider,
     DatePipe,
     DecimalPipe,
