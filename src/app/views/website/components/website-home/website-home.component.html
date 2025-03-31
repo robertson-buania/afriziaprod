@@ -3,17 +3,15 @@
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-lg-8 text-center">
-        <h1 class="mb-4">Afrisia Logistics</h1>
-        <h2 class="mb-4">Spécialiste du fret aérien et maritime international</h2>
-        <p class="lead mb-5">
-          Des solutions d'expédition fiables entre la Chine et l'Afrique. Confiez-nous vos colis et bénéficiez d'un service professionnel et sécurisé.
-        </p>
+        <h1 class="mb-4" translate="HOME.HERO.TITLE"></h1>
+        <h2 class="mb-4" translate="HOME.HERO.SUBTITLE"></h2>
+        <p class="lead mb-5" translate="HOME.HERO.DESCRIPTION"></p>
         <div class="d-flex justify-content-center gap-3">
           <a routerLink="/tracking" class="btn btn-primary btn-lg">
-            <i class="las la-box me-2"></i>Expédier un colis
+            <i class="las la-box me-2"></i>{{ 'HOME.HERO.SHIP_PACKAGE' | translate }}
           </a>
           <button class="btn btn-outline-light btn-lg" (click)="scrollToTracking()">
-            <i class="las la-search me-2"></i>Suivre un colis
+            <i class="las la-search me-2"></i>{{ 'HOME.HERO.TRACK_PACKAGE' | translate }}
           </button>
         </div>
       </div>
@@ -27,13 +25,13 @@
     <div class="row justify-content-center">
       <div class="col-lg-8">
         <div class="tracking-form">
-          <h2 class="text-center mb-4">Suivre votre colis</h2>
+          <h2 class="text-center mb-4" translate="HOME.TRACKING.TITLE"></h2>
           <div class="input-group">
             <input
               type="text"
               class="form-control form-control-lg"
               [(ngModel)]="trackingCode"
-              placeholder="Entrez votre code de suivi"
+              [placeholder]="'HOME.TRACKING.PLACEHOLDER' | translate"
               (keyup.enter)="trackPackage()"
             >
             <button
@@ -41,7 +39,7 @@
               type="button"
               (click)="trackPackage()"
             >
-              <i class="las la-search me-2"></i>Suivre
+              <i class="las la-search me-2"></i>{{ 'HOME.TRACKING.BUTTON' | translate }}
             </button>
           </div>
           <div *ngIf="error" class="alert alert-danger mt-3">
@@ -64,10 +62,10 @@
               <div class="action-icon">
                 <i class="las la-search"></i>
               </div>
-              <h3>Rechercher un colis</h3>
-              <p>Consultez les détails de vos colis enregistrés</p>
+              <h3 translate="HOME.QUICK_ACTIONS.SEARCH_PACKAGE.TITLE"></h3>
+              <p translate="HOME.QUICK_ACTIONS.SEARCH_PACKAGE.DESCRIPTION"></p>
               <a routerLink="/recherche-colis" class="btn btn-primary w-100">
-                <i class="las la-arrow-right me-2"></i>Rechercher
+                <i class="las la-arrow-right me-2"></i>{{ 'COMMON.SEARCH' | translate }}
               </a>
             </div>
           </div>
@@ -76,10 +74,10 @@
               <div class="action-icon">
                 <i class="las la-shipping-fast"></i>
               </div>
-              <h3>Suivre un colis</h3>
-              <p>Suivez l'état et la progression de votre expédition</p>
+              <h3 translate="HOME.QUICK_ACTIONS.TRACK_PACKAGE.TITLE"></h3>
+              <p translate="HOME.QUICK_ACTIONS.TRACK_PACKAGE.DESCRIPTION"></p>
               <a routerLink="/tracking" class="btn btn-primary w-100">
-                <i class="las la-arrow-right me-2"></i>Suivre
+                <i class="las la-arrow-right me-2"></i>{{ 'NAVBAR.TRACK_PACKAGE' | translate }}
               </a>
             </div>
           </div>
@@ -88,10 +86,10 @@
               <div class="action-icon">
                 <i class="las la-phone"></i>
               </div>
-              <h3>Nous contacter</h3>
-              <p>Assistance et information sur nos services</p>
+              <h3 translate="HOME.QUICK_ACTIONS.CONTACT.TITLE"></h3>
+              <p translate="HOME.QUICK_ACTIONS.CONTACT.DESCRIPTION"></p>
               <a routerLink="/contact" class="btn btn-primary w-100">
-                <i class="las la-arrow-right me-2"></i>Contact
+                <i class="las la-arrow-right me-2"></i>{{ 'NAVBAR.CONTACT' | translate }}
               </a>
             </div>
           </div>
@@ -105,35 +103,35 @@
 <section class="services-section">
   <div class="container">
     <div class="text-center mb-5">
-      <h2 class="section-title">Nos Services</h2>
-      <p class="section-subtitle">Solutions de transport adaptées à tous vos besoins</p>
+      <h2 class="section-title" translate="HOME.SERVICES.TITLE"></h2>
+      <p class="section-subtitle" translate="HOME.SERVICES.SUBTITLE"></p>
     </div>
     <div class="row">
       <div class="col-md-4 mb-4">
         <div class="service-card">
           <i class="las la-plane service-icon"></i>
-          <h3>Fret Aérien Express</h3>
-          <p>Livraison express en 3 à 5 jours avec suivi en temps réel et sécurité garantie</p>
-          <p class="price-tag">À partir de 18$/kg</p>
-          <a routerLink="/about" class="btn btn-outline-primary mt-3">En savoir plus</a>
+          <h3 translate="HOME.SERVICES.AIR_FREIGHT.TITLE"></h3>
+          <p translate="HOME.SERVICES.AIR_FREIGHT.DESCRIPTION"></p>
+          <p class="price-tag" translate="HOME.SERVICES.AIR_FREIGHT.PRICE"></p>
+          <a routerLink="/about" class="btn btn-outline-primary mt-3">{{ 'COMMON.NEXT' | translate }}</a>
         </div>
       </div>
       <div class="col-md-4 mb-4">
         <div class="service-card">
           <i class="las la-ship service-icon"></i>
-          <h3>Fret Maritime</h3>
-          <p>Transport économique par cargo avec délai de 75 jours, idéal pour les envois non urgents</p>
-          <p class="price-tag">À partir de 540$/CBM</p>
-          <a routerLink="/about" class="btn btn-outline-primary mt-3">Voir les tarifs</a>
+          <h3 translate="HOME.SERVICES.SEA_FREIGHT.TITLE"></h3>
+          <p translate="HOME.SERVICES.SEA_FREIGHT.DESCRIPTION"></p>
+          <p class="price-tag" translate="HOME.SERVICES.SEA_FREIGHT.PRICE"></p>
+          <a routerLink="/about" class="btn btn-outline-primary mt-3">{{ 'COMMON.NEXT' | translate }}</a>
         </div>
       </div>
       <div class="col-md-4 mb-4">
         <div class="service-card">
           <i class="las la-shield-alt service-icon"></i>
-          <h3>Transport Spécialisé</h3>
-          <p>Solutions adaptées pour les produits sensibles, électroniques et médicaments</p>
-          <p class="price-tag">À partir de 20$/kg</p>
-          <a routerLink="/about" class="btn btn-outline-primary mt-3">Découvrir</a>
+          <h3 translate="HOME.SERVICES.SPECIAL_FREIGHT.TITLE"></h3>
+          <p translate="HOME.SERVICES.SPECIAL_FREIGHT.DESCRIPTION"></p>
+          <p class="price-tag" translate="HOME.SERVICES.SPECIAL_FREIGHT.PRICE"></p>
+          <a routerLink="/about" class="btn btn-outline-primary mt-3">{{ 'COMMON.NEXT' | translate }}</a>
         </div>
       </div>
     </div>
@@ -144,8 +142,8 @@
 <section class="tarifs-section">
   <div class="container">
     <div class="text-center mb-5">
-      <h2 class="section-title">Nos Tarifs</h2>
-      <p class="section-subtitle">Des prix compétitifs adaptés à chaque type d'expédition</p>
+      <h2 class="section-title" translate="HOME.PRICING.TITLE"></h2>
+      <p class="section-subtitle" translate="HOME.PRICING.SUBTITLE"></p>
     </div>
     <div class="row justify-content-center">
       <div class="col-lg-10">
@@ -154,66 +152,66 @@
             <table class="table table-hover">
               <thead class="table-primary">
                 <tr>
-                  <th>Type de colis</th>
-                  <th>Prix/kg</th>
-                  <th>Délai d'expédition</th>
-                  <th>Prépaiement</th>
+                  <th>{{ 'HOME.PRICING.HEADERS.PACKAGE_TYPE' | translate }}</th>
+                  <th>{{ 'HOME.PRICING.HEADERS.PRICE' | translate }}</th>
+                  <th>{{ 'HOME.PRICING.HEADERS.DELIVERY_TIME' | translate }}</th>
+                  <th>{{ 'HOME.PRICING.HEADERS.PREPAYMENT' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Objets ordinaires (Cargo)</td>
-                  <td>17$</td>
-                  <td>15 jours ou plus</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARGO.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARGO.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARGO.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARGO.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Express</td>
-                  <td>18$</td>
-                  <td>3 à 5 jours</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.EXPRESS.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.EXPRESS.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.EXPRESS.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.EXPRESS.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Fret Maritime</td>
-                  <td>540$/CBM</td>
-                  <td>75 jours environ</td>
-                  <td>50% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MARITIME.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MARITIME.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MARITIME.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MARITIME.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Objets avec batteries</td>
-                  <td>20$</td>
-                  <td>Variable selon le cas</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.BATTERY.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.BATTERY.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.BATTERY.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.BATTERY.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Médicaments / Compléments alimentaires</td>
-                  <td>20$</td>
-                  <td>Express uniquement</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MEDICAL.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MEDICAL.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MEDICAL.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.MEDICAL.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Cartouches</td>
-                  <td>20$</td>
-                  <td>Variable selon le cas</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARTRIDGES.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARTRIDGES.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARTRIDGES.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.CARTRIDGES.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Téléphones</td>
-                  <td>20$ + 10$ par téléphone</td>
-                  <td>Variable selon le cas</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.PHONES.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.PHONES.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.PHONES.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.PHONES.PREPAYMENT' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Ordinateurs</td>
-                  <td>20$ + 30$ par ordinateur</td>
-                  <td>Variable selon le cas</td>
-                  <td>100% obligatoire</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.COMPUTERS.NAME' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.COMPUTERS.PRICE' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.COMPUTERS.DELIVERY' | translate }}</td>
+                  <td>{{ 'HOME.PRICING.ITEMS.COMPUTERS.PREPAYMENT' | translate }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="tarifs-note mt-3">
-            <p><strong>NB:</strong> Il est recommandé de nous contacter avant d'effectuer les achats de pièces incluant des grosses piles.</p>
+            <p><strong>NB:</strong> {{ 'HOME.PRICING.NOTE' | translate }}</p>
           </div>
         </div>
       </div>
@@ -225,8 +223,8 @@
 <section class="features-section">
   <div class="container">
     <div class="text-center mb-5">
-      <h2 class="section-title">Pourquoi nous choisir ?</h2>
-      <p class="section-subtitle">Des avantages qui font la différence</p>
+      <h2 class="section-title" translate="HOME.FEATURES.TITLE"></h2>
+      <p class="section-subtitle" translate="HOME.FEATURES.SUBTITLE"></p>
     </div>
     <div class="row g-4">
       <div class="col-md-3">
@@ -234,8 +232,8 @@
           <div class="feature-icon">
             <i class="las la-clock"></i>
           </div>
-          <h4>Express</h4>
-          <p>Livraison en 3-5 jours entre la Chine et l'Afrique</p>
+          <h4 translate="HOME.FEATURES.EXPRESS.TITLE"></h4>
+          <p translate="HOME.FEATURES.EXPRESS.DESCRIPTION"></p>
         </div>
       </div>
       <div class="col-md-3">
@@ -243,8 +241,8 @@
           <div class="feature-icon">
             <i class="las la-hand-holding-usd"></i>
           </div>
-          <h4>Économique</h4>
-          <p>Options cargo à tarifs avantageux</p>
+          <h4 translate="HOME.FEATURES.ECONOMIC.TITLE"></h4>
+          <p translate="HOME.FEATURES.ECONOMIC.DESCRIPTION"></p>
         </div>
       </div>
       <div class="col-md-3">
@@ -252,8 +250,8 @@
           <div class="feature-icon">
             <i class="las la-headset"></i>
           </div>
-          <h4>Support 24/7</h4>
-          <p>Assistance client permanente</p>
+          <h4 translate="HOME.FEATURES.SUPPORT.TITLE"></h4>
+          <p translate="HOME.FEATURES.SUPPORT.DESCRIPTION"></p>
         </div>
       </div>
       <div class="col-md-3">
@@ -261,8 +259,8 @@
           <div class="feature-icon">
             <i class="las la-map-marked-alt"></i>
           </div>
-          <h4>Suivi en temps réel</h4>
-          <p>Localisez vos colis à tout moment</p>
+          <h4 translate="HOME.FEATURES.TRACKING.TITLE"></h4>
+          <p translate="HOME.FEATURES.TRACKING.DESCRIPTION"></p>
         </div>
       </div>
     </div>
@@ -278,11 +276,11 @@
           <div class="card-body p-5">
             <div class="row align-items-center">
               <div class="col-md-8">
-                <h3 class="mb-4">Système de Prépaiement</h3>
-                <p>Depuis fin 2023, tous nos services nécessitent un prépaiement à 100% avant expédition de vos colis.</p>
-                <p>Ce système garantit le traitement prioritaire de vos colis et assure une expédition dans le délai.</p>
-                <p>Le fret aérien nécessite un prépaiement à 100%, tandis que le fret maritime nécessite un prépaiement de 50% avant expédition.</p>
-                <p class="mb-0">Pour plus d'informations sur ce système, n'hésitez pas à contacter notre service client.</p>
+                <h3 class="mb-4" translate="HOME.PREPAYMENT.TITLE"></h3>
+                <p translate="HOME.PREPAYMENT.DESCRIPTION"></p>
+                <p>{{ 'HOME.PREPAYMENT.DETAILS.0' | translate }}</p>
+                <p>{{ 'HOME.PREPAYMENT.DETAILS.1' | translate }}</p>
+                <p class="mb-0">{{ 'HOME.PREPAYMENT.DETAILS.2' | translate }}</p>
               </div>
               <div class="col-md-4 text-center">
                 <div class="prepaiement-icon">
@@ -302,14 +300,14 @@
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-lg-8 text-center">
-        <h2 class="mb-4">Prêt à expédier votre colis ?</h2>
-        <p class="mb-4">Rejoignez nos clients satisfaits et profitez de nos services de fret internationaux</p>
+        <h2 class="mb-4" translate="HOME.CTA.TITLE"></h2>
+        <p class="mb-4" translate="HOME.CTA.SUBTITLE"></p>
         <div class="d-flex justify-content-center gap-3">
           <a routerLink="/tracking" class="btn btn-primary btn-lg">
-            <i class="las la-paper-plane me-2"></i>Commencer maintenant
+            <i class="las la-paper-plane me-2"></i>{{ 'HOME.CTA.START_NOW' | translate }}
           </a>
           <a routerLink="/contact" class="btn btn-outline-light btn-lg">
-            <i class="las la-headset me-2"></i>Nous contacter
+            <i class="las la-headset me-2"></i>{{ 'HOME.CTA.CONTACT_US' | translate }}
           </a>
         </div>
       </div>
@@ -323,7 +321,7 @@
     <div class="row justify-content-center">
       <div class="col-lg-10">
         <div class="text-center mb-4">
-          <h2 class="section-title h4">Modes de Paiement Acceptés</h2>
+          <h2 class="section-title h4" translate="HOME.PAYMENT_METHODS.TITLE"></h2>
         </div>
         <div class="payment-methods-list d-flex justify-content-center flex-wrap gap-4">
           <div class="payment-method-item">

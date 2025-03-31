@@ -1,28 +1,29 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-website-footer',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   template: `
     <!-- Footer -->
     <footer class="site-footer bg-dark text-white py-5">
       <div class="container">
         <div class="row">
           <div class="col-md-4 mb-4 mb-md-0">
-            <h3 class="h5 mb-3">Afrisia Logistics</h3>
-            <p>Spécialiste du fret aérien et maritime international entre la Chine et l'Afrique.</p>
+            <h3 class="h5 mb-3">{{ 'FOOTER.COMPANY.TITLE' | translate }}</h3>
+            <p>{{ 'FOOTER.COMPANY.DESCRIPTION' | translate }}</p>
             <div class="d-flex align-items-center mt-3">
               <a href="https://wa.me/243838716236" class="btn btn-outline-light whatsapp-btn">
-                <i class="lab la-whatsapp me-2"></i>Nous contacter sur WhatsApp
+                <i class="lab la-whatsapp me-2"></i>{{ 'CONTACT.WHATSAPP_BUTTON' | translate }}
               </a>
             </div>
 
             <!-- Modes de paiement -->
             <div class="payment-methods mt-4">
-              <h5 class="h6 text-white mb-3">Modes de paiement acceptés</h5>
+              <h5 class="h6 text-white mb-3">{{ 'HOME.PAYMENT.TITLE' | translate }}</h5>
               <div class="payment-icons d-flex flex-wrap gap-2">
                 <img src="assets/images/payement/visa.jpg" alt="VISA" class="payment-icon" />
                 <img src="assets/images/payement/MasterCard.png" alt="MasterCard" class="payment-icon" />
@@ -33,21 +34,22 @@ import { RouterModule } from '@angular/router';
             </div>
           </div>
           <div class="col-md-4 mb-4 mb-md-0">
-            <h3 class="h5 mb-3">Coordonnées</h3>
-            <p><i class="las la-map-marker me-2"></i>Av. Lubefu numéro 44/95 Quartier Batetela, Commune de la Gombe</p>
+            <h3 class="h5 mb-3">{{ 'FOOTER.COMPANY.TITLE' | translate }}</h3>
+            <p><i class="las la-map-marker me-2"></i>{{ 'FOOTER.COMPANY.ADDRESS' | translate }}</p>
             <p><i class="las la-phone me-2"></i>+243 83 87 16 236 / +243 81 51 00 939</p>
             <p><i class="las la-envelope me-2"></i>moiseeloko&#64;gmail.com</p>
           </div>
           <div class="col-md-4">
-            <h3 class="h5 mb-3">Horaires d'ouverture</h3>
-            <p><i class="las la-clock me-2"></i>Lundi - Vendredi: 8:30 - 17:30</p>
-            <p><i class="las la-clock me-2"></i>Samedi - Dimanche: 9:00 - 15:00</p>
+            <h3 class="h5 mb-3">{{ 'FOOTER.HOURS.TITLE' | translate }}</h3>
+            <p><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.WEEKDAYS' | translate }}</p>
+            <p><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.SATURDAY' | translate }}</p>
+            <p><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.SUNDAY' | translate }}</p>
           </div>
         </div>
         <hr class="my-4">
         <div class="row">
           <div class="col-12 text-center">
-            <p class="mb-0">&copy; 2024 Afrisia Logistics. Tous droits réservés.</p>
+            <p class="mb-0">{{ 'FOOTER.BOTTOM.COPYRIGHT' | translate }}</p>
           </div>
         </div>
       </div>

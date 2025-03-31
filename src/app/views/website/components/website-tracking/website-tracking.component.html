@@ -1,52 +1,52 @@
             <!-- Informations du colis -->
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Type de colis</label>
+                <label class="form-label" translate="TRACKING.RESULT.PACKAGE_TYPE"></label>
                 <select class="form-select" formControlName="type">
-                  <option value="">Sélectionnez un type</option>
+                  <option value="">{{ 'COMMON.SELECT_TYPE' | translate }}</option>
                   @for (type of getTypeColis(); track type.value) {
                     <option [value]="type.value">{{ type.label }}</option>
                   }
                 </select>
                 <div class="form-text text-danger" *ngIf="colisForm.get('type')?.invalid && colisForm.get('type')?.touched">
-                  Le type de colis est requis
+                  {{ 'TRACKING.FORM.ERRORS.PACKAGE_TYPE_REQUIRED' | translate }}
                 </div>
               </div>
 
               <div class="col-md-6 mb-3">
-                <label class="form-label">Type d'expédition</label>
+                <label class="form-label" translate="TRACKING.RESULT.SHIPPING_TYPE"></label>
                 <select class="form-select" formControlName="typeExpedition">
-                  <option value="">Sélectionnez un type</option>
+                  <option value="">{{ 'COMMON.SELECT_TYPE' | translate }}</option>
                   @for (type of getTypeExpedition(); track type.value) {
                     <option [value]="type.value">{{ type.label }}</option>
                   }
                 </select>
                 <div class="form-text text-danger" *ngIf="colisForm.get('typeExpedition')?.invalid && colisForm.get('typeExpedition')?.touched">
-                  Le type d'expédition est requis
+                  {{ 'TRACKING.FORM.ERRORS.SHIPPING_TYPE_REQUIRED' | translate }}
                 </div>
               </div>
 
               <div class="col-md-6 mb-3">
-                <label class="form-label">Poids (kg)</label>
+                <label class="form-label">{{ 'TRACKING.RESULT.WEIGHT' | translate }} (kg)</label>
                 <input type="number" class="form-control" formControlName="poids" step="0.1">
                 <div class="form-text text-danger" *ngIf="colisForm.get('poids')?.invalid && colisForm.get('poids')?.touched">
-                  Le poids est requis
+                  {{ 'TRACKING.FORM.ERRORS.WEIGHT_REQUIRED' | translate }}
                 </div>
               </div>
 
               <div class="col-md-6 mb-3" *ngIf="showUnites()">
-                <label class="form-label">Nombre d'unités</label>
+                <label class="form-label" translate="TRACKING.FORM.UNITS"></label>
                 <input type="number" class="form-control" formControlName="nombreUnites" min="1">
                 <div class="form-text text-danger" *ngIf="colisForm.get('nombreUnites')?.invalid && colisForm.get('nombreUnites')?.touched">
-                  Le nombre d'unités est requis
+                  {{ 'TRACKING.FORM.ERRORS.UNITS_REQUIRED' | translate }}
                 </div>
               </div>
 
               <div class="col-12 mb-3">
-                <label class="form-label">Description</label>
+                <label class="form-label" translate="TRACKING.FORM.DESCRIPTION"></label>
                 <textarea class="form-control" formControlName="description" rows="3"></textarea>
                 <div class="form-text text-danger" *ngIf="colisForm.get('description')?.invalid && colisForm.get('description')?.touched">
-                  La description est requise
+                  {{ 'TRACKING.FORM.ERRORS.DESCRIPTION_REQUIRED' | translate }}
                 </div>
               </div>
 
@@ -54,21 +54,21 @@
               <div class="col-12 mb-3" *ngIf="colisList.length > 0">
                 <div class="card">
                   <div class="card-header bg-light">
-                    <h5 class="mb-0">Colis enregistrés</h5>
+                    <h5 class="mb-0" translate="TRACKING.RESULT.REGISTERED_PACKAGES"></h5>
                   </div>
                   <div class="card-body p-0">
                     <div class="table-responsive">
                       <table class="table table-hover mb-0">
                         <thead class="table-light">
                           <tr>
-                            <th>Code de suivi</th>
-                            <th>Type</th>
-                            <th>Expédition</th>
-                            <th>Poids</th>
-                            <th>Unités</th>
-                            <th>Description</th>
-                            <th class="text-end">Coût</th>
-                            <th class="text-center">Actions</th>
+                            <th translate="TRACKING.RESULT.TRACKING_CODE"></th>
+                            <th translate="TRACKING.RESULT.PACKAGE_TYPE"></th>
+                            <th translate="TRACKING.RESULT.SHIPPING_TYPE"></th>
+                            <th translate="TRACKING.RESULT.WEIGHT"></th>
+                            <th translate="TRACKING.FORM.UNITS"></th>
+                            <th translate="TRACKING.FORM.DESCRIPTION"></th>
+                            <th class="text-end" translate="TRACKING.RESULT.COST"></th>
+                            <th class="text-center" translate="COMMON.ACTIONS"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -91,7 +91,7 @@
                         </tbody>
                         <tfoot class="table-light">
                           <tr>
-                            <td colspan="6" class="text-end fw-bold">Total</td>
+                            <td colspan="6" class="text-end fw-bold" translate="TRACKING.RESULT.TOTAL"></td>
                             <td class="text-end fw-bold">{{ getTotalCost() | currency:'XOF':'symbol' }}</td>
                             <td></td>
                           </tr>
@@ -105,14 +105,14 @@
               <div class="col-12">
                 <div class="d-flex gap-2">
                   <button type="button" class="btn btn-primary" (click)="addAnotherColis()" [disabled]="colisForm.invalid">
-                    <i class="las la-plus me-1"></i>Ajouter un autre colis
+                    <i class="las la-plus me-1"></i>{{ 'TRACKING.FORM.ADD_ANOTHER_PACKAGE' | translate }}
                   </button>
                   <button type="button" class="btn btn-success" (click)="onColisSubmit()" [disabled]="colisList.length === 0">
-                    <i class="las la-check me-1"></i>Enregistrer
+                    <i class="las la-check me-1"></i>{{ 'COMMON.SAVE' | translate }}
                   </button>
                   <button type="button" class="btn btn-info" (click)="initiatePayment()" [disabled]="colisList.length === 0 || isProcessingPayment">
                     <i class="las" [ngClass]="{'la-credit-card': !isProcessingPayment, 'la-spinner la-spin': isProcessingPayment}"></i>
-                    <span class="ms-1">{{ isProcessingPayment ? 'Traitement...' : 'Payer maintenant' }}</span>
+                    <span class="ms-1">{{ isProcessingPayment ? ('COMMON.PROCESSING' | translate) : ('TRACKING.FORM.PAY_NOW' | translate) }}</span>
                   </button>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { RouterModule, RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { WebsiteNavbarComponent } from './components/website-navbar/website-navbar.component';
 import { WebsiteFooterComponent } from './components/website-footer/website-footer.component';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-website',
@@ -13,6 +14,7 @@ import { WebsiteFooterComponent } from './components/website-footer/website-foot
     RouterModule,
     RouterOutlet,
     FormsModule,
+    TranslateModule,
     WebsiteNavbarComponent,
     WebsiteFooterComponent
   ],

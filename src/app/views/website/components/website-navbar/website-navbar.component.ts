@@ -7,11 +7,20 @@ import { Subscription } from 'rxjs';
 import { NgbDropdownModule, NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
 import { Utilisateur } from '@/app/models/utilisateur.model';
 import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.service';
+import { TranslateDirective } from '@/app/shared/directives/translate.directive';
+import { LanguageSelectorComponent } from '@/app/shared/components/language-selector/language-selector.component';
 
 @Component({
   selector: 'app-website-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgbDropdownModule, NgbCollapseModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    NgbDropdownModule,
+    NgbCollapseModule,
+    TranslateDirective,
+    LanguageSelectorComponent
+  ],
   template: `
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm fixed-top">
       <div class="container">
@@ -34,39 +43,50 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
             <li class="nav-item">
               <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
                  (click)="isMenuCollapsed = true">
-                <i class="las la-home me-1"></i>Accueil
+                <i class="las la-home me-1"></i>
+                <span translate="NAVBAR.HOME"></span>
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" routerLink="/tracking" routerLinkActive="active"
                  (click)="isMenuCollapsed = true">
-                <i class="las la-search me-1"></i>Suivre un colis
+                <i class="las la-search me-1"></i>
+                <span translate="NAVBAR.TRACK_PACKAGE"></span>
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" routerLink="/recherche-colis" routerLinkActive="active"
                  (click)="isMenuCollapsed = true">
-                <i class="las la-box me-1"></i>Rechercher un colis
+                <i class="las la-box me-1"></i>
+                <span translate="NAVBAR.SEARCH_PACKAGE"></span>
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link position-relative" routerLink="/panier" routerLinkActive="active"
                  (click)="isMenuCollapsed = true">
-                <i class="las la-shopping-cart me-1"></i>Panier
+                <i class="las la-shopping-cart me-1"></i>
+                <span translate="NAVBAR.CART"></span>
                 <span *ngIf="nombreArticles > 0" class="cart-counter">{{ nombreArticles }}</span>
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" routerLink="/about" routerLinkActive="active"
                  (click)="isMenuCollapsed = true">
-                <i class="las la-info-circle me-1"></i>À propos
+                <i class="las la-info-circle me-1"></i>
+                <span translate="NAVBAR.ABOUT"></span>
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" routerLink="/contact" routerLinkActive="active"
                  (click)="isMenuCollapsed = true">
-                <i class="las la-envelope me-1"></i>Contact
+                <i class="las la-envelope me-1"></i>
+                <span translate="NAVBAR.CONTACT"></span>
               </a>
+            </li>
+
+            <!-- Sélecteur de langue -->
+            <li class="nav-item">
+              <app-language-selector></app-language-selector>
             </li>
 
             <!-- Menu utilisateur -->
@@ -87,17 +107,17 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
                 </div>
                 <div class="dropdown-divider"></div>
                 <a ngbDropdownItem routerLink="/profil" (click)="isMenuCollapsed = true">
-                  <i class="las la-user me-2"></i>Mon profil
+                  <i class="las la-user me-2"></i>
+                  <span translate="NAVBAR.MY_PROFILE"></span>
                 </a>
                 <a ngbDropdownItem routerLink="/mes-commandes" (click)="isMenuCollapsed = true">
-                  <i class="las la-file-invoice me-2"></i>Mes commandes
+                  <i class="las la-file-invoice me-2"></i>
+                  <span translate="NAVBAR.MY_ORDERS"></span>
                 </a>
-                <!-- <a ngbDropdownItem routerLink="/dashboard/analytics" *ngIf="estAdmin() || estPersonnel()" (click)="isMenuCollapsed = true">
-                  <i class="las la-tachometer-alt me-2"></i>Tableau de bord
-                </a> -->
                 <div class="dropdown-divider"></div>
                 <a ngbDropdownItem (click)="deconnecter()" class="text-danger">
-                  <i class="las la-sign-out-alt me-2"></i>Déconnexion
+                  <i class="las la-sign-out-alt me-2"></i>
+                  <span translate="NAVBAR.LOGOUT"></span>
                 </a>
               </div>
             </li>
@@ -105,14 +125,17 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
             <!-- Menu connexion/inscription si non connecté -->
             <li class="nav-item" ngbDropdown *ngIf="!utilisateur">
               <a class="nav-link" role="button" ngbDropdownToggle id="authDropdown">
-                <i class="las la-user me-1"></i>Compte
+                <i class="las la-user me-1"></i>
+                <span translate="NAVBAR.ACCOUNT"></span>
               </a>
               <div ngbDropdownMenu aria-labelledby="authDropdown" class="dropdown-menu-end">
                 <a ngbDropdownItem (click)="ouvrirModalConnexion()">
-                  <i class="las la-sign-in-alt me-2"></i>Connexion
+                  <i class="las la-sign-in-alt me-2"></i>
+                  <span translate="NAVBAR.LOGIN"></span>
                 </a>
                 <a ngbDropdownItem (click)="ouvrirModalInscription()">
-                  <i class="las la-user-plus me-2"></i>Inscription
+                  <i class="las la-user-plus me-2"></i>
+                  <span translate="NAVBAR.REGISTER"></span>
                 </a>
               </div>
             </li>
@@ -207,7 +230,6 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
       width: 20px;
       text-align: center;
     }
-    /* Améliorations pour la navbar responsive */
     @media (max-width: 991.98px) {
       .navbar-collapse {
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);

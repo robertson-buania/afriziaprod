@@ -20,11 +20,18 @@ import { AuthModalComponent } from './views/website/components/auth-modal/auth-m
 import { AuthModalModule } from './views/website/components/auth-modal/auth-modal.module'
 import { AuthModalService, AuthModalType } from './core/services/auth-modal.service'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
+import { TranslateModule, TranslateService } from '@ngx-translate/core'
 
 @Component({
     selector: 'app-root',
     standalone: true,
-    imports: [CommonModule, RouterOutlet, NgProgressModule, AuthModalModule],
+    imports: [
+      CommonModule,
+      RouterOutlet,
+      NgProgressModule,
+      AuthModalModule,
+      TranslateModule
+    ],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })
@@ -38,11 +45,20 @@ export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router)
   private authModalService = inject(AuthModalService)
   private modalService = inject(NgbModal)
+  private translate = inject(TranslateService)
 
   constructor() {
     this.router.events.subscribe((event: Event) => {
       this.checkRouteChange(event)
     })
+
+    // Initialize translations
+    this.translate.addLangs(['fr', 'zh']);
+    this.translate.setDefaultLang('fr');
+
+    // Use browser language if available, otherwise use default
+    const browserLang = this.translate.getBrowserLang();
+    this.translate.use(browserLang?.match(/fr|zh/) ? browserLang : 'fr');
   }
 
   ngOnInit(): void {

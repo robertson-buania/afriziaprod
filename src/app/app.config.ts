@@ -30,6 +30,8 @@ import { getFirestore, provideFirestore } from '@angular/fire/firestore'
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap'
 import { provideAnimations } from '@angular/platform-browser/animations'
 import { AuthModalService } from './core/services/auth-modal.service'
+import { TranslateModule, TranslateLoader } from '@ngx-translate/core'
+import { StaticTranslateLoader } from './shared/config/translation.config'
 
 const firebaseConfig = {
   apiKey: "AIzaSyBxspYrMsyjpIinpuIjOqHMqS2cRX7cZ0c",
@@ -74,6 +76,15 @@ export const appConfig: ApplicationConfig = {
     provideAnimations(),
     importProvidersFrom(NgbModule),
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
-    provideFirestore(() => getFirestore())
+    provideFirestore(() => getFirestore()),
+    importProvidersFrom(
+      TranslateModule.forRoot({
+        defaultLanguage: 'fr',
+        loader: {
+          provide: TranslateLoader,
+          useClass: StaticTranslateLoader
+        }
+      })
+    )
   ],
 }
