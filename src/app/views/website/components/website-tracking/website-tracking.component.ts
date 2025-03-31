@@ -107,18 +107,18 @@ import { HttpClientModule } from '@angular/common/http';
                         <div class="tracking-timeline">
                           <h6 class="text-muted mb-3">Progression</h6>
                           <div class="timeline">
-                            <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.EN_ATTENTE_VERIFICATION)">
+                            <!-- <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.EN_ATTENTE_VERIFICATION)">
                               <div class="timeline-point"></div>
                               <div class="timeline-content">
                                 <h6>Vérification</h6>
                                 <p>Colis en attente de vérification</p>
                               </div>
-                            </div>
+                            </div> -->
                             <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.EN_ATTENTE_FACTURATION)">
                               <div class="timeline-point"></div>
                               <div class="timeline-content">
                                 <h6>Facturation</h6>
-                                <p>Colis en cours de facturation</p>
+                                <p>Colis en attente de facturation</p>
                               </div>
                             </div>
                             <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.EN_ATTENTE_PAIEMENT)">
@@ -128,11 +128,21 @@ import { HttpClientModule } from '@angular/common/http';
                                 <p>En attente de paiement</p>
                               </div>
                             </div>
+
+                            <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION)">
+                              <div class="timeline-point"></div>
+                              <div class="timeline-content">
+                                <h6>Expédition</h6>
+                                <p>En cours expédition</p>
+                              </div>
+                            </div>
+
+
                             <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON)">
                               <div class="timeline-point"></div>
                               <div class="timeline-content">
                                 <h6>Livraison</h6>
-                                <p>En cours de livraison</p>
+                                <p>En attente livraison</p>
                               </div>
                             </div>
                             <div class="timeline-item" [class.active]="isStatusReached(STATUT_COLIS.LIVRE)">
@@ -178,8 +188,8 @@ import { HttpClientModule } from '@angular/common/http';
     }
 
     .nav-pills .nav-link.active {
-      background-color: #4e73e1;
-      color: white; /* Added white text color for active tab */
+      background-color: #3498db;
+      color: white;
     }
 
     .tracking-search, .register-form {
@@ -197,8 +207,8 @@ import { HttpClientModule } from '@angular/common/http';
     }
 
     .form-control:focus, .form-select:focus {
-      border-color: #4e73e1;
-      box-shadow: 0 0 0 0.2rem rgba(78,115,225,0.25);
+      border-color: #3498db;
+      box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
     }
 
     .btn-lg {
@@ -257,7 +267,7 @@ import { HttpClientModule } from '@angular/common/http';
     }
 
     .timeline-item.active .timeline-point {
-      background: #4e73e1;
+      background: #3498db;
     }
 
     .timeline-content h6 {

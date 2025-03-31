@@ -36,3 +36,35 @@
 .input-group .btn {
   z-index: 0;
 }
+
+.card-header {
+  background-color: #3498db !important;
+}
+
+.text-primary {
+  color: #3498db !important;
+}
+
+.btn-primary {
+  background-color: #3498db !important;
+  border-color: #3498db !important;
+
+  &:hover, &:focus {
+    background-color: #2980b9 !important;
+    border-color: #2980b9 !important;
+  }
+}
+
+.btn-outline-primary {
+  color: #3498db !important;
+  border-color: #3498db !important;
+
+  &:hover, &:focus {
+    background-color: #3498db !important;
+    color: white !important;
+  }
+}
+
+.badge.bg-primary {
+  background-color: #3498db !important;
+}

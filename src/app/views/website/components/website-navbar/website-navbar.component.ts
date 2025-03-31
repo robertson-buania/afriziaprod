@@ -13,11 +13,16 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
   standalone: true,
   imports: [CommonModule, RouterModule, NgbDropdownModule, NgbCollapseModule],
   template: `
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm fixed-top">
       <div class="container">
         <a class="navbar-brand" routerLink="/">
-          <img src="assets/images/logo-sm.png" alt="Kamba Agency" height="40">
-          AFRIZA
+          <div class="d-flex align-items-center">
+            <img src="assets/images/logo-sm.png" alt="Afrisia Logistics" height="45" class="me-2">
+            <div class="brand-text">
+              <span class="brand-name">Afrisia</span>
+              <span class="brand-tagline">Logistics</span>
+            </div>
+          </div>
         </a>
         <button class="navbar-toggler" type="button" (click)="isMenuCollapsed = !isMenuCollapsed"
                 aria-label="Toggle navigation">
@@ -119,24 +124,41 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
   `,
   styles: [`
     .navbar {
-      padding: 1rem 0;
+      padding: 0.75rem 0;
       z-index: 1030;
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     }
     .navbar-spacer {
-      height: 80px; /* Ajustez cette valeur selon la hauteur de votre navbar */
+      height: 80px;
     }
     .nav-link {
       font-weight: 500;
-      color: #333;
+      color: rgba(255, 255, 255, 0.9) !important;
       padding: 0.5rem 1rem;
       transition: color 0.3s ease;
     }
     .nav-link:hover, .nav-link.active {
-      color: #4e73e1;
+      color: white !important;
     }
     .navbar-brand {
       font-weight: 700;
-      color: #333;
+      color: white;
+      display: flex;
+      align-items: center;
+    }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .brand-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .brand-tagline {
+      font-size: 0.9rem;
+      letter-spacing: 0.05rem;
+      opacity: 0.9;
     }
     .cart-counter {
       position: absolute;
@@ -170,15 +192,25 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
     }
     .user-avatar {
       font-size: 2rem;
-      color: #4e73e1;
+      color: #3498db;
     }
     .user-info {
       line-height: 1.2;
     }
+    .dropdown-item {
+      padding: 0.5rem 1rem;
+    }
+    .dropdown-item:hover {
+      background-color: rgba(52, 152, 219, 0.05);
+    }
+    .dropdown-item i {
+      width: 20px;
+      text-align: center;
+    }
     /* Améliorations pour la navbar responsive */
     @media (max-width: 991.98px) {
       .navbar-collapse {
-        background: white;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
         padding: 1rem;
         border-radius: 0 0 8px 8px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -186,6 +218,12 @@ import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.
       }
       .navbar-nav .nav-item {
         margin: 0.25rem 0;
+      }
+      .brand-name {
+        font-size: 1.2rem;
+      }
+      .brand-tagline {
+        font-size: 0.8rem;
       }
     }
   `]

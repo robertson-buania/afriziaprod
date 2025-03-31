@@ -1,0 +1,353 @@
+<!-- Hero Section -->
+<div class="hero-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 text-center">
+        <h1 class="mb-4">Afrisia Logistics</h1>
+        <h2 class="mb-4">Spécialiste du fret aérien et maritime international</h2>
+        <p class="lead mb-5">
+          Des solutions d'expédition fiables entre la Chine et l'Afrique. Confiez-nous vos colis et bénéficiez d'un service professionnel et sécurisé.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+          <a routerLink="/tracking" class="btn btn-primary btn-lg">
+            <i class="las la-box me-2"></i>Expédier un colis
+          </a>
+          <button class="btn btn-outline-light btn-lg" (click)="scrollToTracking()">
+            <i class="las la-search me-2"></i>Suivre un colis
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tracking Section -->
+<section class="tracking-section mt-4" id="tracking">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="tracking-form">
+          <h2 class="text-center mb-4">Suivre votre colis</h2>
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              [(ngModel)]="trackingCode"
+              placeholder="Entrez votre code de suivi"
+              (keyup.enter)="trackPackage()"
+            >
+            <button
+              class="btn btn-primary btn-lg"
+              type="button"
+              (click)="trackPackage()"
+            >
+              <i class="las la-search me-2"></i>Suivre
+            </button>
+          </div>
+          <div *ngIf="error" class="alert alert-danger mt-3">
+            {{ error }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Actions Section -->
+<section class="quick-actions-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="row action-buttons">
+          <div class="col-md-4 mb-4">
+            <div class="action-card">
+              <div class="action-icon">
+                <i class="las la-search"></i>
+              </div>
+              <h3>Rechercher un colis</h3>
+              <p>Consultez les détails de vos colis enregistrés</p>
+              <a routerLink="/recherche-colis" class="btn btn-primary w-100">
+                <i class="las la-arrow-right me-2"></i>Rechercher
+              </a>
+            </div>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="action-card">
+              <div class="action-icon">
+                <i class="las la-shipping-fast"></i>
+              </div>
+              <h3>Suivre un colis</h3>
+              <p>Suivez l'état et la progression de votre expédition</p>
+              <a routerLink="/tracking" class="btn btn-primary w-100">
+                <i class="las la-arrow-right me-2"></i>Suivre
+              </a>
+            </div>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="action-card">
+              <div class="action-icon">
+                <i class="las la-phone"></i>
+              </div>
+              <h3>Nous contacter</h3>
+              <p>Assistance et information sur nos services</p>
+              <a routerLink="/contact" class="btn btn-primary w-100">
+                <i class="las la-arrow-right me-2"></i>Contact
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Services Section -->
+<section class="services-section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Nos Services</h2>
+      <p class="section-subtitle">Solutions de transport adaptées à tous vos besoins</p>
+    </div>
+    <div class="row">
+      <div class="col-md-4 mb-4">
+        <div class="service-card">
+          <i class="las la-plane service-icon"></i>
+          <h3>Fret Aérien Express</h3>
+          <p>Livraison express en 3 à 5 jours avec suivi en temps réel et sécurité garantie</p>
+          <p class="price-tag">À partir de 18$/kg</p>
+          <a routerLink="/about" class="btn btn-outline-primary mt-3">En savoir plus</a>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="service-card">
+          <i class="las la-ship service-icon"></i>
+          <h3>Fret Maritime</h3>
+          <p>Transport économique par cargo avec délai de 75 jours, idéal pour les envois non urgents</p>
+          <p class="price-tag">À partir de 540$/CBM</p>
+          <a routerLink="/about" class="btn btn-outline-primary mt-3">Voir les tarifs</a>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="service-card">
+          <i class="las la-shield-alt service-icon"></i>
+          <h3>Transport Spécialisé</h3>
+          <p>Solutions adaptées pour les produits sensibles, électroniques et médicaments</p>
+          <p class="price-tag">À partir de 20$/kg</p>
+          <a routerLink="/about" class="btn btn-outline-primary mt-3">Découvrir</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tarifs Section -->
+<section class="tarifs-section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Nos Tarifs</h2>
+      <p class="section-subtitle">Des prix compétitifs adaptés à chaque type d'expédition</p>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="tarifs-table">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-primary">
+                <tr>
+                  <th>Type de colis</th>
+                  <th>Prix/kg</th>
+                  <th>Délai d'expédition</th>
+                  <th>Prépaiement</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Objets ordinaires (Cargo)</td>
+                  <td>17$</td>
+                  <td>15 jours ou plus</td>
+                  <td>100% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Express</td>
+                  <td>18$</td>
+                  <td>3 à 5 jours</td>
+                  <td>100% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Fret Maritime</td>
+                  <td>540$/CBM</td>
+                  <td>75 jours environ</td>
+                  <td>50% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Objets avec batteries</td>
+                  <td>20$</td>
+                  <td>Variable selon le cas</td>
+                  <td>100% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Médicaments / Compléments alimentaires</td>
+                  <td>20$</td>
+                  <td>Express uniquement</td>
+                  <td>100% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Cartouches</td>
+                  <td>20$</td>
+                  <td>Variable selon le cas</td>
+                  <td>100% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Téléphones</td>
+                  <td>20$ + 10$ par téléphone</td>
+                  <td>Variable selon le cas</td>
+                  <td>100% obligatoire</td>
+                </tr>
+                <tr>
+                  <td>Ordinateurs</td>
+                  <td>20$ + 30$ par ordinateur</td>
+                  <td>Variable selon le cas</td>
+                  <td>100% obligatoire</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tarifs-note mt-3">
+            <p><strong>NB:</strong> Il est recommandé de nous contacter avant d'effectuer les achats de pièces incluant des grosses piles.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Pourquoi nous choisir ?</h2>
+      <p class="section-subtitle">Des avantages qui font la différence</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-3">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i class="las la-clock"></i>
+          </div>
+          <h4>Express</h4>
+          <p>Livraison en 3-5 jours entre la Chine et l'Afrique</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i class="las la-hand-holding-usd"></i>
+          </div>
+          <h4>Économique</h4>
+          <p>Options cargo à tarifs avantageux</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i class="las la-headset"></i>
+          </div>
+          <h4>Support 24/7</h4>
+          <p>Assistance client permanente</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i class="las la-map-marked-alt"></i>
+          </div>
+          <h4>Suivi en temps réel</h4>
+          <p>Localisez vos colis à tout moment</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Prepaiement Section -->
+<section class="prepaiement-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-5">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h3 class="mb-4">Système de Prépaiement</h3>
+                <p>Depuis fin 2023, tous nos services nécessitent un prépaiement à 100% avant expédition de vos colis.</p>
+                <p>Ce système garantit le traitement prioritaire de vos colis et assure une expédition dans le délai.</p>
+                <p>Le fret aérien nécessite un prépaiement à 100%, tandis que le fret maritime nécessite un prépaiement de 50% avant expédition.</p>
+                <p class="mb-0">Pour plus d'informations sur ce système, n'hésitez pas à contacter notre service client.</p>
+              </div>
+              <div class="col-md-4 text-center">
+                <div class="prepaiement-icon">
+                  <i class="las la-credit-card"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 text-center">
+        <h2 class="mb-4">Prêt à expédier votre colis ?</h2>
+        <p class="mb-4">Rejoignez nos clients satisfaits et profitez de nos services de fret internationaux</p>
+        <div class="d-flex justify-content-center gap-3">
+          <a routerLink="/tracking" class="btn btn-primary btn-lg">
+            <i class="las la-paper-plane me-2"></i>Commencer maintenant
+          </a>
+          <a routerLink="/contact" class="btn btn-outline-light btn-lg">
+            <i class="las la-headset me-2"></i>Nous contacter
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Payment Methods Section -->
+<section class="payment-methods-section py-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="text-center mb-4">
+          <h2 class="section-title h4">Modes de Paiement Acceptés</h2>
+        </div>
+        <div class="payment-methods-list d-flex justify-content-center flex-wrap gap-4">
+          <div class="payment-method-item">
+            <img src="assets/images/payement/visa.jpg" alt="VISA" />
+            <span>VISA</span>
+          </div>
+          <div class="payment-method-item">
+            <img src="assets/images/payement/MasterCard.png" alt="MasterCard" />
+            <span>MasterCard</span>
+          </div>
+          <div class="payment-method-item">
+            <img src="assets/images/payement/mpesa.png" alt="M-PESA" />
+            <span>M-PESA</span>
+          </div>
+          <div class="payment-method-item">
+            <img src="assets/images/payement/orange_money.png" alt="Orange Money" />
+            <span>ORANGE MONEY</span>
+          </div>
+          <div class="payment-method-item">
+            <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" />
+            <span>AIRTEL MONEY</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
