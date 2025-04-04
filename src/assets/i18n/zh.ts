@@ -167,6 +167,9 @@ export const ZH = {
         '如需了解更多信息，请联系我们的客服。'
       ]
     },
+    PAYMENT_METHODS:{
+      TITLE:"支付方式"
+    },
     CTA: {
       TITLE: '准备发送包裹？',
       SUBTITLE: '加入我们满意的客户，享受国际货运服务',

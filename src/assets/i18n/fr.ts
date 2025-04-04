@@ -167,6 +167,9 @@ export const FR = {
         'Pour plus d\'informations sur ce système, n\'hésitez pas à contacter notre service client.'
       ]
     },
+    PAYMENT_METHODS:{
+      TITLE:"Méthodes de paiement"
+    },
     CTA: {
       TITLE: 'Prêt à expédier votre colis ?',
       SUBTITLE: 'Rejoignez nos clients satisfaits et profitez de nos services de fret internationaux',
