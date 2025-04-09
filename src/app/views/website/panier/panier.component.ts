@@ -40,7 +40,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   // Type d'expédition
   readonly TYPE_EXPEDITION = TYPE_EXPEDITION;
-  selectedExpeditionType: TYPE_EXPEDITION = TYPE_EXPEDITION.STANDARD;
+  selectedExpeditionType: TYPE_EXPEDITION = TYPE_EXPEDITION.EXPRESS;
 
   constructor(
     private panierService: PanierService,
@@ -175,11 +175,12 @@ export class PanierComponent implements OnInit, OnDestroy {
   onExpeditionTypeChange(): void {
     // Recalculer les coûts pour chaque colis en fonction du type d'expédition
     for (const colis of this.colis) {
+
       if (colis.id) {
         // Calculer le nouveau coût du colis basé sur le type d'expédition
         const typeColis = colis.type;
         const poids = colis.poids || 0;
-        const nombreUnites = colis.nombreUnites || 1;
+        const quantite = Number(colis.quantite) || 1; // Convertir en nombre
 
         // Récupérer les tarifs correspondants
         const parametrage = PARAMETRAGE_COLIS[this.selectedExpeditionType][typeColis];
@@ -187,13 +188,19 @@ export class PanierComponent implements OnInit, OnDestroy {
         // Calculer le coût
         let nouveauCout = parametrage.prixParKilo * poids;
         if (parametrage.prixUnitaire) {
-          nouveauCout += parametrage.prixUnitaire * nombreUnites;
+          nouveauCout += parametrage.prixUnitaire * quantite;
         }
 
         // Mettre à jour le colis
-        colis.cout = nouveauCout;
+        colis.cout = Math.round(nouveauCout);
         colis.typeExpedition = this.selectedExpeditionType;
       }
+    }
+
+    // Mettre à jour le panier pour persister les changements
+    this.panierService.viderPanier();
+    for (const colis of this.colis) {
+      this.panierService.ajouterAuPanier(colis);
     }
 
     // Mettre à jour le total

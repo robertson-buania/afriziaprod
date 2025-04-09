@@ -113,13 +113,13 @@ export const FR = {
         },
         MEDICAL: {
           NAME: 'Médicaments / Compléments alimentaires',
-          PRICE: '20$',
+          PRICE: '18$',
           DELIVERY: 'Express uniquement',
           PREPAYMENT: '100% obligatoire'
         },
         CARTRIDGES: {
           NAME: 'Cartouches',
-          PRICE: '20$',
+          PRICE: '18$',
           DELIVERY: 'Variable selon le cas',
           PREPAYMENT: '100% obligatoire'
         },
@@ -220,7 +220,8 @@ export const FR = {
     BOTTOM: {
       COPYRIGHT: '© 2024 Afrisia Logistics. Tous droits réservés.',
       DEVELOPED_BY: 'Développé par'
-    }
+    },
+    PRIVACY_POLICY: 'Politique de Confidentialité'
   },
   CONTACT: {
     WHATSAPP_BUTTON: 'Nous contacter sur WhatsApp',

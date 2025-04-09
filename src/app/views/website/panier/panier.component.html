@@ -67,9 +67,10 @@
                   <thead class="table-light">
                     <tr>
                       <th class="ps-3" style="width: 40%">Colis</th>
-                      <th style="width: 20%">Statut</th>
-                      <th style="width: 20%">Coût</th>
-                      <th class="text-end pe-3" style="width: 20%">Actions</th>
+                      <th style="width: 15%">Statut</th>
+                      <th style="width: 15%">Poids</th>
+                      <th style="width: 15%">Coût</th>
+                      <th class="text-end pe-3" style="width: 15%">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -91,6 +92,9 @@
                       </td>
                       <td>
                         <span class="badge bg-info">{{ getStatutLabel(item.statut) }}</span>
+                      </td>
+                      <td>
+                        <span>{{ item.poids || 0 }} kg</span>
                       </td>
                       <td>
                         <span class="fw-bold">{{ item.cout | currency:'USD':'symbol' }}</span>

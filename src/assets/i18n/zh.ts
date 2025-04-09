@@ -220,7 +220,8 @@ export const ZH = {
     BOTTOM: {
       COPYRIGHT: '© 2024 Afrisia 物流。保留所有权利。',
       DEVELOPED_BY: '开发者'
-    }
+    },
+    PRIVACY_POLICY: '隐私政策'
   },
   CONTACT: {
     WHATSAPP_BUTTON: '通过WhatsApp联系我们'

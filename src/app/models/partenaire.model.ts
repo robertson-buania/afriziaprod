@@ -78,14 +78,24 @@ export enum  TYPE_PAIEMENT{
 }
 
 export enum STATUT_COLIS{
-  EN_ATTENTE_VERIFICATION,
-  EN_ATTENTE_FACTURATION,
-  EN_ATTENTE_PAIEMENT,
-  EN_ATTENTE_LIVRAISON,
-  EN_COURS_EXPEDITION,
-  COLIS_ARRIVE,
-  LIVRE,
-  ANNULE
+  EN_ATTENTE_VERIFICATION,//0
+  EN_ATTENTE_FACTURATION,//1
+  EN_ATTENTE_PAIEMENT,//1
+  EN_ATTENTE_LIVRAISON,//3
+  EN_COURS_EXPEDITION,//2
+  COLIS_ARRIVE,//5
+  LIVRE,//6
+  ANNULE//7
+}
+
+export enum STATUT_COLIS1{
+
+  EN_ATTENTE_PAIEMENT,//1
+  EN_ATTENTE_LIVRAISON,//3
+  EN_COURS_EXPEDITION,//2
+  COLIS_ARRIVE,//5
+  LIVRE,//6
+  ANNULE//7
 }
 
 export enum TYPE_EXPEDITION{
@@ -95,16 +105,17 @@ export enum TYPE_EXPEDITION{
 
 // Paramétrage des tarifs de colis en fonction de l'expédition et du type de colis
 export const PARAMETRAGE_COLIS: Record<TYPE_EXPEDITION, Record<TYPE_COLIS, { prixParKilo: number; prixUnitaire?: number }>> = {
-  [TYPE_EXPEDITION.STANDARD]: {
-    [TYPE_COLIS.ORDINAIRE]: { prixParKilo: 17, prixUnitaire: 0 },
-    [TYPE_COLIS.AVEC_BATTERIE]: { prixParKilo: 20, prixUnitaire: 0 },
-    [TYPE_COLIS.ORDINATEUR]: { prixParKilo: 20, prixUnitaire: 30 },
-    [TYPE_COLIS.TELEPHONE]: { prixParKilo: 20, prixUnitaire: 10 },
-  },
   [TYPE_EXPEDITION.EXPRESS]: {
     [TYPE_COLIS.ORDINAIRE]: { prixParKilo: 18, prixUnitaire: 0 },
     [TYPE_COLIS.AVEC_BATTERIE]: { prixParKilo: 20 , prixUnitaire: 0},
     [TYPE_COLIS.ORDINATEUR]: { prixParKilo: 20, prixUnitaire: 30 },
     [TYPE_COLIS.TELEPHONE]: { prixParKilo: 20, prixUnitaire: 10 },
+  },
+  [TYPE_EXPEDITION.STANDARD]: {
+    [TYPE_COLIS.ORDINAIRE]: { prixParKilo: 17, prixUnitaire: 0 },
+    [TYPE_COLIS.AVEC_BATTERIE]: { prixParKilo: 20, prixUnitaire: 0 },
+    [TYPE_COLIS.ORDINATEUR]: { prixParKilo: 20, prixUnitaire: 30 },
+    [TYPE_COLIS.TELEPHONE]: { prixParKilo: 20, prixUnitaire: 10 },
   }
+
 };

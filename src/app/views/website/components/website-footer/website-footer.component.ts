@@ -12,6 +12,7 @@ import { TranslateModule } from '@ngx-translate/core';
     <footer class="site-footer bg-dark text-white py-5">
       <div class="container">
         <div class="row">
+          <!-- À propos de l'entreprise -->
           <div class="col-md-4 mb-4 mb-md-0">
             <h3 class="h5 mb-3">{{ 'FOOTER.COMPANY.TITLE' | translate }}</h3>
             <p>{{ 'FOOTER.COMPANY.DESCRIPTION' | translate }}</p>
@@ -33,20 +34,40 @@ import { TranslateModule } from '@ngx-translate/core';
               </div>
             </div>
           </div>
+
+          <!-- Liens rapides -->
           <div class="col-md-4 mb-4 mb-md-0">
-            <h3 class="h5 mb-3">{{ 'FOOTER.COMPANY.TITLE' | translate }}</h3>
-            <p><i class="las la-map-marker me-2"></i>{{ 'FOOTER.COMPANY.ADDRESS' | translate }}</p>
-            <p><i class="las la-phone me-2"></i>+243 83 87 16 236 / +243 81 51 00 939</p>
-            <p><i class="las la-envelope me-2"></i>moiseeloko&#64;gmail.com</p>
+            <h3 class="h5 mb-3">{{ 'FOOTER.QUICK_LINKS.TITLE' | translate }}</h3>
+            <ul class="list-unstyled footer-links">
+              <li><a routerLink="/" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.HOME' | translate }}</a></li>
+              <li><a routerLink="/about" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.ABOUT' | translate }}</a></li>
+              <li><a routerLink="/tracking" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.TRACK_PACKAGE' | translate }}</a></li>
+              <li><a routerLink="/recherche-colis" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.SEARCH_PACKAGE' | translate }}</a></li>
+              <li><a routerLink="/contact" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.CONTACT' | translate }}</a></li>
+              <li><a routerLink="/politique-confidentialite" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a></li>
+            </ul>
           </div>
+
+          <!-- Contact et horaires -->
           <div class="col-md-4">
-            <h3 class="h5 mb-3">{{ 'FOOTER.HOURS.TITLE' | translate }}</h3>
-            <p><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.WEEKDAYS' | translate }}</p>
-            <p><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.SATURDAY' | translate }}</p>
-            <p><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.SUNDAY' | translate }}</p>
+            <h3 class="h5 mb-3">{{ 'FOOTER.CONTACT.TITLE' | translate }}</h3>
+            <ul class="list-unstyled footer-contact">
+              <li><i class="las la-map-marker me-2"></i>{{ 'FOOTER.COMPANY.ADDRESS' | translate }}</li>
+              <li><i class="las la-phone me-2"></i>+243 83 87 16 236 / +243 81 51 00 939</li>
+              <li><i class="las la-envelope me-2"></i>moiseeloko&#64;gmail.com</li>
+            </ul>
+
+            <h3 class="h5 mb-3 mt-4">{{ 'FOOTER.HOURS.TITLE' | translate }}</h3>
+            <ul class="list-unstyled footer-hours">
+              <li><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.WEEKDAYS' | translate }}</li>
+              <li><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.SATURDAY' | translate }}</li>
+              <li><i class="las la-clock me-2"></i>{{ 'FOOTER.HOURS.SUNDAY' | translate }}</li>
+            </ul>
           </div>
         </div>
+
         <hr class="my-4">
+
         <div class="row">
           <div class="col-12 text-center">
             <p class="mb-0">{{ 'FOOTER.BOTTOM.COPYRIGHT' | translate }}</p>
@@ -103,6 +124,20 @@ import { TranslateModule } from '@ngx-translate/core';
 
     .payment-icon:hover {
       transform: translateY(-3px);
+    }
+
+    .footer-links li, .footer-contact li, .footer-hours li {
+      margin-bottom: 0.75rem;
+    }
+
+    .footer-links a {
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: white !important;
+      padding-left: 5px;
     }
 
     @media (max-width: 768px) {

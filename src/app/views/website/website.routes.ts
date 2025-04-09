@@ -74,6 +74,13 @@ export const WEBSITE_ROUTES: Route[] = [
           import('./components/website-contact/website-contact.component')
             .then(m => m.WebsiteContactComponent),
         data: { title: 'Contact' }
+      },
+      {
+        path: 'politique-confidentialite',
+        loadComponent: () =>
+          import('./components/politique-confidentialite/politique-confidentialite.component')
+            .then(m => m.PolitiqueConfidentialiteComponent),
+        data: { title: 'Politique de Confidentialité' }
       }
     ]
   }

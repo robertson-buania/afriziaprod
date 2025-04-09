@@ -1,0 +1,34 @@
+// Styles spécifiques pour la page de politique de confidentialité
+.card {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.card-header {
+  border-bottom: none;
+}
+
+h2.h4 {
+  color: #333;
+  font-weight: 600;
+}
+
+ul {
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+.alert-info {
+  border-left: 4px solid #0dcaf0;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
