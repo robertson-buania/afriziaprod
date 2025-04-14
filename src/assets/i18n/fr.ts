@@ -221,7 +221,8 @@ export const FR = {
       COPYRIGHT: '© 2024 Afrisia Logistics. Tous droits réservés.',
       DEVELOPED_BY: 'Développé par'
     },
-    PRIVACY_POLICY: 'Politique de Confidentialité'
+    PRIVACY_POLICY: 'Politique de Confidentialité',
+    REFUND_POLICY: 'Politique de Remboursement'
   },
   CONTACT: {
     WHATSAPP_BUTTON: 'Nous contacter sur WhatsApp',

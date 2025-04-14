@@ -81,6 +81,13 @@ export const WEBSITE_ROUTES: Route[] = [
           import('./components/politique-confidentialite/politique-confidentialite.component')
             .then(m => m.PolitiqueConfidentialiteComponent),
         data: { title: 'Politique de Confidentialité' }
+      },
+      {
+        path: 'politique-remboursement',
+        loadComponent: () =>
+          import('./components/politique-remboursement/politique-remboursement.component')
+            .then(m => m.PolitiqueRemboursementComponent),
+        data: { title: 'Politique de Remboursement' }
       }
     ]
   }

@@ -45,6 +45,7 @@ import { TranslateModule } from '@ngx-translate/core';
               <li><a routerLink="/recherche-colis" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.SEARCH_PACKAGE' | translate }}</a></li>
               <li><a routerLink="/contact" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'NAVBAR.CONTACT' | translate }}</a></li>
               <li><a routerLink="/politique-confidentialite" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a></li>
+              <li><a routerLink="/politique-remboursement" class="text-white-50"><i class="las la-chevron-right me-2"></i>{{ 'FOOTER.REFUND_POLICY' | translate }}</a></li>
             </ul>
           </div>
 
