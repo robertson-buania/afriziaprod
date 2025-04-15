@@ -7,6 +7,7 @@ import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
 import { ROLE_UTILISATEUR } from '@/app/models/utilisateur.model';
+import { FirebaseService } from '@/app/core/services/firebase.service';
 
 @Component({
   selector: 'app-auth-modal',
@@ -36,7 +37,8 @@ export class AuthModalComponent implements OnInit, OnDestroy {
     private authModalService: AuthModalService,
     private fb: FormBuilder,
     private utilisateurService: UtilisateurService,
-    private router: Router
+    private router: Router,
+    private firebaseService: FirebaseService
   ) {}
 
   ngOnInit(): void {
@@ -137,14 +139,32 @@ export class AuthModalComponent implements OnInit, OnDestroy {
     try {
       const formData = this.registerForm.value;
 
-      // Soumettre une demande d'utilisateur partenaire
-      await this.utilisateurService.soumettreDemandeUtilisateur({
+      // 1. Créer d'abord le partenaire
+      const partenaireId = await this.firebaseService.addPartenaire({
+        nom: formData.nom,
+        prenom: formData.prenom,
+        postnom: '', // Champ obligatoire, à remplir plus tard par l'utilisateur
+        telephone: Number(formData.telephone) || 0,
+        email: formData.email,
+        adresse: '',
+        factures: []
+      });
+
+      // 2. Créer l'utilisateur lié au partenaire
+      await this.utilisateurService.creerUtilisateur({
         nom: formData.nom,
         prenom: formData.prenom,
         email: formData.email,
         telephone: formData.telephone,
-        role: ROLE_UTILISATEUR.PERSONNEL, // Rôle personnel qui peut être partenaire
-      }, formData.password); // Passer le mot de passe pour créer directement l'utilisateur
+        role: ROLE_UTILISATEUR.PERSONNEL,
+        password: formData.password,
+        partenaireId: partenaireId, // Lier l'utilisateur au partenaire
+        preferences: {
+          themeMode: 'light',
+          langue: 'fr',
+          notificationsActives: true
+        }
+      });
 
       this.successMessage = 'Votre compte a été créé avec succès et vous êtes désormais enregistré comme partenaire. Vous pouvez maintenant vous connecter.';
       this.registerForm.reset();

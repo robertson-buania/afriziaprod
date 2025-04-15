@@ -18,7 +18,7 @@ export class PanierService {
    * Ajoute un colis au panier s'il est en attente de facturation
    */
   ajouterAuPanier(colis: Colis): boolean {
-    if (colis.statut !== STATUT_COLIS.EN_ATTENTE_FACTURATION) {
+    if (colis.statut !== STATUT_COLIS.EN_ATTENTE_PAIEMENT) {
       return false;
     }
 
@@ -101,7 +101,7 @@ export class PanierService {
           try {
             // Charger chaque colis individuellement de manière asynchrone
             const colisItem = await this.firebaseService.getColisById(id);
-            if (colisItem && colisItem.statut === STATUT_COLIS.EN_ATTENTE_FACTURATION) {
+            if (colisItem && colisItem.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT) {
               colis.push(colisItem);
             }
           } catch (error) {

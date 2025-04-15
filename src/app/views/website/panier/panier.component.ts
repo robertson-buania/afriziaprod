@@ -112,23 +112,21 @@ export class PanierComponent implements OnInit, OnDestroy {
   }
 
   getStatutLabel(statut: STATUT_COLIS): string {
-    switch (statut) {
-      case STATUT_COLIS.EN_ATTENTE_VERIFICATION:
-        return 'En attente de vérification';
-      case STATUT_COLIS.EN_ATTENTE_FACTURATION:
-        return 'En attente de facturation';
+    switch(statut) {
       case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
-        return 'En attente de paiement';
+        return 'bg-warning text-dark';
+      case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
+        return 'bg-info';
+      case STATUT_COLIS.EN_COURS_EXPEDITION:
+        return 'bg-primary';
       case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
-        return 'En attente de livraison';
-      case STATUT_COLIS.COLIS_ARRIVE:
-        return 'Arrivé';
+        return 'bg-secondary';
       case STATUT_COLIS.LIVRE:
-        return 'Livré';
+        return 'bg-success';
       case STATUT_COLIS.ANNULE:
-        return 'Annulé';
+        return 'bg-danger';
       default:
-        return 'Statut inconnu';
+        return 'bg-secondary';
     }
   }
 

@@ -13,26 +13,26 @@ export const VIEW_ROUTES: Route[] = [
     loadChildren: () =>
       import('./applications/apps.route').then((mod) => mod.APPS_ROUTES),
   },
-  {
-    path: 'partenaires',
-    loadChildren: () =>
-      import('./partenaires/partenaire.routes').then((mod) => mod.PARTENAIRES_ROUTES),
-  },
-  {
-    path: 'colis',
-    loadChildren: () =>
-      import('./colis/colis.routes').then((mod) => mod.COLIS_ROUTES),
-  },
-  {
-    path: 'facture',
-    loadChildren: () =>
-      import('./facture/facture.routes').then((mod) => mod.FACTURE_ROUTES),
-  },
-  {
-    path: 'paiement',
-    loadChildren: () =>
-      import('./paiement/paiement.routes').then((mod) => mod.PAIEMENT_ROUTES),
-  },
+  // {
+  //   path: 'partenaires',
+  //   loadChildren: () =>
+  //     import('./partenaires/partenaire.routes').then((mod) => mod.PARTENAIRES_ROUTES),
+  // },
+  // {
+  //   path: 'colis',
+  //   loadChildren: () =>
+  //     import('./colis/colis.routes').then((mod) => mod.COLIS_ROUTES),
+  // },
+  // {
+  //   path: 'facture',
+  //   loadChildren: () =>
+  //     import('./facture/facture.routes').then((mod) => mod.FACTURE_ROUTES),
+  // },
+  // {
+  //   path: 'paiement',
+  //   loadChildren: () =>
+  //     import('./paiement/paiement.routes').then((mod) => mod.PAIEMENT_ROUTES),
+  // },
   {
     path: 'ui',
     loadChildren: () => import('./ui/ui.route').then((mod) => mod.UI_ROUTES),

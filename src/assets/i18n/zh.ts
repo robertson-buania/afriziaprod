@@ -188,6 +188,10 @@ export const ZH = {
       PHONE: '电话',
       EMAIL: '电子邮件'
     },
+    CONTACT: {
+      TITLE: '联系我们',
+      
+    },
     QUICK_LINKS: {
       TITLE: '快速链接',
       HOME: '首页',

@@ -22,22 +22,22 @@ export const APP_ROUTES: Route[] = [
         path: 'dashboard',
         loadChildren: () => import('./views/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES)
       },
-      {
-        path: 'facture',
-        loadChildren: () => import('./views/facture/facture.routes').then(m => m.FACTURE_ROUTES)
-      },
-      {
-        path: 'paiement',
-        loadChildren: () => import('./views/paiement/paiement.routes').then(m => m.PAIEMENT_ROUTES)
-      },
-      {
-        path: 'partenaires',
-        loadChildren: () => import('./views/partenaires/partenaire.routes').then(m => m.PARTENAIRES_ROUTES)
-      },
-      {
-        path: 'colis',
-        loadChildren: () => import('./views/colis/colis.routes').then(m => m.COLIS_ROUTES)
-      },
+      // {
+      //   path: 'facture',
+      //   loadChildren: () => import('./views/facture/facture.routes').then(m => m.FACTURE_ROUTES)
+      // },
+      // {
+      //   path: 'paiement',
+      //   loadChildren: () => import('./views/paiement/paiement.routes').then(m => m.PAIEMENT_ROUTES)
+      // },
+      // {
+      //   path: 'partenaires',
+      //   loadChildren: () => import('./views/partenaires/partenaire.routes').then(m => m.PARTENAIRES_ROUTES)
+      // },
+      // {
+      //   path: 'colis',
+      //   loadChildren: () => import('./views/colis/colis.routes').then(m => m.COLIS_ROUTES)
+      // },
       {
         path: 'utilisateurs',
         loadChildren: () => import('./views/utilisateurs/utilisateurs.routes')

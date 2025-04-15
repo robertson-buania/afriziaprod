@@ -14,9 +14,11 @@ export interface Facture{
   id?:string
   montant:number
   montantPaye:number
-  colis:Colis[]
+  colis:(Colis | string)[]
+  colisObjets?:Colis[]
   paiements:Paiement[]
-  prixRemise?: number
+  dateCreation?: string
+  partenaireId?: string
 }
 
 
@@ -34,7 +36,6 @@ export interface Colis{
   poids?:number
   cout?:number
   dateCreation?: string
-  dateReception?: string
   codeSuivi: string
   nombreUnites?: number
   codeexpedition:string,
@@ -49,9 +50,7 @@ export interface Sac{
   id?:string,
   reference:string,
   colis:Colis[],
-  dateCreation?: string,
-  dateReception?: string,
-  numeroListe?: string
+  dateCreation?: string
 }
 
 export interface Paiement{
@@ -77,6 +76,7 @@ export enum  TYPE_PAIEMENT{
   MPESA,
   ORANGE_MONEY
 }
+
 
 // export enum STATUT_COLIS{
 //   EN_ATTENTE_VERIFICATION,

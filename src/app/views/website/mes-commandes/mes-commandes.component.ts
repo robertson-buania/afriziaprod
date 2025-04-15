@@ -158,23 +158,20 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       return 'Statut inconnu';
     }
 
-    switch (statut) {
-      case STATUT_COLIS.EN_ATTENTE_VERIFICATION:
-        return 'En attente de vérification';
-      case STATUT_COLIS.EN_ATTENTE_FACTURATION:
-        return 'En attente de facturation';
+    switch(statut) {
       case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
         return 'En attente de paiement';
+      case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
+        return "En attente d'expédition";
+      case STATUT_COLIS.EN_COURS_EXPEDITION:
+        return "En cours d'expédition";
+     
       case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
         return 'En attente de livraison';
-      case STATUT_COLIS.COLIS_ARRIVE:
-        return 'Colis arrivé';
       case STATUT_COLIS.LIVRE:
         return 'Livré';
-      case STATUT_COLIS.ANNULE:
-        return 'Annulé';
       default:
-        return 'Statut inconnu';
+        return 'Annulé';
     }
   }
 
@@ -183,14 +180,14 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     if (statut === null || statut === undefined) {
       return 'bg-secondary';
     }
-
-    switch (statut) {
-      case STATUT_COLIS.EN_ATTENTE_VERIFICATION:
-      case STATUT_COLIS.EN_ATTENTE_FACTURATION:
+    switch(statut) {
       case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
-        return 'bg-warning';
+        return 'bg-warning text-dark';
+      case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
+        return 'bg-info';
+      case STATUT_COLIS.EN_COURS_EXPEDITION:
+        return 'bg-primary';
       case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
-      case STATUT_COLIS.COLIS_ARRIVE:
         return 'bg-info';
       case STATUT_COLIS.LIVRE:
         return 'bg-success';

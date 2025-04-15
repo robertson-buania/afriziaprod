@@ -70,7 +70,7 @@ export class RechercheColisComponent implements OnInit {
   ajouterAuPanier(): void {
     if (!this.colis) return;
 
-    if (this.colis.statut !== STATUT_COLIS.EN_ATTENTE_FACTURATION) {
+    if (this.colis.statut !== STATUT_COLIS.EN_ATTENTE_PAIEMENT) {
       this.errorMessage = 'Ce colis ne peut pas être ajouté au panier car il n\'est pas en attente de facturation';
       return;
     }
@@ -84,7 +84,7 @@ export class RechercheColisComponent implements OnInit {
   }
 
   peutEtreAjouteAuPanier(): boolean {
-    return this.colis?.statut === STATUT_COLIS.EN_ATTENTE_FACTURATION;
+    return this.colis?.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT;
   }
 
   getTypeColisLabel(type: TYPE_COLIS): string {
@@ -114,44 +114,39 @@ export class RechercheColisComponent implements OnInit {
   }
 
   getStatutLabel(statut: STATUT_COLIS): string {
-    switch (statut) {
-      case STATUT_COLIS.EN_ATTENTE_VERIFICATION:
-        return 'En attente de vérification';
-      case STATUT_COLIS.EN_ATTENTE_FACTURATION:
-        return 'En attente de facturation';
+    switch(statut) {
       case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
-        return 'En attente de paiement';
-      case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
-        return 'En attente de livraison';
-      case STATUT_COLIS.COLIS_ARRIVE:
-        return 'Arrivé';
-      case STATUT_COLIS.LIVRE:
-        return 'Livré';
-      case STATUT_COLIS.ANNULE:
-        return 'Annulé';
-      default:
-        return 'Statut inconnu';
-    }
-  }
-
-  getStatutClass(statut: STATUT_COLIS): string {
-    switch (statut) {
-      case STATUT_COLIS.EN_ATTENTE_VERIFICATION:
-        return 'bg-warning';
-      case STATUT_COLIS.EN_ATTENTE_FACTURATION:
+        return 'bg-warning text-dark';
+      case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
         return 'bg-info';
-      case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
+      case STATUT_COLIS.EN_COURS_EXPEDITION:
         return 'bg-primary';
       case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
         return 'bg-secondary';
-      case STATUT_COLIS.COLIS_ARRIVE:
-        return 'bg-info';
       case STATUT_COLIS.LIVRE:
         return 'bg-success';
       case STATUT_COLIS.ANNULE:
         return 'bg-danger';
       default:
         return 'bg-secondary';
+    }
+  }
+
+  getStatutClass(statut: STATUT_COLIS): string {
+    switch(statut) {
+      case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
+        return 'En attente de paiement';
+      case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
+        return "En attente d'expédition";
+      case STATUT_COLIS.EN_COURS_EXPEDITION:
+        return "En cours d'expédition";
+     
+      case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
+        return 'En attente de livraison';
+      case STATUT_COLIS.LIVRE:
+        return 'Livré';
+      default:
+        return 'Annulé';
     }
   }
 }

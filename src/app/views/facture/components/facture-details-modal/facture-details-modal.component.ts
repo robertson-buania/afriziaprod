@@ -2,10 +2,11 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Colis, Facture, Partenaire, TYPE_COLIS, TYPE_EXPEDITION, Paiement } from '@/app/models/partenaire.model';
+import { Colis, Facture, Partenaire, TYPE_COLIS, TYPE_EXPEDITION } from '@/app/models/partenaire.model';
 import { computed, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { FacturePaiementModalComponent } from '../facture-paiement-modal/facture-paiement-modal.component';
+import printJS from 'print-js';
 
 @Component({
   selector: 'app-facture-details-modal',
@@ -20,8 +21,6 @@ export class FactureDetailsModalComponent implements OnInit {
   @Output() paiementRequest = new EventEmitter<string>();
 
   facture = signal<Facture | null>(null);
-  // Signal dédié pour les colis avec le type correct
-  colis = signal<Colis[]>([]);
   client = signal<Partenaire | null>(null);
   isLoading = signal(true);
 
@@ -29,34 +28,6 @@ export class FactureDetailsModalComponent implements OnInit {
     const facture = this.facture();
     if (!facture || facture.montant === 0) return 100;
     return (facture.montantPaye / facture.montant) * 100;
-  });
-
-  // Propriété computée pour obtenir la date de création de manière sûre
-  dateCreation = computed(() => {
-    const facture = this.facture();
-    if (!facture) return null;
-
-    if (facture.colisObjets && facture.colisObjets.length > 0 && facture.colisObjets[0].dateCreation) {
-      return facture.colisObjets[0].dateCreation;
-    }
-
-    return null;
-  });
-
-  // Propriété computée pour obtenir les paiements de manière sûre
-  paiements = computed((): Paiement[] => {
-    const facture = this.facture();
-    if (!facture) return [];
-
-    return facture.paiements || [];
-  });
-
-  // Propriété computée pour obtenir les colis de manière sûre
-  colisObjets = computed((): Colis[] => {
-    const facture = this.facture();
-    if (!facture) return [];
-
-    return facture.colisObjets || [];
   });
 
   constructor(
@@ -90,44 +61,15 @@ export class FactureDetailsModalComponent implements OnInit {
         return;
       }
 
-      // Convertir les IDs de colis en objets complets si nécessaire
-      if (facture.colis && facture.colis.length > 0) {
-        const colisArray = facture.colis;
-        const updatedColis: Colis[] = [];
-
-        for (const colisDonnee of colisArray) {
-          if (typeof colisDonnee === 'string') {
-            try {
-              // Si c'est un ID, charger l'objet colis complet
-              const colis = await this.firebaseService.getColisById(colisDonnee);
-              if (colis) {
-                updatedColis.push(colis);
-              }
-            } catch (error) {
-              console.error(`Erreur lors du chargement du colis ${colisDonnee}:`, error);
-            }
-          } else {
-            // Si c'est déjà un objet colis, l'ajouter directement
-            updatedColis.push(colisDonnee);
-          }
-        }
-
-        // Mettre à jour le signal des colis et la propriété colisObjets de la facture
-        this.colis.set(updatedColis);
-        facture.colisObjets = updatedColis;
-      } else {
-        this.colis.set([]);
-        facture.colisObjets = [];
-      }
-
       this.facture.set(facture);
 
-      // Charger les informations du client
-      if (this.colis().length > 0) {
-        const firstColis = this.colis()[0];
-        if (firstColis.partenaireId) {
+      // Charger les informations du client si des colis sont disponibles
+      if (facture.colis && facture.colis.length > 0) {
+        const colis = facture.colis[0];
+        const partenaireId = colis.partenaireId;
+        if (partenaireId) {
           const partenaires = await firstValueFrom(this.firebaseService.getPartenaires());
-          const client = partenaires.find(p => p.id === firstColis.partenaireId);
+          const client = partenaires.find(p => p.id === partenaireId);
           this.client.set(client || null);
         }
       }
@@ -166,8 +108,72 @@ export class FactureDetailsModalComponent implements OnInit {
     return 'Non payée';
   }
 
+  calculateOriginalTotal(): number {
+    if (!this.facture() || !this.facture()?.colis) return 0;
+    return this.facture()!.colis.reduce((sum, colis) => sum + (colis.cout || 0), 0);
+  }
+
+  calculateDiscount(): number {
+    const facture = this.facture();
+    if (!facture || facture.prixRemise === undefined) return 0;
+    return this.calculateOriginalTotal() - facture.montant;
+  }
+
   onPrint(): void {
-    window.print();
+    const printContents = document.getElementById('facture-print');
+    if (printContents) {
+      // Vérifier si les données sont chargées
+      if (!this.facture()) {
+        console.error('Impossible d\'imprimer: les données de la facture ne sont pas chargées');
+        return;
+      }
+
+      // S'assurer que l'élément est visible temporairement pour l'impression
+      const originalDisplay = printContents.style.display;
+      printContents.style.display = 'block';
+
+      printJS({
+        printable: 'facture-print',
+        type: 'html',
+        documentTitle: `Facture_${this.facture()?.id || 'print'}`,
+        css: [
+          'assets/css/bootstrap.min.css',
+          'assets/css/icons.min.css'
+        ],
+        style: `
+          .card { box-shadow: none !important; }
+          .card-body { padding: 1rem; }
+          .print-header { background-color: #000 !important; color: #fff !important; padding: 15px; }
+          .text-muted { color: #6c757d !important; }
+          .text-white { color: #fff !important; }
+          .text-primary { color: #3b7ddd !important; }
+          .fw-semibold { font-weight: 600 !important; }
+          .fw-bold { font-weight: 700 !important; }
+          .ms-auto { margin-left: auto !important; }
+          .me-1 { margin-right: 0.25rem !important; }
+          .mb-0 { margin-bottom: 0 !important; }
+          .mb-1 { margin-bottom: 0.25rem !important; }
+          .mb-2 { margin-bottom: 0.5rem !important; }
+          .mb-3 { margin-bottom: 1rem !important; }
+          .mt-2 { margin-top: 0.5rem !important; }
+          .mt-4 { margin-top: 1.5rem !important; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+          th { background-color: #f2f2f2; }
+          .text-end { text-align: right !important; }
+          .text-center { text-align: center !important; }
+          .border-top { border-top: 1px solid #dee2e6 !important; }
+          .border-bottom { border-bottom: 1px solid #dee2e6 !important; }
+          .no-print { display: none !important; }
+        `,
+        onPrintDialogClose: () => {
+          // Restaurer l'affichage original après l'impression
+          printContents.style.display = originalDisplay;
+        }
+      });
+    } else {
+      console.error('Élément d\'impression non trouvé');
+    }
   }
 
   onAddPayment(): void {
@@ -195,10 +201,5 @@ export class FactureDetailsModalComponent implements OnInit {
       },
       () => {}
     );
-  }
-
-  // Vérifie si un élément est un objet Colis ou une chaîne ID
-  isColisDynamic(colis: Colis | string): colis is Colis {
-    return typeof colis !== 'string' && colis !== null && typeof colis === 'object';
   }
 }

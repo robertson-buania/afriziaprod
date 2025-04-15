@@ -188,6 +188,10 @@ export const FR = {
       PHONE: 'Téléphone',
       EMAIL: 'Email'
     },
+    CONTACT: {
+      TITLE: 'Nous contacter',
+      
+    },
     QUICK_LINKS: {
       TITLE: 'Liens Rapides',
       HOME: 'Accueil',
