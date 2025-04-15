@@ -14,11 +14,9 @@ export interface Facture{
   id?:string
   montant:number
   montantPaye:number
-  colis:(Colis | string)[]
-  colisObjets?:Colis[]
+  colis:Colis[]
   paiements:Paiement[]
-  dateCreation?: string
-  partenaireId?: string
+  prixRemise?: number
 }
 
 
@@ -36,6 +34,7 @@ export interface Colis{
   poids?:number
   cout?:number
   dateCreation?: string
+  dateReception?: string
   codeSuivi: string
   nombreUnites?: number
   codeexpedition:string,
@@ -50,7 +49,9 @@ export interface Sac{
   id?:string,
   reference:string,
   colis:Colis[],
-  dateCreation?: string
+  dateCreation?: string,
+  dateReception?: string,
+  numeroListe?: string
 }
 
 export interface Paiement{
@@ -77,25 +78,23 @@ export enum  TYPE_PAIEMENT{
   ORANGE_MONEY
 }
 
+// export enum STATUT_COLIS{
+//   EN_ATTENTE_VERIFICATION,
+//   EN_ATTENTE_FACTURATION,
+//   EN_ATTENTE_PAIEMENT,
+//   EN_ATTENTE_LIVRAISON,
+//   COLIS_ARRIVE,
+//   LIVRE,
+//   ANNULE
+// }
 export enum STATUT_COLIS{
-  EN_ATTENTE_VERIFICATION,//0
-  EN_ATTENTE_FACTURATION,//1
-  EN_ATTENTE_PAIEMENT,//1
-  EN_ATTENTE_LIVRAISON,//3
-  EN_COURS_EXPEDITION,//2
-  COLIS_ARRIVE,//5
-  LIVRE,//6
-  ANNULE//7
-}
-
-export enum STATUT_COLIS1{
-
-  EN_ATTENTE_PAIEMENT,//1
-  EN_ATTENTE_LIVRAISON,//3
-  EN_COURS_EXPEDITION,//2
-  COLIS_ARRIVE,//5
-  LIVRE,//6
-  ANNULE//7
+  EN_ATTENTE_PAIEMENT,
+  PAYE,
+  EN_ATTENTE_EXPEDITION,
+  EN_COURS_EXPEDITION,
+  EN_ATTENTE_LIVRAISON,
+  LIVRE,
+  ANNULE
 }
 
 export enum TYPE_EXPEDITION{
@@ -103,8 +102,22 @@ export enum TYPE_EXPEDITION{
   STANDARD
 }
 
+export enum TYPE_IMPORT_SAC {
+  CLASSE_EN_ATTENTE_EXPEDITION = "CLASSE_EN_ATTENTE_EXPEDITION",
+  ENVOYE_EN_COURS_EXPEDITION = "ENVOYE_EN_COURS_EXPEDITION",
+  ARRIVE_EN_ATTENTE_LIVRAISON = "ARRIVE_EN_ATTENTE_LIVRAISON"
+}
+
+export interface SacGroup {
+  reference: string;
+  colis: Colis[];
+  typeImportSac: TYPE_IMPORT_SAC;
+  dateimport: string;
+}
+
 // Paramétrage des tarifs de colis en fonction de l'expédition et du type de colis
 export const PARAMETRAGE_COLIS: Record<TYPE_EXPEDITION, Record<TYPE_COLIS, { prixParKilo: number; prixUnitaire?: number }>> = {
+ 
   [TYPE_EXPEDITION.EXPRESS]: {
     [TYPE_COLIS.ORDINAIRE]: { prixParKilo: 18, prixUnitaire: 0 },
     [TYPE_COLIS.AVEC_BATTERIE]: { prixParKilo: 20 , prixUnitaire: 0},
@@ -116,6 +129,5 @@ export const PARAMETRAGE_COLIS: Record<TYPE_EXPEDITION, Record<TYPE_COLIS, { pri
     [TYPE_COLIS.AVEC_BATTERIE]: { prixParKilo: 20, prixUnitaire: 0 },
     [TYPE_COLIS.ORDINATEUR]: { prixParKilo: 20, prixUnitaire: 30 },
     [TYPE_COLIS.TELEPHONE]: { prixParKilo: 20, prixUnitaire: 10 },
-  }
-
+  },
 };
