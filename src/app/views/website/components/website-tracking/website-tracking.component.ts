@@ -364,7 +364,7 @@ export class WebsiteTrackingComponent implements OnInit {
 
     try {
       this.isLoading = true;
-      
+
       // Mettre à jour le statut du colis
       const updatedColis = { ...colis, statut: newStatus };
       await this.firebaseService.updateColis(colis.id, updatedColis);
@@ -488,9 +488,9 @@ export class WebsiteTrackingComponent implements OnInit {
     try {
       this.isLoading = true;
       const factures = await firstValueFrom(this.firebaseService.getFacturesByPartenaire(this.currentUser.id));
-      
+
       // Fix the type issue by filtering out string values and only keeping Colis objects
-      this.colisList = factures.flatMap((facture: Facture) => 
+      this.colisList = factures.flatMap((facture: Facture) =>
         facture.colis.filter((item): item is Colis => typeof item !== 'string')
       );
     } catch (error) {
@@ -509,10 +509,10 @@ export class WebsiteTrackingComponent implements OnInit {
 
     try {
       this.isProcessingPayment = true;
-      
+
       // Mettre à jour le statut de la facture
       await this.firebaseService.updateFacture(factureId, { montantPaye: 0 });
-      
+
       this.message = { type: 'success', text: 'Paiement traité avec succès' };
     } catch (error) {
       console.error('Erreur lors du traitement du paiement:', error);
