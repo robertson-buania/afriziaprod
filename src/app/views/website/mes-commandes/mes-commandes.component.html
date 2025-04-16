@@ -34,7 +34,7 @@
   </div>
 
   <!-- Navigation tabs -->
-  <ul ngbNav #nav="ngbNav" [(activeIds)]="activeTab" class="nav-tabs">
+  <ul ngbNav #nav="ngbNav" [activeId]="activeTab" class="nav-tabs" (navChange)="onTabChange($event.nextId)">
     <li [ngbNavItem]="1">
       <a ngbNavLink>Toutes les commandes</a>
     </li>
@@ -47,186 +47,178 @@
   </ul>
 
   <!-- Content panels -->
-  <div [ngbNavOutlet]="nav" class="mt-3">
+  <div [ngbNavContent]="1">
     <!-- Toutes les commandes -->
-    <div ngbNavContent="1">
-      <div class="card">
-        <div class="card-body">
-          <div *ngIf="isLoading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Chargement...</span>
-            </div>
-            <p class="mt-2">Chargement de vos commandes...</p>
-          </div>
-
-          <div *ngIf="!isLoading && factures.length === 0" class="text-center py-5">
-            <i class="bi bi-inbox fs-1 text-muted"></i>
-            <p class="mt-3">Vous n'avez pas encore de commandes.</p>
-          </div>
-
-          <div *ngIf="!isLoading && factures.length > 0" class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>N° Facture</th>
-                  <th>Date</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let facture of factures">
-                  <td>{{ facture.id }}</td>
-                  <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>
-                    <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
-                      {{ facture.montant | number:'1.2-2' }} USD
-                    </div>
-                    <div *ngIf="aRemise(facture)" class="text-success">
-                      {{ getPrixFormate(facture) }}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getClassStatutPaiement(facture)">
-                      {{ getStatutFacture(facture) }}
-                    </span>
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
-                      <i class="bi bi-eye"></i> Détails
-                    </button>
-                    <button 
-                      *ngIf="!estFacturePayee(facture)"
-                      class="btn btn-sm btn-success" 
-                      (click)="payerFactureCinetPay(facture)"
-                      [disabled]="isPaiementEnCours">
-                      <i class="bi bi-credit-card"></i> Payer
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <div class="tab-content">
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
         </div>
+        <p class="mt-2">Chargement de vos commandes...</p>
+      </div>
+
+      <div *ngIf="!isLoading && factures.length === 0" class="text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="mt-3">Vous n'avez pas encore de commandes.</p>
+      </div>
+
+      <div *ngIf="!isLoading && factures.length > 0" class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>N° Facture</th>
+              <th>Date</th>
+              <th>Montant</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let facture of factures">
+              <td>{{ facture.id }}</td>
+              <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
+                  {{ facture.montant | number:'1.2-2' }} USD
+                </div>
+                <div *ngIf="aRemise(facture)" class="text-success">
+                  {{ getPrixFormate(facture) }}
+                </div>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getClassStatutPaiement(facture)">
+                  {{ getStatutFacture(facture) }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
+                  <i class="bi bi-eye"></i> Détails
+                </button>
+                <button 
+                  *ngIf="!estFacturePayee(facture)"
+                  class="btn btn-sm btn-success" 
+                  (click)="payerFactureCinetPay(facture)"
+                  [disabled]="isPaiementEnCours">
+                  <i class="bi bi-credit-card"></i> Payer
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
 
+  <div [ngbNavContent]="2">
     <!-- Commandes payées -->
-    <div ngbNavContent="2">
-      <div class="card">
-        <div class="card-body">
-          <div *ngIf="isLoading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Chargement...</span>
-            </div>
-            <p class="mt-2">Chargement de vos commandes payées...</p>
-          </div>
-
-          <div *ngIf="!isLoading && facturesPayees.length === 0" class="text-center py-5">
-            <i class="bi bi-inbox fs-1 text-muted"></i>
-            <p class="mt-3">Vous n'avez pas de commandes payées.</p>
-          </div>
-
-          <div *ngIf="!isLoading && facturesPayees.length > 0" class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>N° Facture</th>
-                  <th>Date</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let facture of facturesPayees">
-                  <td>{{ facture.id }}</td>
-                  <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>
-                    <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
-                      {{ facture.montant | number:'1.2-2' }} USD
-                    </div>
-                    <div *ngIf="aRemise(facture)" class="text-success">
-                      {{ getPrixFormate(facture) }}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge bg-success">Payée</span>
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-primary" (click)="afficherDetailsFacture(facture)">
-                      <i class="bi bi-eye"></i> Détails
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <div class="tab-content">
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
         </div>
+        <p class="mt-2">Chargement de vos commandes payées...</p>
+      </div>
+
+      <div *ngIf="!isLoading && facturesPayees.length === 0" class="text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="mt-3">Vous n'avez pas de commandes payées.</p>
+      </div>
+
+      <div *ngIf="!isLoading && facturesPayees.length > 0" class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>N° Facture</th>
+              <th>Date</th>
+              <th>Montant</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let facture of facturesPayees">
+              <td>{{ facture.id }}</td>
+              <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
+                  {{ facture.montant | number:'1.2-2' }} USD
+                </div>
+                <div *ngIf="aRemise(facture)" class="text-success">
+                  {{ getPrixFormate(facture) }}
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-success">Payée</span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-primary" (click)="afficherDetailsFacture(facture)">
+                  <i class="bi bi-eye"></i> Détails
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
 
+  <div [ngbNavContent]="3">
     <!-- Commandes non payées -->
-    <div ngbNavContent="3">
-      <div class="card">
-        <div class="card-body">
-          <div *ngIf="isLoading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Chargement...</span>
-            </div>
-            <p class="mt-2">Chargement de vos commandes non payées...</p>
-          </div>
-
-          <div *ngIf="!isLoading && facturesNonPayees.length === 0" class="text-center py-5">
-            <i class="bi bi-inbox fs-1 text-muted"></i>
-            <p class="mt-3">Vous n'avez pas de commandes non payées.</p>
-          </div>
-
-          <div *ngIf="!isLoading && facturesNonPayees.length > 0" class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>N° Facture</th>
-                  <th>Date</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let facture of facturesNonPayees">
-                  <td>{{ facture.id }}</td>
-                  <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>
-                    <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
-                      {{ facture.montant | number:'1.2-2' }} USD
-                    </div>
-                    <div *ngIf="aRemise(facture)" class="text-success">
-                      {{ getPrixFormate(facture) }}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getClassStatutPaiement(facture)">
-                      {{ getStatutFacture(facture) }}
-                    </span>
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
-                      <i class="bi bi-eye"></i> Détails
-                    </button>
-                    <button 
-                      class="btn btn-sm btn-success" 
-                      (click)="payerFactureCinetPay(facture)"
-                      [disabled]="isPaiementEnCours">
-                      <i class="bi bi-credit-card"></i> Payer
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <div class="tab-content">
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
         </div>
+        <p class="mt-2">Chargement de vos commandes non payées...</p>
+      </div>
+
+      <div *ngIf="!isLoading && facturesNonPayees.length === 0" class="text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="mt-3">Vous n'avez pas de commandes non payées.</p>
+      </div>
+
+      <div *ngIf="!isLoading && facturesNonPayees.length > 0" class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>N° Facture</th>
+              <th>Date</th>
+              <th>Montant</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let facture of facturesNonPayees">
+              <td>{{ facture.id }}</td>
+              <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
+                  {{ facture.montant | number:'1.2-2' }} USD
+                </div>
+                <div *ngIf="aRemise(facture)" class="text-success">
+                  {{ getPrixFormate(facture) }}
+                </div>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getClassStatutPaiement(facture)">
+                  {{ getStatutFacture(facture) }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
+                  <i class="bi bi-eye"></i> Détails
+                </button>
+                <button 
+                  class="btn btn-sm btn-success" 
+                  (click)="payerFactureCinetPay(facture)"
+                  [disabled]="isPaiementEnCours">
+                  <i class="bi bi-credit-card"></i> Payer
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

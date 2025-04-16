@@ -242,8 +242,8 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   // Méthode pour créer la facture
   private async createFacture(): Promise<string> {
-    if (!this.utilisateurConnecte || !this.utilisateurConnecte.id) {
-      throw new Error('Utilisateur non connecté');
+    if (!this.utilisateurConnecte || !this.utilisateurConnecte.partenaireId) {
+      throw new Error('Utilisateur non connecté ou partenaireId non disponible');
     }
 
     const facture: Omit<Facture, 'id'> & { id: string } = {
@@ -253,7 +253,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       colis: this.colis,
       paiements: [],
       dateCreation: new Date().toISOString(),
-      partenaireId: this.utilisateurConnecte.id
+      partenaireId: this.utilisateurConnecte.partenaireId
     };
 
     await this.firebaseService.createFacture(facture);

@@ -1,26 +1,44 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { NgbNavModule, NgbAccordionModule, NgbAlertModule, NgbTooltipModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbNavModule, NgbAccordionModule, NgbAlertModule, NgbTooltipModule, NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
 import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT } from '@/app/models/partenaire.model';
-import { Subscription } from 'rxjs';
+import { Subscription, of, Subject, timer, from, Observable } from 'rxjs';
 import { PaymentService } from '@/app/core/services/payment.service';
 import { AuthService } from '@/app/core/services/auth.service';
 import { CinetPayService, CinetPayResponse } from '@/app/core/services/cinetpay.service';
 import { environment } from '@/environments/environment';
-import { Subject, takeUntil } from 'rxjs';
+import { takeUntil, take, retry, delay, catchError, switchMap, map, filter, finalize } from 'rxjs/operators';
 import { FactureService } from '@/app/core/services/facture.service';
 import { ColisService } from '@/app/core/services/colis.service';
 import { User } from '@/app/models/user.model';
 import { FormsModule } from '@angular/forms';
+import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 
 interface ExtendedPaiement extends Paiement {
-  date: Date;
+  date: string;
   montant: number;
   methode: string;
   statut: 'success' | 'pending' | 'failed';
+}
+
+type FactureStatus = 'PAYEE' | 'PARTIELLEMENT_PAYEE' | 'EN_ATTENTE';
+
+interface BaseFacture extends Omit<Facture, 'colis'> {
+  montant: number;
+  montantPaye: number;
+  paiements: Paiement[];
+  dateCreation?: string;
+  partenaireId?: string;
+  prixRemise?: number;
+}
+
+interface ExtendedFacture extends BaseFacture {
+  statut: FactureStatus;
+  colis: (string | Colis)[];
+  colisObjets?: Colis[];
 }
 
 @Component({
@@ -39,10 +57,10 @@ interface ExtendedPaiement extends Paiement {
   styleUrl: './mes-commandes.component.scss'
 })
 export class MesCommandesComponent implements OnInit, OnDestroy {
-  factures: Facture[] = [];
-  facturesPayees: Facture[] = [];
-  facturesNonPayees: Facture[] = [];
-  factureSelectionnee: Facture | null = null;
+  factures: ExtendedFacture[] = [];
+  facturesPayees: ExtendedFacture[] = [];
+  facturesNonPayees: ExtendedFacture[] = [];
+  factureSelectionnee: ExtendedFacture | null = null;
 
   isLoading = true;
   isLoadingColis = false;
@@ -50,6 +68,9 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   successMessage = '';
   isPaiementEnCours = false;
   activeTab = 1; // 1: Toutes, 2: Payées, 3: Non payées
+  isOffline = false;
+  retryCount = 0;
+  maxRetries = 3;
 
   // États pour le détail d'une facture
   detailsVisible = false;
@@ -57,6 +78,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   private utilisateurConnecte: User | null = null;
   private destroy$ = new Subject<void>();
+  private modalRef: NgbModalRef | null = null;
 
   constructor(
     private utilisateurService: UtilisateurService,
@@ -66,19 +88,53 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     private cinetPayService: CinetPayService,
     private factureService: FactureService,
     private colisService: ColisService,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private firestore: Firestore
   ) {}
 
   ngOnInit(): void {
     this.subscriptions.push(
-      this.authService.currentUser$.subscribe(user => {
-        this.utilisateurConnecte = user;
-        if (user) {
-          this.chargerFactures();
-        } else {
-          this.factures = [];
-          this.facturesPayees = [];
-          this.facturesNonPayees = [];
+      this.authService.currentUser$.pipe(
+        takeUntil(this.destroy$),
+        filter((user): user is User => !!user),
+        switchMap(user => {
+          this.utilisateurConnecte = user;
+          return this.checkFirebaseConnection();
+        }),
+        switchMap(isConnected => {
+          if (!isConnected) {
+            throw new Error('Pas de connexion à Firebase');
+          }
+          if (!this.utilisateurConnecte?.id) {
+            throw new Error('ID utilisateur non disponible');
+          }
+          
+
+          return this.firebaseService.getFacturesByPartenaire(this.utilisateurConnecte.id).pipe(
+            map((factures: Facture[]) => {
+              if (!factures || factures.length === 0) {
+                return [];
+              }
+              return factures.map(facture => ({
+                ...facture,
+                statut: this.determinerStatutFacture(facture),
+                colis: facture.colis || [],
+                colisObjets: facture.colisObjets || []
+              })) as ExtendedFacture[];
+            })
+          );
+        })
+      ).subscribe({
+        next: (extendedFactures: ExtendedFacture[]) => {
+          this.factures = extendedFactures;
+          this.facturesPayees = extendedFactures.filter(f => f.montantPaye >= f.montant);
+          this.facturesNonPayees = extendedFactures.filter(f => f.montantPaye < f.montant);
+          this.isLoading = false;
+        },
+        error: (error: Error) => {
+          console.error('Erreur lors du chargement des factures:', error);
+          this.isLoading = false;
+          this.errorMessage = 'Impossible de charger les factures. Veuillez vérifier votre connexion.';
         }
       })
     );
@@ -88,34 +144,124 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.modalRef) {
+      this.modalRef.close();
+    }
   }
 
-  private chargerFactures(): void {
-    if (!this.utilisateurConnecte?.id) {
-      this.errorMessage = 'Utilisateur non connecté';
-      return;
-    }
+  private checkFirebaseConnection(): Observable<boolean> {
+    return from(getDocs(collection(this.firestore, 'factures'))).pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
 
+  private retryWithBackoff<T>(operation: () => Observable<T>, maxRetries = 3): Observable<T> {
+    return operation().pipe(
+      retry({
+        count: maxRetries,
+        delay: (error, retryCount) => {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          console.log(`Tentative ${retryCount}/${maxRetries} après ${delay}ms`);
+          return timer(delay);
+        }
+      })
+    );
+  }
+
+  chargerFactures(user: User): void {
     this.isLoading = true;
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.subscriptions.push(
-      this.factureService.getFacturesByUser(this.utilisateurConnecte.id)
-        .subscribe({
-          next: (factures) => {
-            this.factures = factures;
-            this.facturesPayees = factures.filter(f => f.montantPaye >= f.montant);
-            this.facturesNonPayees = factures.filter(f => f.montantPaye < f.montant);
-            this.isLoading = false;
-          },
-          error: (error) => {
-            console.error('Erreur lors du chargement des factures:', error);
-            this.errorMessage = 'Erreur lors du chargement des factures. Veuillez réessayer.';
-            this.isLoading = false;
+    this.factureService.getFacturesByUser(user.id)
+      .pipe(
+        takeUntil(this.destroy$),
+        map((factures: Facture[]) => {
+          if (!factures || factures.length === 0) {
+            return [];
           }
+          return factures.map(facture => ({
+            ...facture,
+            statut: this.determinerStatutFacture(facture),
+            colis: facture.colis || [],
+            colisObjets: facture.colisObjets || []
+          })) as ExtendedFacture[];
+        }),
+        retry({
+          count: 2,
+          delay: (error, retryCount) => {
+            console.log(`Tentative de chargement des factures (${retryCount}/2)...`);
+            return timer(2000 * retryCount);
+          }
+        }),
+        catchError(error => {
+          console.error('Erreur lors du chargement des factures:', error);
+          this.isOffline = true;
+          this.errorMessage = 'Impossible de se connecter au serveur. Veuillez vérifier votre connexion Internet.';
+          return of([]);
         })
-    );
+      )
+      .subscribe({
+        next: (extendedFactures: ExtendedFacture[]) => {
+          this.factures = extendedFactures;
+          this.facturesPayees = extendedFactures.filter(f => f.montantPaye >= f.montant);
+          this.facturesNonPayees = extendedFactures.filter(f => f.montantPaye < f.montant);
+          
+          if (extendedFactures.length === 0 && !this.isOffline) {
+            this.successMessage = 'Aucune commande trouvée';
+          }
+          this.isLoading = false;
+        },
+        error: (error: Error) => {
+          console.error('Erreur lors du chargement des factures:', error);
+          this.isOffline = true;
+          this.errorMessage = 'Impossible de se connecter au serveur. Veuillez vérifier votre connexion Internet.';
+          this.isLoading = false;
+        }
+      });
+  }
+
+  retryLoading(): void {
+    if (this.utilisateurConnecte) {
+      this.chargerFactures(this.utilisateurConnecte);
+    }
+  }
+
+  private determinerStatutFacture(facture: Facture): 'PAYEE' | 'PARTIELLEMENT_PAYEE' | 'EN_ATTENTE' {
+    if (facture.montantPaye >= facture.montant) {
+      return 'PAYEE';
+    } else if (facture.montantPaye > 0) {
+      return 'PARTIELLEMENT_PAYEE';
+    }
+    return 'EN_ATTENTE';
+  }
+
+  private normaliserPaiements(paiements: Paiement[]): ExtendedPaiement[] {
+    return paiements.map(paiement => ({
+      ...paiement,
+      date: paiement.datepaiement instanceof Date ? 
+            paiement.datepaiement.toISOString() : 
+            new Date(paiement.datepaiement).toISOString(),
+      montant: paiement.montant_paye,
+      methode: this.getTypePaiementLabel(paiement.typepaiement),
+      statut: 'success' // Par défaut, on considère que les paiements existants sont réussis
+    }));
+  }
+
+  getTypePaiementLabel(type: TYPE_PAIEMENT | undefined): string {
+    if (!type) return 'Inconnu';
+    
+    switch (type) {
+      case TYPE_PAIEMENT.CARTE:
+        return 'Carte bancaire';
+      case TYPE_PAIEMENT.MPESA:
+        return 'M-Pesa';
+      case TYPE_PAIEMENT.ORANGE_MONEY:
+        return 'Orange Money';
+      default:
+        return 'Inconnu';
+    }
   }
 
   chargerDetailsColis(facture: Facture): void {
@@ -125,7 +271,21 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     const colisIds = facture.colis.map(c => typeof c === 'string' ? c : c.id).filter((id): id is string => id !== undefined);
 
     this.colisService.getColisByIds(colisIds)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        retry({
+          count: 2,
+          delay: (error, retryCount) => {
+            console.log(`Tentative de récupération des colis (${retryCount}/2)...`);
+            return timer(2000 * retryCount);
+          }
+        }),
+        catchError(error => {
+          console.error('Erreur lors du chargement des détails des colis:', error);
+          this.errorMessage = 'Impossible de charger les détails des colis. Veuillez réessayer plus tard.';
+          return of([]);
+        })
+      )
       .subscribe({
         next: (colisDetails: Colis[]) => {
           facture.colisObjets = colisDetails;
@@ -140,7 +300,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   afficherDetailsFacture(facture: Facture): void {
-    this.factureSelectionnee = facture;
+    this.factureSelectionnee = facture as ExtendedFacture;
     this.detailsVisible = true;
     this.chargerDetailsColis(facture);
   }
@@ -150,80 +310,87 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     this.factureSelectionnee = null;
   }
 
-  payerFactureCinetPay(facture: Facture): void {
-    if (this.isPaiementEnCours) return;
+  ouvrirModalPaiement(modal: any, facture: ExtendedFacture): void {
+    this.factureSelectionnee = facture;
+    this.modalRef = this.modalService.open(modal, { centered: true });
+  }
 
-    this.isPaiementEnCours = true;
-    const montant = this.getMontantRestant(facture);
+  fermerModalPaiement(): void {
+    if (this.modalRef) {
+      this.modalRef.close();
+      this.modalRef = null;
+    }
+    this.factureSelectionnee = null;
+  }
+
+  payerFactureCinetPay(facture: ExtendedFacture): void {
+    if (!facture) {
+      this.errorMessage = 'Aucune facture sélectionnée';
+      return;
+    }
+
+    const montantRestant = facture.montant - facture.montantPaye;
+    if (montantRestant <= 0) {
+      this.errorMessage = 'Cette facture est déjà payée';
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
 
     this.cinetPayService.initializePayment({
-      amount: montant,
-      currency: 'USD',
+      amount: montantRestant,
+      currency: 'XAF',
       description: `Paiement de la facture ${facture.id}`,
-      return_url: `${environment.apiUrl}/paiement/retour`,
-      cancel_url: `${environment.apiUrl}/paiement/annulation`,
+      return_url: `${environment.apiUrl}/paiement/succes`,
+      cancel_url: `${environment.apiUrl}/paiement/annule`,
       notify_url: `${environment.apiUrl}/paiement/notification`,
       channels: 'ALL',
       lang: 'fr'
-    })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: CinetPayResponse) => {
-          if (response.data?.payment_url) {
-            window.location.href = response.data.payment_url;
-          } else {
-            this.errorMessage = 'Une erreur est survenue lors de l\'initialisation du paiement';
-            this.isPaiementEnCours = false;
-          }
-        },
-        error: (error: Error) => {
-          console.error('Erreur lors de l\'initialisation du paiement:', error);
-          this.errorMessage = 'Une erreur est survenue lors de l\'initialisation du paiement';
-          this.isPaiementEnCours = false;
+    }).pipe(
+      take(1),
+      retry({
+        count: 2,
+        delay: (error, retryCount) => {
+          console.log(`Tentative d'initialisation du paiement (${retryCount}/2)...`);
+          return timer(2000 * retryCount);
         }
-      });
-  }
-
-  // Méthodes utilitaires
-  estFacturePayee(facture: Facture): boolean {
-    return facture.montantPaye >= facture.montant;
-  }
-
-  getMontantRestant(facture: Facture): number {
-    const montantTotal = facture.prixRemise || facture.montant;
-    return Math.max(0, montantTotal - facture.montantPaye);
-  }
-
-  getStatutFacture(facture: Facture): string {
-    if (this.estFacturePayee(facture)) return 'Payée';
-    if (facture.montantPaye > 0) return 'Partiellement payée';
-    return 'Non payée';
-  }
-
-  getClassStatutPaiement(facture: Facture): string {
-    if (this.estFacturePayee(facture)) return 'bg-success';
-    if (facture.montantPaye > 0) return 'bg-warning';
-    return 'bg-danger';
+      }),
+      catchError(error => {
+        console.error('Erreur lors de l\'initialisation du paiement:', error);
+        this.errorMessage = 'Erreur lors de l\'initialisation du paiement. Veuillez réessayer plus tard.';
+        return of(null);
+      }),
+      finalize(() => {
+        this.isLoading = false;
+      })
+    ).subscribe(response => {
+      if (response && response.data?.payment_url) {
+        window.location.href = response.data.payment_url;
+      } else {
+        this.errorMessage = 'Impossible d\'initialiser le paiement';
+      }
+    });
   }
 
   getClassStatutColis(statut: STATUT_COLIS): string {
     switch (statut) {
       case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
-        return 'bg-warning';
+        return 'badge-warning';
       case STATUT_COLIS.PAYE:
-        return 'bg-success';
+        return 'badge-info';
       case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
-        return 'bg-info';
+        return 'badge-primary';
       case STATUT_COLIS.EN_COURS_EXPEDITION:
-        return 'bg-primary';
+        return 'badge-info';
       case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
-        return 'bg-info';
+        return 'badge-warning';
       case STATUT_COLIS.LIVRE:
-        return 'bg-success';
+        return 'badge-success';
       case STATUT_COLIS.ANNULE:
-        return 'bg-danger';
+        return 'badge-danger';
       default:
-        return 'bg-secondary';
+        return 'badge-secondary';
     }
   }
 
@@ -269,20 +436,32 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     }).format(montant);
   }
 
-  getTypePaiementLabel(type: TYPE_PAIEMENT | undefined): string {
-    if (type === undefined) return 'Inconnu';
-    
-    switch (type) {
-      case TYPE_PAIEMENT.ESPECE:
-        return 'Espèces';
-      case TYPE_PAIEMENT.CARTE:
-        return 'Carte bancaire';
-      case TYPE_PAIEMENT.MPESA:
-        return 'M-Pesa';
-      case TYPE_PAIEMENT.ORANGE_MONEY:
-        return 'Orange Money';
-      default:
-        return 'Inconnu';
+  // Méthodes manquantes pour corriger les erreurs de compilation
+  getClassStatutPaiement(facture: Facture): string {
+    if (facture.montantPaye >= facture.montant) {
+      return 'badge-success';
+    } else if (facture.montantPaye > 0) {
+      return 'badge-warning';
+    } else {
+      return 'badge-danger';
     }
+  }
+
+  getStatutFacture(facture: Facture): string {
+    if (facture.montantPaye >= facture.montant) {
+      return 'Payée';
+    } else if (facture.montantPaye > 0) {
+      return 'Partiellement payée';
+    } else {
+      return 'En attente de paiement';
+    }
+  }
+
+  estFacturePayee(facture: Facture): boolean {
+    return facture.montantPaye >= facture.montant;
+  }
+
+  onTabChange(tabId: number): void {
+    this.activeTab = tabId;
   }
 }
