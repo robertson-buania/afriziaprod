@@ -1,0 +1,84 @@
+// Variables
+$primary-color: #3498db;
+$secondary-color: #555;
+$light-color: #f8f9fa;
+$border-radius: 10px;
+$transition-speed: 0.3s;
+
+.refund-policy-page {
+  background-color: $light-color;
+  min-height: calc(100vh - 72px);
+  padding: 30px 0;
+}
+
+h1 {
+  color: $primary-color;
+  font-weight: 600;
+}
+
+.lead {
+  color: $secondary-color;
+}
+
+h3 {
+  color: $primary-color;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+
+  i {
+    font-size: 1.5rem;
+  }
+}
+
+.card {
+  border: none;
+  border-radius: $border-radius;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+  overflow: hidden;
+
+  .card-body {
+    padding: 2rem;
+  }
+}
+
+.process-list {
+  padding-left: 1.5rem;
+
+  li {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.contact-list {
+  li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+
+    i {
+      width: 2rem;
+      font-size: 1.5rem;
+      color: $primary-color;
+    }
+  }
+}
+
+.btn-primary {
+  background-color: $primary-color;
+  border-color: $primary-color;
+
+  &:hover, &:focus {
+    background-color: darken($primary-color, 10%);
+    border-color: darken($primary-color, 10%);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1.5rem;
+  }
+}

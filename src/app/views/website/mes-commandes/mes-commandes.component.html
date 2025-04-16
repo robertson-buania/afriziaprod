@@ -47,7 +47,7 @@
   </ul>
 
   <!-- Content panels -->
-  <div [ngbNavContent]="1">
+  <ng-template [ngbNavContent]="1">
     <!-- Toutes les commandes -->
     <div class="tab-content">
       <div *ngIf="isLoading" class="text-center py-5">
@@ -94,9 +94,9 @@
                 <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
                   <i class="bi bi-eye"></i> Détails
                 </button>
-                <button 
+                <button
                   *ngIf="!estFacturePayee(facture)"
-                  class="btn btn-sm btn-success" 
+                  class="btn btn-sm btn-success"
                   (click)="payerFactureCinetPay(facture)"
                   [disabled]="isPaiementEnCours">
                   <i class="bi bi-credit-card"></i> Payer
@@ -107,9 +107,9 @@
         </table>
       </div>
     </div>
-  </div>
+  </ng-template>
 
-  <div [ngbNavContent]="2">
+  <ng-template [ngbNavContent]="2">
     <!-- Commandes payées -->
     <div class="tab-content">
       <div *ngIf="isLoading" class="text-center py-5">
@@ -160,9 +160,9 @@
         </table>
       </div>
     </div>
-  </div>
+  </ng-template>
 
-  <div [ngbNavContent]="3">
+  <ng-template [ngbNavContent]="3">
     <!-- Commandes non payées -->
     <div class="tab-content">
       <div *ngIf="isLoading" class="text-center py-5">
@@ -209,8 +209,8 @@
                 <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
                   <i class="bi bi-eye"></i> Détails
                 </button>
-                <button 
-                  class="btn btn-sm btn-success" 
+                <button
+                  class="btn btn-sm btn-success"
                   (click)="payerFactureCinetPay(facture)"
                   [disabled]="isPaiementEnCours">
                   <i class="bi bi-credit-card"></i> Payer
@@ -221,7 +221,7 @@
         </table>
       </div>
     </div>
-  </div>
+  </ng-template>
 
   <!-- Détails de la facture -->
   <div *ngIf="detailsVisible && factureSelectionnee" class="mt-4">
