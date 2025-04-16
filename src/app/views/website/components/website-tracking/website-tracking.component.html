@@ -1,281 +1,421 @@
 <div class="container py-5">
   <div class="row justify-content-center">
-    <div class="col-lg-10">
-      <!-- Onglets de navigation -->
-      <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" [class.active]="activeTab === 'track'" (click)="setActiveTab('track')" type="button" role="tab">
-            <i class="las la-search me-1"></i>Rechercher un colis
-          </button>
-        </li>
-        <!-- <li class="nav-item" role="presentation">
-          <button class="nav-link" [class.active]="activeTab === 'register'" (click)="setActiveTab('register')" type="button" role="tab">
-            <i class="las la-plus-circle me-1"></i>Enregistrer un colis
-          </button>
-        </li> -->
-      </ul>
-
-      <!-- Messages d'information -->
-      <div *ngIf="message" class="alert" [ngClass]="{'alert-success': message.type === 'success', 'alert-danger': message.type === 'error', 'alert-info': message.type === 'info'}">
-        {{ message.text }}
+    <div class="col-lg-8">
+      <!-- En-tête de la page -->
+      <div class="text-center mb-4">
+        <h1 class="h2 mb-3">Suivi de Colis</h1>
+        <p class="lead text-muted">Suivez l'état de vos colis en temps réel</p>
       </div>
 
-      <!-- Onglet de recherche de colis -->
-      <div *ngIf="activeTab === 'track'" class="tab-content">
-        <div class="card shadow-sm">
-          <div class="card-header bg-primary text-white">
-            <h2 class="h4 mb-0">Recherche de Colis</h2>
+      <!-- Formulaire de recherche unifié -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+          <form [formGroup]="trackingForm" (ngSubmit)="searchPackage()">
+            <div class="mb-3">
+              <label for="codeSuivi" class="form-label">Code de suivi ou d'expédition</label>
+              <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="las la-search"></i></span>
+                <input 
+                  type="text" 
+                  id="codeSuivi" 
+                  formControlName="codeSuivi" 
+                  class="form-control" 
+                  placeholder="Entrez votre code de suivi ou d'expédition"
+                >
+                <button 
+                  type="submit" 
+                  class="btn btn-primary" 
+                  [disabled]="trackingForm.get('codeSuivi')?.invalid || isLoading"
+                >
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <span class="d-none d-sm-inline">Rechercher</span>
+                  <i class="las la-search d-sm-none"></i>
+                </button>
+              </div>
+              <div *ngIf="trackingForm.get('codeSuivi')?.invalid && trackingForm.get('codeSuivi')?.touched" class="invalid-feedback d-block">
+                <span *ngIf="trackingForm.get('codeSuivi')?.errors?.['required']">Le code est requis</span>
+              </div>
+              <small class="form-text text-muted mt-2">
+                <i class="las la-info-circle me-1"></i>Veuillez saisir le code de suivi ou d'expédition fourni lors de l'enregistrement de votre colis.
+              </small>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Messages d'erreur et de succès -->
+      <div class="message-container" *ngIf="message">
+        <div class="alert" [ngClass]="{
+          'alert-success': message.type === 'success',
+          'alert-danger': message.type === 'error',
+          'alert-info': message.type === 'info'
+        }">
+          {{ message.text }}
+        </div>
+      </div>
+
+      <!-- Affichage du suivi du colis -->
+      <div class="tracking-container" *ngIf="colis && !isLoading">
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Détails du colis</h3>
           </div>
           <div class="card-body">
-            <form [formGroup]="trackingForm" (ngSubmit)="searchPackage()">
-              <div class="mb-3">
-                <label for="codeSuivi" class="form-label">Code de suivi</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="codeSuivi" formControlName="codeSuivi" placeholder="Entrez le code de suivi">
-                  <button class="btn btn-primary" type="submit" [disabled]="trackingForm.invalid || isLoading">
-                    <i class="las la-search me-1"></i>Rechercher
-                  </button>
-                </div>
-                <div class="form-text text-danger" *ngIf="trackingForm.get('codeSuivi')?.invalid && trackingForm.get('codeSuivi')?.touched">
-                  Le code de suivi est requis
-                </div>
+            <div class="row">
+              <div class="col-md-6">
+                <ul class="list-group mb-3">
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Code de suivi:</span>
+                    <span>{{ colis.codeSuivi }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Code d'expédition:</span>
+                    <span>{{ colis.codeexpedition }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Type:</span>
+                    <span>{{ getColisTypeLabel(colis.type) }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Expédition:</span>
+                    <span>{{ getTypeExpeditionLabel(colis.typeExpedition) }}</span>
+                  </li>
+                </ul>
               </div>
-            </form>
-
-            <!-- Résultat de la recherche -->
-            <div *ngIf="colis && !isLoading" class="mt-4">
-              <div class="card">
-                <div class="card-header bg-light">
-                  <h3 class="h5 mb-0">Détails du colis</h3>
-                </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-6">
-                      <p><strong>Code de suivi:</strong> {{ colis.codeSuivi }}</p>
-                      <p><strong>Type:</strong> {{ getColisTypeLabel(colis.type) }}</p>
-                      <p><strong>Type d'expédition:</strong> {{ getTypeExpeditionLabel(colis.typeExpedition) }}</p>
-                      <p><strong>Poids:</strong> {{ colis.poids }} kg</p>
-                      <p><strong>Coût:</strong> {{ colis.cout | currency:'USD':'symbol' }}</p>
-                    </div>
-                    <div class="col-md-6">
-                      <p><strong>Destinataire:</strong> {{ colis.destinataire }}</p>
-                      <p><strong>Destination:</strong> {{ colis.destination }}</p>
-                      <p><strong>Quantité:</strong> {{ colis.quantite }}</p>
-                      <p><strong>Nature:</strong> {{ colis.nature }}</p>
-                      <p><strong>Transporteur:</strong> {{ colis.transporteur }}</p>
-                    </div>
-                  </div>
-
-                  <div class="mt-3">
-                    <p><strong>Description:</strong> {{ colis.description || 'Aucune description' }}</p>
-                  </div>
-
-                  <div class="mt-3">
-                    <p><strong>Statut:</strong>
-                      <span class="badge" [ngClass]="getColisStatusClass(colis.statut)">
-                        {{ getColisStatusLabel(colis.statut) }}
-                      </span>
-                    </p>
-                    <p><strong>Date de création:</strong> {{ formatDate(colis.dateCreation) }}</p>
-                  </div>
-
-                  <!-- Bouton de paiement si le colis est en attente de paiement -->
-                  <div *ngIf="colis.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT" class="mt-3">
-                    <button class="btn btn-success" (click)="colis.id ? processPayment(colis.id) : null" [disabled]="isProcessingPayment">
-                      <i class="las la-credit-card me-1"></i>Payer maintenant
-                    </button>
-                  </div>
-                </div>
+              <div class="col-md-6">
+                <ul class="list-group mb-3">
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Destinataire:</span>
+                    <span>{{ colis.destinataire }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Destination:</span>
+                    <span>{{ colis.destination }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Poids:</span>
+                    <span>{{ colis.poids }} kg</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Coût:</span>
+                    <span class="fw-bold text-primary">{{ colis.cout }} $</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
-            <!-- Indicateur de chargement -->
-            <div *ngIf="isLoading" class="text-center my-5">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Chargement...</span>
+            <!-- Bouton de paiement si le colis est en attente de paiement -->
+            <div *ngIf="colis.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT" class="text-center mt-3">
+              <button class="btn btn-success" (click)="ajouterAuPanier()" [disabled]="isProcessingPayment">
+                <i class="las la-shopping-cart me-1"></i>Ajouter au panier
+              </button>
+              <div class="mt-2">
+                <a routerLink="/panier" class="btn btn-outline-primary btn-sm">
+                  <i class="las la-arrow-right me-1"></i>Voir mon panier
+                </a>
               </div>
-              <p class="mt-2">Recherche en cours...</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Traçage du parcours -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Traçage du parcours</h3>
+          </div>
+          <div class="card-body">
+            <div class="tracking-timeline">
+              <!-- Étape 1: En attente de paiement -->
+              <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_ATTENTE_PAIEMENT), 'current': colis.statut === STATUT_COLIS.EN_ATTENTE_PAIEMENT}">
+                <div class="step-icon">
+                  <i class="las" [ngClass]="{'la-check-circle': isStatusReached(STATUT_COLIS.EN_ATTENTE_PAIEMENT), 'la-circle': !isStatusReached(STATUT_COLIS.EN_ATTENTE_PAIEMENT)}"></i>
+                </div>
+                <div class="step-content">
+                  <h5>En attente de paiement</h5>
+                  <p>Le colis est enregistré et attend le paiement</p>
+                  <small *ngIf="isStatusReached(STATUT_COLIS.EN_ATTENTE_PAIEMENT)">Complété le {{ formatDate(colis.dateCreation) }}</small>
+                </div>
+              </div>
+              
+              <!-- Étape 2: Payé -->
+              <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.PAYE), 'current': colis.statut === STATUT_COLIS.PAYE}">
+                <div class="step-icon">
+                  <i class="las" [ngClass]="{'la-check-circle': isStatusReached(STATUT_COLIS.PAYE), 'la-circle': !isStatusReached(STATUT_COLIS.PAYE)}"></i>
+                </div>
+                <div class="step-content">
+                  <h5>Payé</h5>
+                  <p>Le paiement a été effectué avec succès</p>
+                  <small *ngIf="isStatusReached(STATUT_COLIS.PAYE)">Complété le {{ formatDate(colis.dateCreation) }}</small>
+                </div>
+              </div>
+              
+              <!-- Étape 3: En attente d'expédition -->
+              <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_ATTENTE_EXPEDITION), 'current': colis.statut === STATUT_COLIS.EN_ATTENTE_EXPEDITION}">
+                <div class="step-icon">
+                  <i class="las" [ngClass]="{'la-check-circle': isStatusReached(STATUT_COLIS.EN_ATTENTE_EXPEDITION), 'la-circle': !isStatusReached(STATUT_COLIS.EN_ATTENTE_EXPEDITION)}"></i>
+                </div>
+                <div class="step-content">
+                  <h5>En attente d'expédition</h5>
+                  <p>Le colis est prêt à être expédié</p>
+                  <small *ngIf="isStatusReached(STATUT_COLIS.EN_ATTENTE_EXPEDITION)">Complété le {{ formatDate(colis.dateCreation) }}</small>
+                </div>
+              </div>
+              
+              <!-- Étape 4: En cours d'expédition -->
+              <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION), 'current': colis.statut === STATUT_COLIS.EN_COURS_EXPEDITION}">
+                <div class="step-icon">
+                  <i class="las" [ngClass]="{'la-check-circle': isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION), 'la-circle': !isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION)}"></i>
+                </div>
+                <div class="step-content">
+                  <h5>En cours d'expédition</h5>
+                  <p>Le colis est en route vers sa destination</p>
+                  <small *ngIf="isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION)">Complété le {{ formatDate(colis.dateCreation) }}</small>
+                </div>
+              </div>
+              
+              <!-- Étape 5: En attente de livraison -->
+              <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON), 'current': colis.statut === STATUT_COLIS.EN_ATTENTE_LIVRAISON}">
+                <div class="step-icon">
+                  <i class="las" [ngClass]="{'la-check-circle': isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON), 'la-circle': !isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON)}"></i>
+                </div>
+                <div class="step-content">
+                  <h5>En attente de livraison</h5>
+                  <p>Le colis est arrivé à destination</p>
+                  <small *ngIf="isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON)">Complété le {{ formatDate(colis.dateCreation) }}</small>
+                </div>
+              </div>
+              
+              <!-- Étape 6: Livré -->
+              <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.LIVRE), 'current': colis.statut === STATUT_COLIS.LIVRE}">
+                <div class="step-icon">
+                  <i class="las" [ngClass]="{'la-check-circle': isStatusReached(STATUT_COLIS.LIVRE), 'la-circle': !isStatusReached(STATUT_COLIS.LIVRE)}"></i>
+                </div>
+                <div class="step-content">
+                  <h5>Livré</h5>
+                  <p>Le colis a été livré avec succès</p>
+                  <small *ngIf="isStatusReached(STATUT_COLIS.LIVRE)">Complété le {{ formatDate(colis.dateCreation) }}</small>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Onglet d'enregistrement de colis -->
-      <div *ngIf="activeTab === 'register'" class="tab-content">
-        <div class="card shadow-sm">
-          <div class="card-header bg-primary text-white">
-            <h2 class="h4 mb-0">Enregistrement de Colis</h2>
-          </div>
-          <div class="card-body">
-            <!-- Formulaire de colis -->
-            <form [formGroup]="colisForm" (ngSubmit)="onColisSubmit()">
-              <!-- Messages d'erreur et de succès -->
-              <div class="alert alert-danger" *ngIf="errorMessage">
-                {{ errorMessage }}
-              </div>
-              <div class="alert alert-success" *ngIf="successMessage">
-                {{ successMessage }}
-              </div>
-
-              <!-- Informations du colis -->
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Type de colis</label>
-                  <select class="form-select" formControlName="type">
-                    <option value="">Sélectionnez un type</option>
-                    <option *ngFor="let type of colisTypes" [value]="type.value">{{ type.label }}</option>
-                  </select>
-                  <div class="form-text text-danger" *ngIf="colisForm.get('type')?.invalid && colisForm.get('type')?.touched">
-                    Le type de colis est requis
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Type d'expédition</label>
-                  <select class="form-select" formControlName="typeExpedition">
-                    <option value="">Sélectionnez un type</option>
-                    <option *ngFor="let type of getTypeExpeditionOptions()" [value]="type.value">{{ type.label }}</option>
-                  </select>
-                  <div class="form-text text-danger" *ngIf="colisForm.get('typeExpedition')?.invalid && colisForm.get('typeExpedition')?.touched">
-                    Le type d'expédition est requis
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Poids (kg)</label>
-                  <input type="number" class="form-control" formControlName="poids" step="0.1">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Coût</label>
-                  <input type="number" class="form-control" formControlName="cout" step="0.01">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Code de suivi</label>
-                  <input type="text" class="form-control" formControlName="codeSuivi">
-                  <div class="form-text text-danger" *ngIf="colisForm.get('codeSuivi')?.invalid && colisForm.get('codeSuivi')?.touched">
-                    Le code de suivi est requis
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Destinataire</label>
-                  <input type="text" class="form-control" formControlName="destinataire">
-                  <div class="form-text text-danger" *ngIf="colisForm.get('destinataire')?.invalid && colisForm.get('destinataire')?.touched">
-                    Le destinataire est requis
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Destination</label>
-                  <input type="text" class="form-control" formControlName="destination">
-                  <div class="form-text text-danger" *ngIf="colisForm.get('destination')?.invalid && colisForm.get('destination')?.touched">
-                    La destination est requise
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Quantité</label>
-                  <input type="text" class="form-control" formControlName="quantite">
-                  <div class="form-text text-danger" *ngIf="colisForm.get('quantite')?.invalid && colisForm.get('quantite')?.touched">
-                    La quantité est requise
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Nature</label>
-                  <input type="text" class="form-control" formControlName="nature">
-                  <div class="form-text text-danger" *ngIf="colisForm.get('nature')?.invalid && colisForm.get('nature')?.touched">
-                    La nature est requise
-                  </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Transporteur</label>
-                  <input type="text" class="form-control" formControlName="transporteur">
-                  <div class="form-text text-danger" *ngIf="colisForm.get('transporteur')?.invalid && colisForm.get('transporteur')?.touched">
-                    Le transporteur est requis
-                  </div>
-                </div>
-
-                <div class="col-12 mb-3">
-                  <label class="form-label">Description</label>
-                  <textarea class="form-control" formControlName="description" rows="3"></textarea>
-                </div>
-
-                <!-- Tableau des colis enregistrés -->
-                <div class="col-12 mb-3" *ngIf="colisList.length > 0">
-                  <div class="card">
-                    <div class="card-header bg-light">
-                      <h5 class="mb-0">Colis enregistrés</h5>
-                    </div>
-                    <div class="card-body p-0">
-                      <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                          <thead class="table-light">
-                            <tr>
-                              <th>Code de suivi</th>
-                              <th>Type</th>
-                              <th>Type d'expédition</th>
-                              <th>Poids</th>
-                              <th>Destinataire</th>
-                              <th>Destination</th>
-                              <th>Quantité</th>
-                              <th>Nature</th>
-                              <th>Transporteur</th>
-                              <th class="text-end">Coût</th>
-                              <th class="text-center">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr *ngFor="let colis of colisList; let i = index">
-                              <td>{{ colis.codeSuivi }}</td>
-                              <td>{{ getTypeColisLabel(colis.type) }}</td>
-                              <td>{{ getTypeExpeditionLabel(colis.typeExpedition) }}</td>
-                              <td>{{ colis.poids }} kg</td>
-                              <td>{{ colis.destinataire }}</td>
-                              <td>{{ colis.destination }}</td>
-                              <td>{{ colis.quantite }}</td>
-                              <td>{{ colis.nature }}</td>
-                              <td>{{ colis.transporteur }}</td>
-                              <td class="text-end fw-bold">{{ colis.cout | currency:'USD':'symbol' }}</td>
-                              <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-danger" (click)="removeColisFromList(i)">
-                                  <i class="las la-trash"></i>
-                                </button>
-                              </td>
-                            </tr>
-                          </tbody>
-                          <tfoot class="table-light">
-                            <tr>
-                              <td colspan="9" class="text-end fw-bold">Total</td>
-                              <td class="text-end fw-bold">{{ getTotalCost() | currency:'USD':'symbol' }}</td>
-                              <td></td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="col-12">
-                  <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-primary" (click)="addColisToList()" [disabled]="colisForm.invalid">
-                      <i class="las la-plus me-1"></i>Ajouter un autre colis
-                    </button>
-                    <button type="submit" class="btn btn-success" [disabled]="colisList.length === 0 || isLoading">
-                      <i class="las" [ngClass]="{'la-check': !isLoading, 'la-spinner la-spin': isLoading}"></i>
-                      <span class="ms-1">{{ isLoading ? 'Traitement en cours...' : 'Enregistrer' }}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
+      <!-- Indicateur de chargement -->
+      <div *ngIf="isLoading" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
         </div>
+        <p class="mt-3">Recherche en cours...</p>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+.tracking-timeline {
+  position: relative;
+  padding: 1rem 0;
+}
+
+.tracking-step {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.tracking-step::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 30px;
+  bottom: -30px;
+  width: 2px;
+  background-color: #dee2e6;
+}
+
+.tracking-step:last-child::before {
+  display: none;
+}
+
+.step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f8f9fa;
+  border: 2px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.completed .step-icon {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.current .step-icon {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+.message-container {
+  margin-bottom: 1.5rem;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.alert-info {
+  background-color: #cce5ff;
+  border-color: #b8daff;
+  color: #004085;
+}
+
+.card {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  padding: 1rem 1.25rem;
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+.list-group-item {
+  border: 1px solid #eee;
+  padding: 0.75rem 1.25rem;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.input-group-text {
+  background-color: #f8f9fa;
+  border: 1px solid #ced4da;
+}
+
+.form-control:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Styles responsifs pour les appareils mobiles */
+@media (max-width: 768px) {
+  .tracking-step {
+    margin-bottom: 1rem;
+  }
+  
+  .step-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .tracking-step::before {
+    left: 16px;
+    top: 24px;
+    bottom: -24px;
+  }
+  
+  .input-group-lg > .form-control,
+  .input-group-lg > .input-group-text,
+  .input-group-lg > .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .list-group-item {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+  }
+  
+  h1.h2 {
+    font-size: 1.5rem;
+  }
+  
+  .lead {
+    font-size: 1rem;
+  }
+}
+
+/* Styles pour les très petits écrans */
+@media (max-width: 375px) {
+  .input-group-lg > .form-control,
+  .input-group-lg > .input-group-text,
+  .input-group-lg > .btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .step-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .tracking-step::before {
+    left: 14px;
+    top: 20px;
+    bottom: -20px;
+  }
+  
+  .step-content h5 {
+    font-size: 1rem;
+  }
+  
+  .step-content p {
+    font-size: 0.9rem;
+  }
+}
+</style>

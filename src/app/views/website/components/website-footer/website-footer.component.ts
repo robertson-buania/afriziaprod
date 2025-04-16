@@ -116,10 +116,10 @@ import { TranslateModule } from '@ngx-translate/core';
     }
 
     .payment-icon {
-      height: 40px;
+      height: 25px;
       border-radius: 5px;
       background-color: white;
-      padding: 5px;
+      padding: 3px;
       transition: transform 0.2s ease;
     }
 
@@ -147,7 +147,7 @@ import { TranslateModule } from '@ngx-translate/core';
       }
 
       .payment-icon {
-        height: 30px;
+        height: 20px;
       }
     }
   `]

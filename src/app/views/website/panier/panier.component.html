@@ -66,10 +66,11 @@
                 <table class="table table-hover table-striped mb-0">
                   <thead class="table-light">
                     <tr>
-                      <th class="ps-3" style="width: 40%">Colis</th>
+                      <th class="ps-3" style="width: 35%">Colis</th>
                       <th style="width: 15%">Statut</th>
-                      <th style="width: 15%">Poids</th>
-                      <th style="width: 15%">Coût</th>
+                      <th style="width: 15%">Téléphone</th>
+                      <th style="width: 10%">Poids</th>
+                      <th style="width: 10%">Coût</th>
                       <th class="text-end pe-3" style="width: 15%">Actions</th>
                     </tr>
                   </thead>
@@ -81,8 +82,8 @@
                             <i class="las la-box text-primary"></i>
                           </div>
                           <div class="colis-details">
-                            <div class="fw-bold text-truncate" style="max-width: 200px;" [title]="item.description || 'Aucune description'">
-                              {{ item.description || 'Colis #' + item.id?.substring(0, 8) }}
+                            <div class="fw-bold text-truncate" style="max-width: 200px;" [title]="item.destinataire || 'Destinataire non spécifié'">
+                              {{ item.destinataire || 'Destinataire non spécifié' }}
                             </div>
                             <div class="small text-muted">
                               {{ item.codeSuivi }}
@@ -91,7 +92,12 @@
                         </div>
                       </td>
                       <td>
-                        <span class="badge bg-info">{{ getStatutLabel(item.statut) }}</span>
+                        <span class="badge" [ngClass]="getStatutLabel(item.statut)">
+                          {{ getStatutText(item.statut) }}
+                        </span>
+                      </td>
+                      <td>
+                        <span>{{ item.clientTelephone || 'Non spécifié' }}</span>
                       </td>
                       <td>
                         <span>{{ item.poids || 0 }} kg</span>
@@ -218,9 +224,12 @@
                 </div>
               </div>
 
-              <button class="btn btn-success w-100" (click)="afficherFormulaireFacturation()">
-                <i class="las la-credit-card me-2"></i>Payer maintenant
-              </button>
+              <!-- Boutons d'action -->
+              <div class="d-grid gap-2">
+                <button class="btn btn-success" (click)="afficherFormulaireFacturation()">
+                  <i class="las la-credit-card me-2"></i>Payer maintenant
+                </button>
+              </div>
             </div>
           </div>
 
@@ -245,7 +254,7 @@
                   </div>
                 </div>
 
-                <div class="d-flex justify-content-between mt-3">
+                <div class="d-flex justify-content-between mt-1">
                   <button type="button" class="btn btn-outline-secondary" (click)="annulerFacturation()">
                     <i class="las la-times me-1"></i>Annuler
                   </button>

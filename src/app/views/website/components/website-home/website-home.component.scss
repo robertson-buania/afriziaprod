@@ -1,1 +1,431 @@
+// Variables
+$primary-color: #007bff;
+$secondary-color: #6c757d;
+$light-color: #f8f9fa;
+$dark-color: #343a40;
+$border-radius: 0.5rem;
+$transition-speed: 0.3s;
 
+// Mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin responsive-padding {
+  padding: 1rem;
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+// Hero Section
+.hero-section {
+  background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url('/assets/images/bg/image-1.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 4rem 0;
+  text-align: center;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  .lead {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all $transition-speed;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+// Tracking Section
+.tracking-section {
+  background-color: $light-color;
+  padding: 2rem 0;
+
+  .tracking-form {
+    background-color: white;
+    border-radius: $border-radius;
+    padding: 2rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group {
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+      border-radius: $border-radius;
+      overflow: hidden;
+
+      .form-control {
+        border: none;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+
+        &:focus {
+          box-shadow: none;
+        }
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Quick Actions Section
+.quick-actions-section {
+  padding: 3rem 0;
+
+  .action-buttons {
+    .action-card {
+      background-color: white;
+      border-radius: $border-radius;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+      transition: all $transition-speed;
+      display: flex;
+      flex-direction: column;
+
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      }
+
+      .action-icon {
+        font-size: 2.5rem;
+        color: $primary-color;
+        margin-bottom: 1rem;
+      }
+
+      h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      p {
+        color: $secondary-color;
+        margin-bottom: 1.5rem;
+      }
+
+      .btn {
+        margin-top: auto;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Services Section
+.services-section {
+  padding: 3rem 0;
+  background-color: $light-color;
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .section-subtitle {
+    color: $secondary-color;
+    margin-bottom: 2rem;
+  }
+
+  .service-card {
+    background-color: white;
+    border-radius: $border-radius;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all $transition-speed;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .service-icon {
+      font-size: 2.5rem;
+      color: $primary-color;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: $secondary-color;
+      margin-bottom: 1.5rem;
+    }
+
+    .price-tag {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: $primary-color;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      margin-top: auto;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+    }
+  }
+}
+
+// Tarifs Section
+.tarifs-section {
+  padding: 3rem 0;
+
+  .tarifs-table {
+    background-color: white;
+    border-radius: $border-radius;
+    padding: 2rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+
+    .table {
+      margin-bottom: 0;
+
+      th {
+        background-color: $primary-color;
+        color: white;
+        font-weight: 500;
+        padding: 1rem;
+      }
+
+      td {
+        padding: 1rem;
+        vertical-align: middle;
+      }
+    }
+
+    .tarifs-note {
+      color: $secondary-color;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Features Section
+.features-section {
+  padding: 3rem 0;
+  background-color: $light-color;
+
+  .feature-item {
+    background-color: white;
+    border-radius: $border-radius;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all $transition-speed;
+    height: 100%;
+
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      color: $primary-color;
+      margin-bottom: 1rem;
+    }
+
+    h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: $secondary-color;
+      font-size: 0.9rem;
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Prepaiement Section
+.prepaiement-section {
+  padding: 3rem 0;
+
+  .card {
+    border-radius: $border-radius;
+    overflow: hidden;
+
+    .card-body {
+      h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      p {
+        color: $secondary-color;
+        margin-bottom: 1rem;
+      }
+    }
+
+    .prepaiement-icon {
+      font-size: 4rem;
+      color: $primary-color;
+    }
+  }
+}
+
+// CTA Section
+.cta-section {
+  background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/assets/images/cta-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 4rem 0;
+  text-align: center;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all $transition-speed;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+// Payment Methods Section
+.payment-methods-section {
+  background-color: $light-color;
+
+  .payment-methods-list {
+    .payment-method-item {
+      background-color: white;
+      border-radius: $border-radius;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+      transition: all $transition-speed;
+      min-width: 120px;
+
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      }
+
+      img {
+        max-width: 70px;
+        height: auto;
+        margin-bottom: 0.5rem;
+      }
+
+      span {
+        display: block;
+        font-size: 0.9rem;
+        color: $secondary-color;
+      }
+    }
+  }
+}
+
+// Responsive Adjustments
+@media (max-width: 767.98px) {
+  .hero-section {
+    padding: 3rem 0;
+
+    h1 {
+      font-size: 2rem;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+    }
+
+    .lead {
+      font-size: 1rem;
+    }
+  }
+
+  .tracking-section {
+    .tracking-form {
+      padding: 1.5rem;
+
+      h2 {
+        font-size: 1.5rem;
+      }
+    }
+  }
+
+  .quick-actions-section,
+  .services-section,
+  .tarifs-section,
+  .features-section,
+  .prepaiement-section,
+  .cta-section {
+    padding: 2rem 0;
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+  }
+
+  .action-card,
+  .service-card,
+  .feature-item {
+    padding: 1.5rem;
+  }
+
+  .payment-methods-list {
+    .payment-method-item {
+      min-width: 100px;
+      padding: 0.75rem;
+    }
+  }
+}

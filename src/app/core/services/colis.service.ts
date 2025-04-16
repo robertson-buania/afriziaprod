@@ -1,40 +1,41 @@
 import { Injectable } from '@angular/core';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
-import { Firestore } from '@angular/fire/firestore';
-import { Colis, STATUT_COLIS, TYPE_COLIS } from '@/app/models/partenaire.model';
+import { Observable, from, map } from 'rxjs';
+import { FirebaseService } from './firebase.service';
+import { Colis, STATUT_COLIS } from '@/app/models/partenaire.model';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class ColisService {
-  private colisCollection = collection(this.firestore, 'colis');
+  constructor(private firebaseService: FirebaseService) {}
 
-  constructor(private firestore: Firestore) {}
-
-  async getColis(): Promise<Colis[]> {
-    const q = query(this.colisCollection, orderBy('dateCreation', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Colis[];
+  getColis(): Observable<Colis[]> {
+    return this.firebaseService.getColis();
   }
 
-  async addColis(colis: Omit<Colis, 'id'>): Promise<void> {
-    await addDoc(this.colisCollection, {
+  getColisById(id: string): Promise<Colis | null> {
+    return this.firebaseService.getColisById(id);
+  }
+
+  getColisByIds(ids: string[]): Observable<Colis[]> {
+    return from(Promise.all(ids.map(id => this.getColisById(id))))
+      .pipe(
+        map(colisList => colisList.filter((colis): colis is Colis => colis !== null))
+      );
+  }
+
+  createColis(colis: Omit<Colis, 'id'>): Promise<string> {
+    return this.firebaseService.addColis({
       ...colis,
-      dateCreation: new Date().toISOString(),
-      statut: STATUT_COLIS.EN_ATTENTE_VERIFICATION
+      statut: STATUT_COLIS.EN_ATTENTE_PAIEMENT
     });
   }
 
-  async updateColis(colis: Colis): Promise<void> {
-    if (!colis.id) throw new Error('ID du colis manquant');
-    const docRef = doc(this.firestore, 'colis', colis.id);
-    const { id, ...data } = colis;
-    await updateDoc(docRef, data);
+  updateColis(id: string, data: Partial<Colis>): Promise<void> {
+    return this.firebaseService.updateColis(id, data);
   }
 
-  async deleteColis(id: string): Promise<void> {
-    const docRef = doc(this.firestore, 'colis', id);
-    await deleteDoc(docRef);
+  deleteColis(id: string): Promise<void> {
+    return this.firebaseService.deleteColis(id);
   }
 }

@@ -1,11 +1,34 @@
 export const environment = {
   production: false,
+  apiUrl: 'http://localhost:4200',
   cinetpay: {
-    apiKey: '207383812367daecdb724d28.45072634',
-    siteId: '105890259'
+    apiKey: 'your-api-key',
+    siteId: 'your-site-id'
   },
   whatsapp: {
-    apiUrl: 'https://graph.facebook.com/v22.0/572091615993833/messages',
-    token: 'EAAJUSgCLW9EBO8bWcU69rYzgvuWcDku0dJLApDiZAL6A49reDHbbzACqOUibijVCxYFXAd0wpF76qO1yT3QDMISLABcDGDN162SqFAZAyGvgnseZAa6F93vOZBoH0JmP4JQoqpdIQaTtrMIefC4DrYUMHqarA37LZAFwz0EEcxppDHowtYBpnPUlgCkGw6fgA5K0bfnZBAHjOf5rTJ7yhrC751j40ZD'
+    apiUrl: 'your-whatsapp-api-url',
+    token: 'your-whatsapp-token'
+  },
+  firebaseConfig: {
+    apiKey: "AIzaSyCR2yCWCWXjS17poimbW1xiIZJq5H9cGBQ",
+    authDomain: "jazkonza.firebaseapp.com",
+    projectId: "jazkonza",
+    storageBucket: "jazkonza.firebasestorage.app",
+    messagingSenderId: "749003564628",
+    appId: "1:749003564628:web:7c0fd37c6169c2fb0befc1",
+    measurementId: "G-F238KFG0XG"
   }
+
+  /*
+
+// {
+//   apiKey: "AIzaSyBxspYrMsyjpIinpuIjOqHMqS2cRX7cZ0c",
+//   authDomain: "afriziaprod.firebaseapp.com",
+//   projectId: "afriziaprod",
+//   storageBucket: "afriziaprod.firebasestorage.app",
+//   messagingSenderId: "609959722693",
+//   appId: "1:609959722693:web:e075d926353c99358ffaac",
+//   measurementId: "G-74R2400BTG"
+// };
+  */
 };

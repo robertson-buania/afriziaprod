@@ -19,6 +19,7 @@ export interface Facture{
   paiements:Paiement[]
   dateCreation?: string
   partenaireId?: string
+  prixRemise?: number
 }
 
 

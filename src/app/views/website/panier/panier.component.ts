@@ -1,22 +1,24 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { NgbAlertModule, NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 import { PanierService } from '@/app/core/services/panier.service';
-import { Colis, STATUT_COLIS, TYPE_EXPEDITION, PARAMETRAGE_COLIS } from '@/app/models/partenaire.model';
+import { Colis, STATUT_COLIS, TYPE_EXPEDITION, PARAMETRAGE_COLIS, Facture } from '@/app/models/partenaire.model';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { Subscription } from 'rxjs';
 import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.service';
 import { AuthModalModule } from '@/app/views/website/components/auth-modal/auth-modal.module';
 import { PaymentService } from '@/app/core/services/payment.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
+import { currentYear } from '@/app/common/constants';
 
 @Component({
   selector: 'app-panier',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, NgbAlertModule, NgbModalModule, AuthModalModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, NgbAlertModule, NgbModalModule, AuthModalModule, CurrencyPipe],
+  providers: [CurrencyPipe],
   templateUrl: './panier.component.html',
   styleUrl: './panier.component.scss'
 })
@@ -41,6 +43,11 @@ export class PanierComponent implements OnInit, OnDestroy {
   // Type d'expédition
   readonly TYPE_EXPEDITION = TYPE_EXPEDITION;
   selectedExpeditionType: TYPE_EXPEDITION = TYPE_EXPEDITION.EXPRESS;
+
+  // Nouvelles propriétés pour la facturation
+  currentYear = currentYear;
+  currentDate = new Date();
+  invoiceNumber = `FA${currentYear}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
 
   constructor(
     private panierService: PanierService,
@@ -112,21 +119,44 @@ export class PanierComponent implements OnInit, OnDestroy {
   }
 
   getStatutLabel(statut: STATUT_COLIS): string {
-    switch(statut) {
+    switch (statut) {
       case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
         return 'bg-warning text-dark';
+      case STATUT_COLIS.PAYE:
+        return 'bg-success';
       case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
         return 'bg-info';
       case STATUT_COLIS.EN_COURS_EXPEDITION:
         return 'bg-primary';
       case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
-        return 'bg-secondary';
+        return 'bg-info';
       case STATUT_COLIS.LIVRE:
         return 'bg-success';
       case STATUT_COLIS.ANNULE:
         return 'bg-danger';
       default:
         return 'bg-secondary';
+    }
+  }
+
+  getStatutText(statut: STATUT_COLIS): string {
+    switch (statut) {
+      case STATUT_COLIS.EN_ATTENTE_PAIEMENT:
+        return 'En attente de paiement';
+      case STATUT_COLIS.PAYE:
+        return 'Payé';
+      case STATUT_COLIS.EN_ATTENTE_EXPEDITION:
+        return 'En attente d\'expédition';
+      case STATUT_COLIS.EN_COURS_EXPEDITION:
+        return 'En cours d\'expédition';
+      case STATUT_COLIS.EN_ATTENTE_LIVRAISON:
+        return 'En attente de livraison';
+      case STATUT_COLIS.LIVRE:
+        return 'Livré';
+      case STATUT_COLIS.ANNULE:
+        return 'Annulé';
+      default:
+        return 'Statut inconnu';
     }
   }
 
@@ -153,11 +183,12 @@ export class PanierComponent implements OnInit, OnDestroy {
     // Si l'utilisateur est connecté mais n'a pas complété son profil
     if (!this.utilisateurConnecte.nom || !this.utilisateurConnecte.prenom || !this.utilisateurConnecte.telephone) {
       this.errorMessage = 'Veuillez compléter votre profil pour pouvoir payer';
-      // Rediriger vers la page de profil
+   
       this.router.navigate(['/profil']);
       return;
-    }
-
+    } // Rediriger vers la page de profil
+   console.log("utilisateurConnecte",this.utilisateurConnecte);
+      
     this.isFacturationFormVisible = true;
   }
 
@@ -209,7 +240,56 @@ export class PanierComponent implements OnInit, OnDestroy {
     setTimeout(() => this.successMessage = '', 3000);
   }
 
+  // Méthode pour créer la facture
+  private async createFacture(): Promise<string> {
+    if (!this.utilisateurConnecte || !this.utilisateurConnecte.id) {
+      throw new Error('Utilisateur non connecté');
+    }
+
+    const facture: Omit<Facture, 'id'> & { id: string } = {
+      id: this.invoiceNumber,
+      montant: this.total,
+      montantPaye: 0,
+      colis: this.colis,
+      paiements: [],
+      dateCreation: new Date().toISOString(),
+      partenaireId: this.utilisateurConnecte.id
+    };
+
+    await this.firebaseService.createFacture(facture);
+    return facture.id;
+  }
+
+  // Méthode pour mettre à jour le statut des colis
+  private async updateColisStatus(factureId: string): Promise<void> {
+    const updatePromises = this.colis
+      .filter(colis => colis.id)
+      .map(colis =>
+        this.firebaseService.updateColis(colis.id!, {
+          statut: STATUT_COLIS.EN_ATTENTE_PAIEMENT,
+          typeExpedition: this.selectedExpeditionType
+        })
+      );
+
+    await Promise.all(updatePromises);
+  }
+
   async creerFacture(): Promise<void> {
+    if (!this.utilisateurConnecte) {
+      // L'utilisateur n'est pas connecté, afficher le modal de connexion
+      this.errorMessage = 'Veuillez vous connecter pour poursuivre le paiement';
+      this.ouvrirModalConnexion();
+      return;
+    }
+
+    // Si l'utilisateur est connecté mais n'a pas complété son profil
+    if (!this.utilisateurConnecte.nom || !this.utilisateurConnecte.prenom || !this.utilisateurConnecte.telephone) {
+      this.errorMessage = 'Veuillez compléter votre profil pour pouvoir payer';
+   
+      this.router.navigate(['/profil']);
+      return;
+    }
+
     if (this.facturationForm.invalid) {
       this.facturationForm.markAllAsTouched();
       return;
@@ -219,39 +299,11 @@ export class PanierComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
-      const partenaireId = this.facturationForm.get('partenaireId')?.value || this.partenaireId;
-
-      if (!partenaireId) {
-        this.errorMessage = 'ID de partenaire non spécifié';
-        this.isProcessing = false;
-        return;
-      }
-
-      // Mettre à jour les colis avec les informations client et le type d'expédition
-      if (this.utilisateurConnecte) {
-        const client = this.utilisateurConnecte;
-        for (const colis of this.colis) {
-          if (colis.id) {
-            await this.firebaseService.updateColis(colis.id, {
-              partenaireId: client.id,
-              clientNom: client.nom,
-              clientPrenom: client.prenom,
-              clientEmail: client.email,
-              clientTelephone: client.telephone,
-              typeExpedition: this.selectedExpeditionType
-            });
-          }
-        }
-      }
-
-      // Créer la facture en attente de paiement
-      const factureId = await this.panierService.creerFactureDepuisPanier(partenaireId);
-
-      if (!factureId) {
-        this.errorMessage = 'Erreur lors de la création de la facture';
-        this.isProcessing = false;
-        return;
-      }
+      // Créer la facture
+      const factureId = await this.createFacture();
+      
+      // Mettre à jour le statut des colis
+      await this.updateColisStatus(factureId);
 
       // Préparer les informations client pour CinetPay
       const customer = {
@@ -290,7 +342,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         channels: 'ALL',
         metadata: {
           factureId: factureId,
-          clientId: this.utilisateurConnecte?.id || partenaireId || '',
+          clientId: this.utilisateurConnecte?.id || '',
           colisIds: this.colis.map(c => c.id)
         }
       }).subscribe(

@@ -6,11 +6,11 @@
         <h1 class="mb-4" translate="HOME.HERO.TITLE"></h1>
         <h2 class="mb-4" translate="HOME.HERO.SUBTITLE"></h2>
         <p class="lead mb-5" translate="HOME.HERO.DESCRIPTION"></p>
-        <div class="d-flex justify-content-center gap-3">
-          <a routerLink="/recherche-colis" class="btn btn-primary btn-lg">
+        <div class="d-flex flex-column flex-md-row justify-content-center gap-2 gap-md-3">
+          <a routerLink="/recherche-colis" class="btn btn-primary btn-lg w-100 w-md-auto">
             <i class="las la-box me-2"></i>{{ 'HOME.QUICK_ACTIONS.SEARCH_PACKAGE.TITLE' | translate }}
           </a>
-          <button class="btn btn-outline-light btn-lg" (click)="scrollToTracking()">
+          <button class="btn btn-outline-light btn-lg w-100 w-md-auto" (click)="scrollToTracking()">
             <i class="las la-search me-2"></i>{{ 'HOME.HERO.TRACK_PACKAGE' | translate }}
           </button>
         </div>
@@ -26,16 +26,16 @@
       <div class="col-lg-8">
         <div class="tracking-form">
           <h2 class="text-center mb-4" translate="HOME.TRACKING.TITLE"></h2>
-          <div class="input-group">
+          <div class="input-group input-group-lg">
             <input
               type="text"
-              class="form-control form-control-lg"
+              class="form-control"
               [(ngModel)]="trackingCode"
               [placeholder]="'HOME.TRACKING.PLACEHOLDER' | translate"
               (keyup.enter)="trackPackage()"
             >
             <button
-              class="btn btn-primary btn-lg"
+              class="btn btn-primary"
               type="button"
               (click)="trackPackage()"
             >
@@ -58,37 +58,37 @@
       <div class="col-lg-10">
         <div class="row action-buttons">
           <div class="col-md-4 mb-4">
-            <div class="action-card">
+            <div class="action-card h-100">
               <div class="action-icon">
                 <i class="las la-search"></i>
               </div>
               <h3 translate="HOME.QUICK_ACTIONS.SEARCH_PACKAGE.TITLE"></h3>
               <p translate="HOME.QUICK_ACTIONS.SEARCH_PACKAGE.DESCRIPTION"></p>
-              <a routerLink="/recherche-colis" class="btn btn-primary w-100">
+              <a routerLink="/recherche-colis" class="btn btn-primary w-100 mt-auto">
                 <i class="las la-arrow-right me-2"></i>{{ 'COMMON.SEARCH' | translate }}
               </a>
             </div>
           </div>
           <div class="col-md-4 mb-4">
-            <div class="action-card">
+            <div class="action-card h-100">
               <div class="action-icon">
                 <i class="las la-shipping-fast"></i>
               </div>
               <h3 translate="HOME.QUICK_ACTIONS.TRACK_PACKAGE.TITLE"></h3>
               <p translate="HOME.QUICK_ACTIONS.TRACK_PACKAGE.DESCRIPTION"></p>
-              <a routerLink="/tracking" class="btn btn-primary w-100">
+              <a routerLink="/tracking" class="btn btn-primary w-100 mt-auto">
                 <i class="las la-arrow-right me-2"></i>{{ 'NAVBAR.TRACK_PACKAGE' | translate }}
               </a>
             </div>
           </div>
           <div class="col-md-4 mb-4">
-            <div class="action-card">
+            <div class="action-card h-100">
               <div class="action-icon">
                 <i class="las la-phone"></i>
               </div>
               <h3 translate="HOME.QUICK_ACTIONS.CONTACT.TITLE"></h3>
               <p translate="HOME.QUICK_ACTIONS.CONTACT.DESCRIPTION"></p>
-              <a routerLink="/contact" class="btn btn-primary w-100">
+              <a routerLink="/contact" class="btn btn-primary w-100 mt-auto">
                 <i class="las la-arrow-right me-2"></i>{{ 'NAVBAR.CONTACT' | translate }}
               </a>
             </div>
@@ -108,7 +108,7 @@
     </div>
     <div class="row">
       <div class="col-md-4 mb-4">
-        <div class="service-card">
+        <div class="service-card h-100">
           <i class="las la-plane service-icon"></i>
           <h3 translate="HOME.SERVICES.AIR_FREIGHT.TITLE"></h3>
           <p translate="HOME.SERVICES.AIR_FREIGHT.DESCRIPTION"></p>
@@ -117,7 +117,7 @@
         </div>
       </div>
       <div class="col-md-4 mb-4">
-        <div class="service-card">
+        <div class="service-card h-100">
           <i class="las la-ship service-icon"></i>
           <h3 translate="HOME.SERVICES.SEA_FREIGHT.TITLE"></h3>
           <p translate="HOME.SERVICES.SEA_FREIGHT.DESCRIPTION"></p>
@@ -126,7 +126,7 @@
         </div>
       </div>
       <div class="col-md-4 mb-4">
-        <div class="service-card">
+        <div class="service-card h-100">
           <i class="las la-shield-alt service-icon"></i>
           <h3 translate="HOME.SERVICES.SPECIAL_FREIGHT.TITLE"></h3>
           <p translate="HOME.SERVICES.SPECIAL_FREIGHT.DESCRIPTION"></p>
@@ -227,8 +227,8 @@
       <p class="section-subtitle" translate="HOME.FEATURES.SUBTITLE"></p>
     </div>
     <div class="row g-4">
-      <div class="col-md-3">
-        <div class="feature-item">
+      <div class="col-6 col-md-3">
+        <div class="feature-item h-100">
           <div class="feature-icon">
             <i class="las la-clock"></i>
           </div>
@@ -236,8 +236,8 @@
           <p translate="HOME.FEATURES.EXPRESS.DESCRIPTION"></p>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="feature-item">
+      <div class="col-6 col-md-3">
+        <div class="feature-item h-100">
           <div class="feature-icon">
             <i class="las la-hand-holding-usd"></i>
           </div>
@@ -245,8 +245,8 @@
           <p translate="HOME.FEATURES.ECONOMIC.DESCRIPTION"></p>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="feature-item">
+      <div class="col-6 col-md-3">
+        <div class="feature-item h-100">
           <div class="feature-icon">
             <i class="las la-headset"></i>
           </div>
@@ -254,8 +254,8 @@
           <p translate="HOME.FEATURES.SUPPORT.DESCRIPTION"></p>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="feature-item">
+      <div class="col-6 col-md-3">
+        <div class="feature-item h-100">
           <div class="feature-icon">
             <i class="las la-map-marked-alt"></i>
           </div>
@@ -273,7 +273,7 @@
     <div class="row justify-content-center">
       <div class="col-lg-10">
         <div class="card border-0 shadow-sm">
-          <div class="card-body p-5">
+          <div class="card-body p-4 p-md-5">
             <div class="row align-items-center">
               <div class="col-md-8">
                 <h3 class="mb-4" translate="HOME.PREPAYMENT.TITLE"></h3>
@@ -282,7 +282,7 @@
                 <p>{{ 'HOME.PREPAYMENT.DETAILS.1' | translate }}</p>
                 <p class="mb-0">{{ 'HOME.PREPAYMENT.DETAILS.2' | translate }}</p>
               </div>
-              <div class="col-md-4 text-center">
+              <div class="col-md-4 text-center mt-4 mt-md-0">
                 <div class="prepaiement-icon">
                   <i class="las la-credit-card"></i>
                 </div>
@@ -302,11 +302,11 @@
       <div class="col-lg-8 text-center">
         <h2 class="mb-4" translate="HOME.CTA.TITLE"></h2>
         <p class="mb-4" translate="HOME.CTA.SUBTITLE"></p>
-        <div class="d-flex justify-content-center gap-3">
-          <a routerLink="/tracking" class="btn btn-primary btn-lg">
+        <div class="d-flex flex-column flex-md-row justify-content-center gap-2 gap-md-3">
+          <a routerLink="/tracking" class="btn btn-primary btn-lg w-100 w-md-auto">
             <i class="las la-paper-plane me-2"></i>{{ 'HOME.CTA.START_NOW' | translate }}
           </a>
-          <a routerLink="/contact" class="btn btn-outline-light btn-lg">
+          <a routerLink="/contact" class="btn btn-outline-light btn-lg w-100 w-md-auto">
             <i class="las la-headset me-2"></i>{{ 'HOME.CTA.CONTACT_US' | translate }}
           </a>
         </div>
@@ -323,7 +323,7 @@
         <div class="text-center mb-4">
           <h2 class="section-title h4" translate="HOME.PAYMENT_METHODS.TITLE"></h2>
         </div>
-        <div class="payment-methods-list d-flex justify-content-center flex-wrap gap-4">
+        <div class="payment-methods-list d-flex justify-content-center flex-wrap gap-3 gap-md-4">
           <div class="payment-method-item">
             <img src="assets/images/payement/visa.jpg" alt="VISA" />
             <span>VISA</span>

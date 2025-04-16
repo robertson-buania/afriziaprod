@@ -12,6 +12,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgbAlertModule } from '@ng-bootstrap/ng-bootstrap';
+import { PanierService } from '@/app/core/services/panier.service';
 
 @Component({
   selector: 'app-website-tracking',
@@ -73,33 +74,35 @@ export class WebsiteTrackingComponent implements OnInit {
     private countryService: CountryService,
     private paymentService: PaymentService,
     private fb: FormBuilder,
-    private utilisateurService: UtilisateurService
+    private utilisateurService: UtilisateurService,
+    private panierService: PanierService
   ) {
     this.trackingForm = this.fb.group({
-      codeSuivi: ['', [Validators.required, Validators.minLength(5)]]
+      codeSuivi: ['', Validators.required],
+      codeExpedition: ['']
     });
 
     this.clientForm = this.fb.group({
-      nom: ['', [Validators.required, Validators.minLength(2)]],
-      prenom: ['', [Validators.required, Validators.minLength(2)]],
+      nom: ['', Validators.required],
+      prenom: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       telephone: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
-      adresse: [''],
-      countryCode: ['', Validators.required]
+      pays: ['CM', Validators.required],
+      adresse: ['', Validators.required]
     });
 
     this.colisForm = this.fb.group({
-      type: [TYPE_COLIS.ORDINAIRE, Validators.required],
-      typeExpedition: [TYPE_EXPEDITION.STANDARD, Validators.required],
-      description: ['', Validators.required],
-      poids: [null, [Validators.required, Validators.min(0)]],
+      type: ['', Validators.required],
+      typeExpedition: ['', Validators.required],
+      poids: [null, [Validators.required, Validators.min(0.1)]],
       cout: [null, [Validators.required, Validators.min(0)]],
       codeSuivi: ['', Validators.required],
       destinataire: ['', Validators.required],
       destination: ['', Validators.required],
-      quantite: ['', [Validators.required, Validators.min(1)]],
+      quantite: ['', Validators.required],
       nature: ['', Validators.required],
-      transporteur: ['', Validators.required]
+      transporteur: ['', Validators.required],
+      description: ['']
     });
   }
 
@@ -393,25 +396,61 @@ export class WebsiteTrackingComponent implements OnInit {
   }
 
   async searchPackage() {
-    if (this.trackingForm.invalid) return;
-
-    const trackingCode = this.trackingForm.get('codeSuivi')?.value;
-    if (!trackingCode) return;
+    if (this.trackingForm.invalid) {
+      this.trackingForm.markAllAsTouched();
+      return;
+    }
 
     this.isLoading = true;
-    this.error = '';
     this.colis = null;
+    this.message = null;
+
+    const codeSuivi = this.trackingForm.get('codeSuivi')?.value;
 
     try {
-      const colis = await firstValueFrom(this.firebaseService.getColisByCode(trackingCode));
-      if (!colis) {
-        this.error = 'Aucun colis trouvé avec ce code de suivi';
-        return;
+      const colis = await firstValueFrom(this.firebaseService.getColisByCode(codeSuivi));
+      
+      if (colis) {
+        this.colis = colis;
+        this.message = { type: 'success', text: 'Colis trouvé avec succès' };
+      } else {
+        this.message = { type: 'error', text: 'Aucun colis trouvé avec ce code de suivi' };
       }
-      this.colis = colis;
     } catch (error) {
       console.error('Erreur lors de la recherche du colis:', error);
-      this.error = 'Une erreur est survenue lors de la recherche du colis';
+      this.message = { type: 'error', text: 'Une erreur est survenue lors de la recherche du colis' };
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async searchByExpeditionCode() {
+    if (!this.trackingForm.get('codeExpedition')?.value) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.colis = null;
+    this.message = null;
+
+    const codeExpedition = this.trackingForm.get('codeExpedition')?.value;
+
+    try {
+      // Rechercher tous les colis
+      const allColis = await firstValueFrom(this.firebaseService.getColis());
+      
+      // Filtrer par code d'expédition
+      const colis = allColis.find(c => c.codeexpedition === codeExpedition);
+      
+      if (colis) {
+        this.colis = colis;
+        this.message = { type: 'success', text: 'Colis trouvé avec succès' };
+      } else {
+        this.message = { type: 'error', text: 'Aucun colis trouvé avec ce code d\'expédition' };
+      }
+    } catch (error) {
+      console.error('Erreur lors de la recherche du colis par code d\'expédition:', error);
+      this.message = { type: 'error', text: 'Une erreur est survenue lors de la recherche du colis' };
     } finally {
       this.isLoading = false;
     }
@@ -452,19 +491,24 @@ export class WebsiteTrackingComponent implements OnInit {
 
   isStatusReached(status: STATUT_COLIS): boolean {
     if (!this.colis) return false;
-
+    
+    // Définir l'ordre des statuts
     const statusOrder = [
       STATUT_COLIS.EN_ATTENTE_PAIEMENT,
+      STATUT_COLIS.PAYE,
       STATUT_COLIS.EN_ATTENTE_EXPEDITION,
       STATUT_COLIS.EN_COURS_EXPEDITION,
       STATUT_COLIS.EN_ATTENTE_LIVRAISON,
-      STATUT_COLIS.LIVRE
+      STATUT_COLIS.LIVRE,
+      STATUT_COLIS.ANNULE
     ];
-
-    const currentIndex = statusOrder.indexOf(this.colis.statut);
-    const targetIndex = statusOrder.indexOf(status);
-
-    return currentIndex >= targetIndex;
+    
+    // Trouver l'index du statut actuel et du statut à vérifier
+    const currentStatusIndex = statusOrder.indexOf(this.colis.statut);
+    const targetStatusIndex = statusOrder.indexOf(status);
+    
+    // Si le statut actuel est plus avancé ou égal au statut cible, alors le statut cible est atteint
+    return currentStatusIndex >= targetStatusIndex;
   }
 
   checkPaymentStatus() {
@@ -562,5 +606,47 @@ export class WebsiteTrackingComponent implements OnInit {
 
   getTotalCost(): number {
     return this.colisList.reduce((total, colis) => total + (colis.cout || 0), 0);
+  }
+
+  /**
+   * Ajoute le colis au panier et redirige vers la page du panier
+   */
+  async ajouterAuPanier() {
+    if (!this.colis) {
+      this.message = {
+        type: 'error',
+        text: 'Aucun colis sélectionné'
+      };
+      return;
+    }
+
+    try {
+      this.isProcessingPayment = true;
+      const success = await this.panierService.ajouterAuPanier(this.colis);
+      
+      if (success) {
+        this.message = {
+          type: 'success',
+          text: 'Le colis a été ajouté au panier avec succès'
+        };
+        // Rediriger vers la page du panier après 2 secondes
+        setTimeout(() => {
+          this.router.navigate(['/panier']);
+        }, 2000);
+      } else {
+        this.message = {
+          type: 'error',
+          text: 'Impossible d\'ajouter le colis au panier'
+        };
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout au panier:', error);
+      this.message = {
+        type: 'error',
+        text: 'Une erreur est survenue lors de l\'ajout au panier'
+      };
+    } finally {
+      this.isProcessingPayment = false;
+    }
   }
 }
