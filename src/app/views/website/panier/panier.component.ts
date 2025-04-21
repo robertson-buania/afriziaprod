@@ -291,6 +291,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     const colisData: Colis[] = []
     this.colis.forEach((data) => {
+     
       const colis: Colis = {
         id: data.id,
         type: data.type,
@@ -306,7 +307,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         cout: data.cout,
         dateCreation: data.dateCreation,
         codeSuivi: data.codeSuivi,
-        nombreUnites: data.nombreUnites,
+        nombreUnites: data.nombreUnites? data.nombreUnites :Number( data.quantite),
         codeexpedition: data.codeexpedition,
         destinataire: data.destinataire,
         destination: data.destination,
@@ -315,7 +316,12 @@ export class PanierComponent implements OnInit, OnDestroy {
         transporteur: data.transporteur,
       }
       colisData.push(colis)
+
+      console.log(colis,this.utilisateurConnecte);
+      
     })
+
+    
     // Créer l'objet facture avec l'ID personnalisé
     const facture: Omit<Facture, 'id'> & { id: string } = {
       id: invoiceNumber,
