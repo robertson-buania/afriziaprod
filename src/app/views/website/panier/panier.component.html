@@ -226,46 +226,13 @@
 
               <!-- Boutons d'action -->
               <div class="d-grid gap-2">
-                <button class="btn btn-success" (click)="afficherFormulaireFacturation()">
+                <button class="btn btn-success" (click)="creerFacture()">
                   <i class="las la-credit-card me-2"></i>Payer maintenant
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Formulaire de facturation -->
-          <div *ngIf="isFacturationFormVisible" class="card shadow-sm mb-4">
-            <div class="card-header bg-light py-3">
-              <h5 class="card-title mb-0">Confirmation de paiement</h5>
-            </div>
-            <div class="card-body">
-              <form [formGroup]="facturationForm" (ngSubmit)="creerFacture()">
-                <div class="mb-3" *ngIf="!partenaireId">
-                  <label for="partenaireId" class="form-label">ID du partenaire</label>
-                  <input type="text" id="partenaireId" class="form-control" formControlName="partenaireId">
-                  <div *ngIf="facturationForm.get('partenaireId')?.invalid && facturationForm.get('partenaireId')?.touched" class="text-danger small mt-1">
-                    L'ID du partenaire est requis.
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <div class="alert alert-info">
-                    <i class="las la-info-circle me-2"></i> Vous allez être redirigé vers une page de paiement sécurisée.
-                  </div>
-                </div>
-
-                <div class="d-flex justify-content-between mt-1">
-                  <button type="button" class="btn btn-outline-secondary" (click)="annulerFacturation()">
-                    <i class="las la-times me-1"></i>Annuler
-                  </button>
-                  <button type="submit" class="btn btn-primary" [disabled]="facturationForm.invalid || isProcessing">
-                    <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                    <i *ngIf="!isProcessing" class="las la-credit-card me-1"></i>Procéder au paiement
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -287,6 +254,57 @@
     </button>
     <button type="button" class="btn btn-danger" (click)="modal.close('confirm')">
       <i class="las la-trash-alt me-1"></i>Supprimer
+    </button>
+  </div>
+</ng-template>
+
+<!-- Modal de paiement Stripe -->
+<ng-template #stripePaymentModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Paiement sécurisé</h5>
+    <button type="button" class="btn-close" aria-label="Close" [disabled]="paymentProcessing" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <!-- Message de statut du paiement -->
+    <div *ngIf="paymentStatus === 'processing'" class="alert alert-info text-center">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Traitement du paiement en cours...
+    </div>
+
+    <div *ngIf="paymentStatus === 'success'" class="alert alert-success">
+      <i class="las la-check-circle me-2"></i> Paiement réussi !
+    </div>
+
+    <div *ngIf="paymentStatus === 'error' && errorMessage" class="alert alert-danger">
+      <i class="las la-exclamation-circle me-2"></i> {{ errorMessage }}
+    </div>
+
+    <!-- Résumé de la commande -->
+    <div class="payment-summary mb-4">
+      <h6 class="mb-3">Résumé de la commande</h6>
+      <div class="d-flex justify-content-between">
+        <span>Montant total :</span>
+        <span class="fw-bold">{{ total | currency:'USD':'symbol' }}</span>
+      </div>
+    </div>
+
+    <!-- Formulaire de paiement Stripe -->
+    <div class="payment-form">
+      <h6 class="mb-3">Informations de paiement</h6>
+      <div #cardElement class="card-element mb-3"></div>
+      <p class="text-muted small">
+        <i class="las la-lock me-1"></i>
+        Vos informations de paiement sont sécurisées et chiffrées.
+      </p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" [disabled]="paymentProcessing" (click)="cancelPayment()">
+      Annuler
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="paymentProcessing" (click)="processPayment()">
+      <div *ngIf="paymentProcessing" class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Payer {{ total | currency:'USD':'symbol' }}
     </button>
   </div>
 </ng-template>

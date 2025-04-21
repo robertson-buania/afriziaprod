@@ -78,16 +78,16 @@
               <td>{{ facture.id }}</td>
               <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
               <td>
-                <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
-                  {{ facture.montant | number:'1.2-2' }} USD
+                <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
+                  {{ facture.montant | currency:'USD' }}
                 </div>
-                <div *ngIf="aRemise(facture)" class="text-success">
-                  {{ getPrixFormate(facture) }}
+                <div *ngIf="aRemiseExtended(facture)" class="text-success">
+                  {{ getPrixFormateExtended(facture) }}
                 </div>
               </td>
               <td>
-                <span class="badge" [ngClass]="getClassStatutPaiement(facture)">
-                  {{ getStatutFacture(facture) }}
+                <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
+                  {{ getStatutFactureExtended(facture) }}
                 </span>
               </td>
               <td>
@@ -95,9 +95,9 @@
                   <i class="bi bi-eye"></i> Détails
                 </button>
                 <button
-                  *ngIf="!estFacturePayee(facture)"
+                  *ngIf="!estFacturePayeeExtended(facture)"
                   class="btn btn-sm btn-success"
-                  (click)="payerFactureCinetPay(facture)"
+                  (click)="payerFacture(facture)"
                   [disabled]="isPaiementEnCours">
                   <i class="bi bi-credit-card"></i> Payer
                 </button>
@@ -140,11 +140,11 @@
               <td>{{ facture.id }}</td>
               <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
               <td>
-                <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
-                  {{ facture.montant | number:'1.2-2' }} USD
+                <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
+                  {{ facture.montant | currency:'USD' }}
                 </div>
-                <div *ngIf="aRemise(facture)" class="text-success">
-                  {{ getPrixFormate(facture) }}
+                <div *ngIf="aRemiseExtended(facture)" class="text-success">
+                  {{ getPrixFormateExtended(facture) }}
                 </div>
               </td>
               <td>
@@ -193,16 +193,16 @@
               <td>{{ facture.id }}</td>
               <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
               <td>
-                <div [ngClass]="{'text-decoration-line-through': aRemise(facture)}">
-                  {{ facture.montant | number:'1.2-2' }} USD
+                <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
+                  {{ facture.montant | currency:'USD' }}
                 </div>
-                <div *ngIf="aRemise(facture)" class="text-success">
-                  {{ getPrixFormate(facture) }}
+                <div *ngIf="aRemiseExtended(facture)" class="text-success">
+                  {{ getPrixFormateExtended(facture) }}
                 </div>
               </td>
               <td>
-                <span class="badge" [ngClass]="getClassStatutPaiement(facture)">
-                  {{ getStatutFacture(facture) }}
+                <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
+                  {{ getStatutFactureExtended(facture) }}
                 </span>
               </td>
               <td>
@@ -211,7 +211,7 @@
                 </button>
                 <button
                   class="btn btn-sm btn-success"
-                  (click)="payerFactureCinetPay(facture)"
+                  (click)="payerFacture(facture)"
                   [disabled]="isPaiementEnCours">
                   <i class="bi bi-credit-card"></i> Payer
                 </button>
@@ -237,8 +237,8 @@
             <p><strong>Date de création:</strong> {{ factureSelectionnee.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
             <p><strong>Montant total:</strong> {{ formaterPrix(factureSelectionnee.montant) }}</p>
             <p><strong>Montant payé:</strong> {{ formaterPrix(factureSelectionnee.montantPaye) }}</p>
-            <p *ngIf="aRemise(factureSelectionnee)">
-              <strong>Prix avec remise:</strong> {{ getPrixFormate(factureSelectionnee) }}
+            <p *ngIf="aRemiseExtended(factureSelectionnee)">
+              <strong>Prix avec remise:</strong> {{ getPrixFormateExtended(factureSelectionnee) }}
             </p>
           </div>
         </div>
@@ -290,7 +290,7 @@
               <tbody>
                 <tr *ngFor="let paiement of factureSelectionnee?.paiements">
                   <td>{{ paiement?.datepaiement | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>{{ paiement?.montant_paye | number:'1.2-2' }} USD</td>
+                  <td>{{ paiement?.montant_paye | currency:'USD':'symbol' }}</td>
                   <td>{{ getTypePaiementLabel(paiement?.typepaiement) }}</td>
                   <td>
                     <span class="badge bg-success">Succès</span>
@@ -307,3 +307,66 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de paiement Stripe -->
+<ng-template #stripePaymentModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Paiement sécurisé</h5>
+    <button type="button" class="btn-close" aria-label="Close" [disabled]="paymentProcessing" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <!-- Message de statut du paiement -->
+    <div *ngIf="paymentStatus === 'processing'" class="alert alert-info text-center">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Traitement du paiement en cours...
+    </div>
+
+    <div *ngIf="paymentStatus === 'success'" class="alert alert-success">
+      <i class="bi bi-check-circle me-2"></i> Paiement réussi !
+    </div>
+
+    <div *ngIf="paymentStatus === 'error' && errorMessage" class="alert alert-danger">
+      <i class="bi bi-exclamation-circle me-2"></i> {{ errorMessage }}
+    </div>
+
+    <!-- Résumé de la commande -->
+    <div class="payment-summary mb-4" *ngIf="factureSelectionnee">
+      <h6 class="mb-3">Résumé de la commande</h6>
+      <div class="d-flex justify-content-between">
+        <span>Facture :</span>
+        <span>{{ factureSelectionnee.id }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Montant total :</span>
+        <span class="fw-bold">{{ factureSelectionnee.montant | currency:'USD':'symbol' }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Montant payé :</span>
+        <span>{{ factureSelectionnee.montantPaye | currency:'USD':'symbol' }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Montant restant :</span>
+        <span class="fw-bold text-primary">{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye) | currency:'USD':'symbol' }}</span>
+      </div>
+    </div>
+
+    <!-- Formulaire de paiement Stripe -->
+    <div class="payment-form">
+      <h6 class="mb-3">Informations de paiement</h6>
+      <div #cardElement class="card-element mb-3"></div>
+      <p class="text-muted small">
+        <i class="bi bi-lock"></i>
+        Vos informations de paiement sont sécurisées et chiffrées.
+      </p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" [disabled]="paymentProcessing" (click)="fermerModalPaiement()">
+      Annuler
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="paymentProcessing" (click)="processPayment()">
+      <div *ngIf="paymentProcessing" class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Payer maintenant
+    </button>
+  </div>
+</ng-template>

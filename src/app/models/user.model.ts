@@ -1,5 +1,6 @@
 export interface User {
   id: string;
+  uid: string;  // Firebase auth user ID
   email: string;
   displayName?: string;
   phoneNumber?: string;
@@ -16,4 +17,4 @@ export interface User {
     country?: string;
     postalCode?: string;
   };
-} 
+}

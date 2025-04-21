@@ -1,14 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NgbNavModule, NgbAccordionModule, NgbAlertModule, NgbTooltipModule, NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT } from '@/app/models/partenaire.model';
+import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT, FactureStatus } from '@/app/models/partenaire.model';
 import { Subscription, of, Subject, timer, from, Observable } from 'rxjs';
 import { PaymentService } from '@/app/core/services/payment.service';
 import { AuthService } from '@/app/core/services/auth.service';
-import { CinetPayService, CinetPayResponse } from '@/app/core/services/cinetpay.service';
 import { environment } from '@/environments/environment';
 import { takeUntil, take, retry, delay, catchError, switchMap, map, filter, finalize } from 'rxjs/operators';
 import { FactureService } from '@/app/core/services/facture.service';
@@ -16,6 +15,7 @@ import { ColisService } from '@/app/core/services/colis.service';
 import { User } from '@/app/models/user.model';
 import { FormsModule } from '@angular/forms';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
+import { StripeService } from '@/app/core/services/stripe.service';
 
 interface ExtendedPaiement extends Paiement {
   date: string;
@@ -24,19 +24,17 @@ interface ExtendedPaiement extends Paiement {
   statut: 'success' | 'pending' | 'failed';
 }
 
-type FactureStatus = 'PAYEE' | 'PARTIELLEMENT_PAYEE' | 'EN_ATTENTE';
-
 interface BaseFacture extends Omit<Facture, 'colis'> {
   montant: number;
   montantPaye: number;
   paiements: Paiement[];
-  dateCreation?: string;
-  partenaireId?: string;
+  dateCreation: string;
   prixRemise?: number;
+  statut: FactureStatus;
 }
 
 interface ExtendedFacture extends BaseFacture {
-  statut: FactureStatus;
+  pourcentagePaye: number;
   colis: (string | Colis)[];
   colisObjets?: Colis[];
 }
@@ -51,12 +49,17 @@ interface ExtendedFacture extends BaseFacture {
     NgbAccordionModule,
     NgbAlertModule,
     NgbTooltipModule,
-    FormsModule
+    FormsModule,
+    CurrencyPipe
   ],
   templateUrl: './mes-commandes.component.html',
-  styleUrl: './mes-commandes.component.scss'
+  styleUrl: './mes-commandes.component.scss',
+  providers: [StripeService]
 })
 export class MesCommandesComponent implements OnInit, OnDestroy {
+  @ViewChild('stripePaymentModal') stripePaymentModal!: ElementRef;
+  @ViewChild('cardElement') cardElement!: ElementRef;
+
   factures: ExtendedFacture[] = [];
   facturesPayees: ExtendedFacture[] = [];
   facturesNonPayees: ExtendedFacture[] = [];
@@ -72,6 +75,14 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   retryCount = 0;
   maxRetries = 3;
 
+  // Variables pour Stripe
+  stripe: any;
+  elements: any;
+  paymentElement: any;
+  clientSecret: string = '';
+  paymentProcessing = false;
+  paymentStatus: 'initial' | 'processing' | 'success' | 'error' = 'initial';
+
   // États pour le détail d'une facture
   detailsVisible = false;
 
@@ -85,11 +96,11 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     private firebaseService: FirebaseService,
     private paymentService: PaymentService,
     private authService: AuthService,
-    private cinetPayService: CinetPayService,
     private factureService: FactureService,
     private colisService: ColisService,
     private modalService: NgbModal,
-    private firestore: Firestore
+    private firestore: Firestore,
+    private stripeService: StripeService
   ) {}
 
   ngOnInit(): void {
@@ -108,7 +119,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
           if (!this.utilisateurConnecte?.id) {
             throw new Error('ID utilisateur non disponible');
           }
-          
+
 
           return this.firebaseService.getFacturesByPartenaire(this.utilisateurConnecte.id).pipe(
             map((factures: Facture[]) => {
@@ -146,6 +157,10 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     if (this.modalRef) {
       this.modalRef.close();
+    }
+    // Nettoyer les éléments Stripe
+    if (this.paymentElement) {
+      this.paymentElement.unmount();
     }
   }
 
@@ -207,7 +222,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
           this.factures = extendedFactures;
           this.facturesPayees = extendedFactures.filter(f => f.montantPaye >= f.montant);
           this.facturesNonPayees = extendedFactures.filter(f => f.montantPaye < f.montant);
-          
+
           if (extendedFactures.length === 0 && !this.isOffline) {
             this.successMessage = 'Aucune commande trouvée';
           }
@@ -240,8 +255,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   private normaliserPaiements(paiements: Paiement[]): ExtendedPaiement[] {
     return paiements.map(paiement => ({
       ...paiement,
-      date: paiement.datepaiement instanceof Date ? 
-            paiement.datepaiement.toISOString() : 
+      date: paiement.datepaiement instanceof Date ?
+            paiement.datepaiement.toISOString() :
             new Date(paiement.datepaiement).toISOString(),
       montant: paiement.montant_paye,
       methode: this.getTypePaiementLabel(paiement.typepaiement),
@@ -251,7 +266,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   getTypePaiementLabel(type: TYPE_PAIEMENT | undefined): string {
     if (!type) return 'Inconnu';
-    
+
     switch (type) {
       case TYPE_PAIEMENT.CARTE:
         return 'Carte bancaire';
@@ -321,56 +336,186 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       this.modalRef = null;
     }
     this.factureSelectionnee = null;
+
+    // Nettoyer les éléments Stripe
+    if (this.paymentElement) {
+      this.paymentElement.unmount();
+    }
+    this.paymentElement = null;
+    this.elements = null;
   }
 
-  payerFactureCinetPay(facture: ExtendedFacture): void {
-    if (!facture) {
-      this.errorMessage = 'Aucune facture sélectionnée';
-      return;
-    }
+  // Initialiser le paiement Stripe
+  async initStripePayment(facture: ExtendedFacture, modal: any): Promise<void> {
+    try {
+      this.isPaiementEnCours = true;
+      this.factureSelectionnee = facture;
 
-    const montantRestant = facture.montant - facture.montantPaye;
-    if (montantRestant <= 0) {
-      this.errorMessage = 'Cette facture est déjà payée';
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    this.cinetPayService.initializePayment({
-      amount: montantRestant,
-      currency: 'XAF',
-      description: `Paiement de la facture ${facture.id}`,
-      return_url: `${environment.apiUrl}/paiement/succes`,
-      cancel_url: `${environment.apiUrl}/paiement/annule`,
-      notify_url: `${environment.apiUrl}/paiement/notification`,
-      channels: 'ALL',
-      lang: 'fr'
-    }).pipe(
-      take(1),
-      retry({
-        count: 2,
-        delay: (error, retryCount) => {
-          console.log(`Tentative d'initialisation du paiement (${retryCount}/2)...`);
-          return timer(2000 * retryCount);
-        }
-      }),
-      catchError(error => {
-        console.error('Erreur lors de l\'initialisation du paiement:', error);
-        this.errorMessage = 'Erreur lors de l\'initialisation du paiement. Veuillez réessayer plus tard.';
-        return of(null);
-      }),
-      finalize(() => {
-        this.isLoading = false;
-      })
-    ).subscribe(response => {
-      if (response && response.data?.payment_url) {
-        window.location.href = response.data.payment_url;
-      } else {
-        this.errorMessage = 'Impossible d\'initialiser le paiement';
+      const montantRestant = facture.montant - facture.montantPaye;
+      if (montantRestant <= 0) {
+        this.errorMessage = 'Cette facture est déjà payée';
+        this.isPaiementEnCours = false;
+        return;
       }
-    });
+
+      // Obtenir le client secret
+      this.clientSecret = await this.stripeService.createPaymentIntent(montantRestant);
+
+      // Obtenir l'instance de Stripe
+      this.stripe = await this.stripeService.getStripeInstance();
+
+      // Créer les éléments Stripe
+      this.elements = this.stripe.elements({
+        clientSecret: this.clientSecret,
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#007bff',
+          },
+        },
+      });
+
+      // Ouvrir le modal
+      this.modalRef = this.modalService.open(modal, { centered: true, backdrop: 'static' });
+
+      // Créer et monter l'élément de paiement avec un délai pour s'assurer que le DOM est prêt
+      setTimeout(() => {
+        if (this.cardElement) {
+          this.paymentElement = this.elements.create('payment');
+          this.paymentElement.mount(this.cardElement.nativeElement);
+          this.isPaiementEnCours = false;
+        }
+      }, 300);
+
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation du paiement:', error);
+      this.errorMessage = 'Une erreur est survenue lors de l\'initialisation du paiement';
+      this.isPaiementEnCours = false;
+    }
+  }
+
+  // Traiter le paiement
+  async processPayment(): Promise<void> {
+    if (!this.stripe || !this.elements || !this.factureSelectionnee) {
+      this.errorMessage = 'Le système de paiement n\'est pas initialisé';
+      return;
+    }
+
+    this.paymentProcessing = true;
+    this.paymentStatus = 'processing';
+
+    try {
+      // D'abord soumettre les éléments
+      const { error: submitError } = await this.elements.submit();
+      if (submitError) {
+        this.paymentStatus = 'error';
+        this.errorMessage = submitError.message || 'Erreur lors de la validation du formulaire de paiement';
+        this.paymentProcessing = false;
+        return;
+      }
+
+      // Ensuite confirmer le paiement
+      const { error, paymentIntent } = await this.stripe.confirmPayment({
+        elements: this.elements,
+        clientSecret: this.clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/mes-commandes`,
+        },
+        redirect: 'if_required'
+      });
+
+      if (error) {
+        this.paymentStatus = 'error';
+        this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        this.paymentStatus = 'success';
+        this.successMessage = 'Paiement effectué avec succès!';
+
+        // Mettre à jour la facture après un paiement réussi
+        await this.updateFactureApresPaiement(this.factureSelectionnee.id!);
+
+        // Fermer le modal
+        this.fermerModalPaiement();
+
+        // Recharger les factures
+        if (this.utilisateurConnecte) {
+          this.chargerFactures(this.utilisateurConnecte);
+        }
+      }
+    } catch (error: any) {
+      this.paymentStatus = 'error';
+      this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
+    } finally {
+      this.paymentProcessing = false;
+    }
+  }
+
+  // Mettre à jour la facture après un paiement réussi
+  private async updateFactureApresPaiement(factureId: string): Promise<void> {
+    if (!this.factureSelectionnee) return;
+
+    const montantRestant = this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye;
+
+    // Créer un nouveau paiement avec un ID unique
+    const paiementId = `PAY${new Date().getTime()}`;
+    const nouveauPaiement: Paiement = {
+      id: paiementId,
+      montant_paye: montantRestant,
+      typepaiement: TYPE_PAIEMENT.CARTE,
+      datepaiement: new Date(),
+      id_facture: factureId,
+      facture_reference: factureId
+    };
+
+    try {
+      // Enregistrer le paiement directement dans la mise à jour de la facture
+      // puisque le service FirebaseService n'a peut-être pas de méthode addPaiement
+      const paiementsActuels = this.factureSelectionnee.paiements || [];
+
+      // Mettre à jour la facture avec le nouveau paiement
+      await this.firebaseService.updateFacture(factureId, {
+        montantPaye: this.factureSelectionnee.montant, // Maintenant complètement payé
+        paiements: [...paiementsActuels, nouveauPaiement]
+      });
+
+      // Mettre à jour le statut des colis
+      if (this.factureSelectionnee.colisObjets) {
+        for (const colis of this.factureSelectionnee.colisObjets) {
+          if (colis.id) {
+            await this.firebaseService.updateColis(colis.id, {
+              statut: STATUT_COLIS.PAYE
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la facture:', error);
+      throw error;
+    }
+  }
+
+  async payerFacture(facture: ExtendedFacture): Promise<void> {
+    try {
+      // Vérifier si la facture n'est pas déjà payée
+      const montantRestant = facture.montant - facture.montantPaye;
+      if (montantRestant <= 0) {
+        this.errorMessage = 'Cette facture est déjà payée';
+        return;
+      }
+
+      if (!this.stripePaymentModal) {
+        this.errorMessage = 'Erreur lors de l\'initialisation du formulaire de paiement';
+        return;
+      }
+
+      // Initialiser le paiement Stripe et ouvrir le modal
+      await this.initStripePayment(facture, this.stripePaymentModal);
+
+    } catch (error) {
+      console.error('Erreur lors du processus de paiement:', error);
+      this.errorMessage = 'Une erreur est survenue lors du processus de paiement';
+      this.isPaiementEnCours = false;
+    }
   }
 
   getClassStatutColis(statut: STATUT_COLIS): string {
@@ -430,9 +575,9 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   formaterPrix(montant: number): string {
-    return new Intl.NumberFormat('fr-FR', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'CDF'
+      currency: 'USD'
     }).format(montant);
   }
 
@@ -463,5 +608,60 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   onTabChange(tabId: number): void {
     this.activeTab = tabId;
+  }
+
+  getStatutFactureExtended(facture: ExtendedFacture): string {
+    switch (facture.statut) {
+      case 'EN_ATTENTE':
+        return 'En attente';
+      case 'PAYEE':
+        return 'Payée';
+      case 'ANNULEE':
+        return 'Annulée';
+      default:
+        return 'Statut inconnu';
+    }
+  }
+
+  getClassStatutPaiementExtended(facture: ExtendedFacture): string {
+    switch (facture.statut) {
+      case 'EN_ATTENTE':
+        return 'bg-warning text-dark';
+      case 'PAYEE':
+        return 'bg-success';
+      case 'ANNULEE':
+        return 'bg-danger';
+      default:
+        return 'bg-secondary';
+    }
+  }
+
+  estFacturePayeeExtended(facture: ExtendedFacture): boolean {
+    return facture.statut === 'PAYEE';
+  }
+
+  aRemiseExtended(facture: ExtendedFacture): boolean {
+    return !!facture.prixRemise && facture.prixRemise < facture.montant;
+  }
+
+  getPrixFormateExtended(facture: ExtendedFacture): string {
+    const montant = this.aRemiseExtended(facture) ? facture.prixRemise : facture.montant;
+    // Créer une nouvelle instance de CurrencyPipe ici au lieu d'utiliser l'instance injectée
+    const currencyPipe = new CurrencyPipe('en-US');
+    return currencyPipe.transform(montant, 'USD') || '';
+  }
+
+  getFactureStatus(facture: BaseFacture): FactureStatus {
+    if (facture.montantPaye >= facture.montant) {
+      return FactureStatus.PAYEE;
+    } else if (facture.montantPaye > 0) {
+      return FactureStatus.PARTIELLEMENT_PAYEE;
+    }
+    return FactureStatus.EN_ATTENTE;
+  }
+
+  calculerPourcentagePaye(facture: BaseFacture): number {
+    if (facture.montant === 0) return 0;
+    return (facture.montantPaye / facture.montant) * 100;
   }
 }

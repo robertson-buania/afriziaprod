@@ -10,6 +10,13 @@ export interface Partenaire{
 
 }
 
+export enum FactureStatus {
+  EN_ATTENTE = 'EN_ATTENTE',
+  PAYEE = 'PAYEE',
+  PARTIELLEMENT_PAYEE = 'PARTIELLEMENT_PAYEE',
+  ANNULEE = 'ANNULEE'
+}
+
 export interface Facture{
   id?:string
   montant:number
@@ -20,6 +27,7 @@ export interface Facture{
   dateCreation?: string
   partenaireId?: string
   prixRemise?: number
+  statut?: FactureStatus
 }
 
 
@@ -118,7 +126,7 @@ export interface SacGroup {
 
 // Paramétrage des tarifs de colis en fonction de l'expédition et du type de colis
 export const PARAMETRAGE_COLIS: Record<TYPE_EXPEDITION, Record<TYPE_COLIS, { prixParKilo: number; prixUnitaire?: number }>> = {
- 
+
   [TYPE_EXPEDITION.EXPRESS]: {
     [TYPE_COLIS.ORDINAIRE]: { prixParKilo: 18, prixUnitaire: 0 },
     [TYPE_COLIS.AVEC_BATTERIE]: { prixParKilo: 20 , prixUnitaire: 0},

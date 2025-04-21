@@ -1,11 +1,12 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { StripeService } from '@/app/core/services/stripe.service';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { NgbAlertModule, NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 import { PanierService } from '@/app/core/services/panier.service';
-import { Colis, STATUT_COLIS, TYPE_EXPEDITION, PARAMETRAGE_COLIS, Facture } from '@/app/models/partenaire.model';
+import { Colis, STATUT_COLIS, TYPE_EXPEDITION, PARAMETRAGE_COLIS, Facture, Paiement, TYPE_PAIEMENT } from '@/app/models/partenaire.model';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { Subscription } from 'rxjs';
 import { AuthModalService, AuthModalType } from '@/app/core/services/auth-modal.service';
@@ -18,12 +19,14 @@ import { currentYear } from '@/app/common/constants';
   selector: 'app-panier',
   standalone: true,
   imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, NgbAlertModule, NgbModalModule, AuthModalModule, CurrencyPipe],
-  providers: [CurrencyPipe],
+  providers: [CurrencyPipe, StripeService],
   templateUrl: './panier.component.html',
   styleUrl: './panier.component.scss'
 })
 export class PanierComponent implements OnInit, OnDestroy {
   @ViewChild('connexionRequiseModal') connexionRequiseModal!: TemplateRef<any>;
+  @ViewChild('stripePaymentModal') stripePaymentModal!: TemplateRef<any>;
+  @ViewChild('cardElement') cardElement?: ElementRef;
 
   colis: Colis[] = [];
   total = 0;
@@ -36,6 +39,15 @@ export class PanierComponent implements OnInit, OnDestroy {
   partenaireId: string | null = null;
   utilisateurConnecte: any = null;
   private subscription = new Subscription();
+  factureCreee: string = '';
+
+  // Variables pour Stripe
+  stripe: any;
+  elements: any;
+  paymentElement: any;
+  clientSecret: string = '';
+  paymentProcessing = false;
+  paymentStatus: 'initial' | 'processing' | 'success' | 'error' = 'initial';
 
   // Ajout de l'état du processus de paiement
   isPaiementEnCours = false;
@@ -57,7 +69,8 @@ export class PanierComponent implements OnInit, OnDestroy {
     private modalService: NgbModal,
     private authModalService: AuthModalService,
     private paymentService: PaymentService,
-    private firebaseService: FirebaseService
+    private firebaseService: FirebaseService,
+    private stripeService: StripeService
   ) {}
 
   ngOnInit(): void {
@@ -75,6 +88,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       this.utilisateurService.utilisateurCourant$.subscribe(utilisateur => {
         if (utilisateur) {
           this.utilisateurConnecte = utilisateur;
+          console.log("utilisateur",utilisateur);
           this.partenaireId = utilisateur.partenaireId || null;
           if (this.partenaireId) {
             this.facturationForm.get('partenaireId')?.setValue(this.partenaireId);
@@ -95,7 +109,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   private chargerPanier(): void {
     this.isLoading = true;
-    this.colis = this.panierService.obtenirContenuPanier();
+    this.colis=this.panierService.obtenirContenuPanier();
     this.calculerTotal();
     this.isLoading = false;
   }
@@ -171,26 +185,6 @@ export class PanierComponent implements OnInit, OnDestroy {
     }
   }
 
-  afficherFormulaireFacturation(): void {
-    // Vérifier si l'utilisateur est connecté
-    if (!this.utilisateurConnecte) {
-      // L'utilisateur n'est pas connecté, afficher le modal de connexion
-      this.errorMessage = 'Veuillez vous connecter pour poursuivre le paiement';
-      this.ouvrirModalConnexion();
-      return;
-    }
-
-    // Si l'utilisateur est connecté mais n'a pas complété son profil
-    if (!this.utilisateurConnecte.nom || !this.utilisateurConnecte.prenom || !this.utilisateurConnecte.telephone) {
-      this.errorMessage = 'Veuillez compléter votre profil pour pouvoir payer';
-   
-      this.router.navigate(['/profil']);
-      return;
-    } // Rediriger vers la page de profil
-   console.log("utilisateurConnecte",this.utilisateurConnecte);
-      
-    this.isFacturationFormVisible = true;
-  }
 
   annulerFacturation(): void {
     this.isFacturationFormVisible = false;
@@ -204,7 +198,6 @@ export class PanierComponent implements OnInit, OnDestroy {
   onExpeditionTypeChange(): void {
     // Recalculer les coûts pour chaque colis en fonction du type d'expédition
     for (const colis of this.colis) {
-
       if (colis.id) {
         // Calculer le nouveau coût du colis basé sur le type d'expédition
         const typeColis = colis.type;
@@ -238,6 +231,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     // Informer l'utilisateur du changement
     this.successMessage = `Type d'expédition modifié pour ${this.selectedExpeditionType === TYPE_EXPEDITION.EXPRESS ? 'Express' : 'Standard'}`;
     setTimeout(() => this.successMessage = '', 3000);
+
   }
 
   // Méthode pour créer la facture
@@ -246,8 +240,21 @@ export class PanierComponent implements OnInit, OnDestroy {
       throw new Error('Utilisateur non connecté ou partenaireId non disponible');
     }
 
+    this.colis = this.panierService.obtenirContenuPanier();
+
+    // Mise à jour du type d'expédition pour chaque colis si nécessaire
+    if (this.selectedExpeditionType) {
+      this.colis.forEach(colis => {
+        colis.typeExpedition = this.selectedExpeditionType;
+      });
+    }
+
+    // Générer un numéro de facture unique
+    const invoiceNumber = `FA${currentYear}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+
+    // Créer l'objet facture avec l'ID personnalisé
     const facture: Omit<Facture, 'id'> & { id: string } = {
-      id: this.invoiceNumber,
+      id: invoiceNumber,
       montant: this.total,
       montantPaye: 0,
       colis: this.colis,
@@ -273,19 +280,15 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     await Promise.all(updatePromises);
   }
-
   async creerFacture(): Promise<void> {
     if (!this.utilisateurConnecte) {
-      // L'utilisateur n'est pas connecté, afficher le modal de connexion
       this.errorMessage = 'Veuillez vous connecter pour poursuivre le paiement';
       this.ouvrirModalConnexion();
       return;
     }
 
-    // Si l'utilisateur est connecté mais n'a pas complété son profil
     if (!this.utilisateurConnecte.nom || !this.utilisateurConnecte.prenom || !this.utilisateurConnecte.telephone) {
       this.errorMessage = 'Veuillez compléter votre profil pour pouvoir payer';
-   
       this.router.navigate(['/profil']);
       return;
     }
@@ -301,88 +304,158 @@ export class PanierComponent implements OnInit, OnDestroy {
     try {
       // Créer la facture
       const factureId = await this.createFacture();
-      
+      this.factureCreee = factureId;
+
       // Mettre à jour le statut des colis
       await this.updateColisStatus(factureId);
 
-      // Préparer les informations client pour CinetPay
-      const customer = {
-        customer_name: this.utilisateurConnecte?.nom || 'Client',
-        customer_surname: this.utilisateurConnecte?.prenom || '',
-        customer_email: this.utilisateurConnecte?.email || 'client@example.com',
-        customer_phone_number: this.utilisateurConnecte?.telephone || '0',
-        customer_address: this.utilisateurConnecte?.partenaire?.adresse || '',
-        customer_city: '',
-        customer_country: 'CM',
-        customer_state: '',
-        customer_zip_code: ''
-      };
+      // Initialiser le paiement Stripe
+      await this.initializeStripePayment(factureId);
 
-      // URL de retour après paiement
-      const returnUrl = `${window.location.origin}/paiement/resultat/${factureId}?success=true`;
+      // Ouvrir le modal de paiement Stripe
+      this.modalService.open(this.stripePaymentModal, { centered: true, backdrop: 'static' });
 
-      // Préparer les articles pour le paiement
-      const items = this.colis.map(colis => ({
-        id: colis.id || '',
-        name: colis.nature || `Colis #${colis.id?.substring(0, 8) || ''}`,
-        price: this.total / this.colis.length,
-        quantity: 1
-      }));
-
-      // Initialiser le paiement avec CinetPay
-      this.isPaiementEnCours = true;
-      this.paymentService.initiatePayment({
-        factureId: factureId,
-        amount: this.total,
-        currency: 'USD',
-        customer: customer,
-        items: items,
-        return_url: returnUrl,
-        notify_url: `${window.location.origin}/api/payment-notification`,
-        channels: 'ALL',
-        metadata: {
-          factureId: factureId,
-          clientId: this.utilisateurConnecte?.id || '',
-          colisIds: this.colis.map(c => c.id)
-        }
-      }).subscribe(
-        (response) => {
-          if (response && response.code === '201' && response.data && response.data.payment_url) {
-            // Rediriger vers la page de paiement CinetPay
-            window.location.href = response.data.payment_url;
-          } else {
-            this.errorMessage = 'Erreur lors de l\'initialisation du paiement: ' + response.message;
-            this.isPaiementEnCours = false;
-            this.isProcessing = false;
-
-            // Rediriger vers "Mes Commandes" après une erreur
-            setTimeout(() => {
-              this.router.navigate(['/mes-commandes']);
-            }, 3000);
-          }
-        },
-        (error) => {
-          console.error('Erreur lors de l\'initialisation du paiement:', error);
-          this.errorMessage = 'Une erreur est survenue lors de l\'initialisation du paiement. Vous allez être redirigé vers vos commandes.';
-          this.isPaiementEnCours = false;
-          this.isProcessing = false;
-
-          // Rediriger vers "Mes Commandes" après une erreur
-          setTimeout(() => {
-            this.router.navigate(['/mes-commandes']);
-          }, 3000);
-        }
-      );
     } catch (error) {
-      console.error('Erreur lors de la création de la facture:', error);
-      this.errorMessage = 'Une erreur est survenue lors de la création de la facture. Vous allez être redirigé vers vos commandes.';
+      console.error('Erreur lors de la préparation du paiement:', error);
+      this.errorMessage = 'Une erreur est survenue lors de la préparation du paiement';
       this.isProcessing = false;
-
-      // Rediriger vers "Mes Commandes" après une erreur
-      setTimeout(() => {
-        this.router.navigate(['/mes-commandes']);
-      }, 3000);
     }
+  }
+
+  // Initialiser les éléments de paiement Stripe
+  async initializeStripePayment(factureId: string): Promise<void> {
+    try {
+      // Obtenir le client secret via notre API
+      this.clientSecret = await this.stripeService.createPaymentIntent(this.total);
+
+      // Obtenir l'instance de Stripe
+      this.stripe = await this.stripeService.getStripeInstance();
+
+      // Créer les éléments Stripe
+      this.elements = this.stripe.elements({
+        clientSecret: this.clientSecret,
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#007bff',
+          },
+        },
+      });
+
+      // Créer l'élément de paiement
+      this.paymentElement = this.elements.create('payment');
+
+      // Monter l'élément de paiement dans le DOM
+      setTimeout(() => {
+        if (this.cardElement?.nativeElement) {
+          this.paymentElement.mount(this.cardElement.nativeElement);
+        }
+      }, 100);
+
+      this.isProcessing = false;
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de Stripe:', error);
+      this.errorMessage = 'Erreur lors de l\'initialisation du système de paiement';
+      this.isProcessing = false;
+      throw error;
+    }
+  }
+
+  // Traiter le paiement
+  async processPayment(): Promise<void> {
+    if (!this.stripe || !this.elements) {
+      this.errorMessage = 'Le système de paiement n\'est pas initialisé';
+      return;
+    }
+
+    this.paymentProcessing = true;
+    this.paymentStatus = 'processing';
+
+    try {
+      // D'abord soumettre les éléments
+      const { error: submitError } = await this.elements.submit();
+      if (submitError) {
+        this.paymentStatus = 'error';
+        this.errorMessage = submitError.message || 'Erreur lors de la validation du formulaire de paiement';
+        this.paymentProcessing = false;
+        return;
+      }
+
+      // Ensuite confirmer le paiement
+      const { error, paymentIntent } = await this.stripe.confirmPayment({
+        elements: this.elements,
+        clientSecret: this.clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/mes-commandes`,
+        },
+        redirect: 'if_required'
+      });
+
+      if (error) {
+        this.paymentStatus = 'error';
+        this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        this.paymentStatus = 'success';
+        this.successMessage = 'Paiement effectué avec succès!';
+
+        // Créer un paiement avec un ID unique pour la facture créée
+        if (this.factureCreee) {
+          const paiementId = `PAY${new Date().getTime()}`;
+          const paiement: Paiement = {
+            id: paiementId,
+            typepaiement: TYPE_PAIEMENT.CARTE,
+            montant_paye: this.total,
+            facture_reference: this.factureCreee,
+            id_facture: this.factureCreee,
+            datepaiement: new Date()
+          };
+
+          try {
+            // Mettre à jour la facture avec le nouveau paiement
+            await this.firebaseService.updateFacture(this.factureCreee, {
+              montantPaye: this.total,
+              paiements: [paiement]
+            });
+
+            // Mettre à jour le statut des colis
+            for (const colis of this.colis) {
+              if (colis.id) {
+                await this.firebaseService.updateColis(colis.id, {
+                  statut: STATUT_COLIS.PAYE
+                });
+              }
+            }
+          } catch (err) {
+            console.error('Erreur lors de la mise à jour après paiement:', err);
+            this.errorMessage = 'Le paiement a réussi mais une erreur est survenue lors de la mise à jour. Veuillez contacter le support.';
+          }
+        }
+
+        this.panierService.viderPanier();
+
+        // Fermer le modal
+        this.modalService.dismissAll();
+
+        // Rediriger vers la page de confirmation
+        setTimeout(() => {
+          this.router.navigate(['/mes-commandes']);
+        }, 1500);
+      }
+    } catch (error: any) {
+      this.paymentStatus = 'error';
+      this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
+    } finally {
+      this.paymentProcessing = false;
+    }
+  }
+
+  // Annuler le paiement
+  cancelPayment(): void {
+    this.modalService.dismissAll();
+    this.paymentStatus = 'initial';
+    this.paymentElement?.unmount();
+    this.elements = null;
+    this.paymentElement = null;
   }
 
   confirmerSuppression(modal: any, colisId: string): void {

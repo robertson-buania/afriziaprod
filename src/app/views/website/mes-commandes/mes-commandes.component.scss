@@ -88,3 +88,32 @@ button {
     transform: translateY(-1px);
   }
 }
+
+// Styles pour l'élément de paiement Stripe
+.card-element {
+  padding: 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #fff;
+  min-height: 140px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.payment-summary {
+  padding: 15px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+
+  h6 {
+    font-weight: 600;
+    color: #334155;
+  }
+}
+
+.payment-form {
+  h6 {
+    font-weight: 600;
+    color: #334155;
+  }
+}

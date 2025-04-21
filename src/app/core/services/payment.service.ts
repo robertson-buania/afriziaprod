@@ -72,11 +72,39 @@ export interface PaymentParams {
   };
 }
 
+export interface StripePaymentRequest {
+  factureId: string;
+  amount: number;
+  currency: string;
+  customer: {
+    customer_name: string;
+    customer_surname: string;
+    customer_email: string;
+    customer_phone_number: string;
+    customer_address: string;
+    customer_city: string;
+    customer_country: string;
+    customer_state: string;
+    customer_zip_code: string;
+  };
+  items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+  return_url: string;
+  notify_url: string;
+  channels: string;
+  metadata: any;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class PaymentService {
   private readonly apiUrl = 'https://api-checkout.cinetpay.com/v2/payment';
+  private baseUrl = environment.firebaseFunctionsUrl;
 
   // Remplacez ces valeurs par vos clés réelles dans l'environnement
   private readonly apiKey = environment.cinetpay?.apiKey || 'YOUR_APIKEY';
@@ -171,5 +199,17 @@ export class PaymentService {
     const timestamp = Date.now();
     const randomNum = Math.floor(Math.random() * 10000);
     return `TX${timestamp}${randomNum}`;
+  }
+
+  initiatePaymentStripe(paymentData: StripePaymentRequest): Observable<any> {
+    return this.http.post(`${this.baseUrl}/createPaymentSession`, paymentData);
+  }
+
+  handlePaymentSuccess(sessionId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/stripeWebhookSuccess`, { sessionId });
+  }
+
+  handlePaymentCancel(sessionId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/stripeWebhookCancel`, { sessionId });
   }
 }
