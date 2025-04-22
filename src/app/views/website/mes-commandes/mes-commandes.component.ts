@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NgbNavModule, NgbAccordionModule, NgbAlertModule, NgbTooltipModule, NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
@@ -13,9 +13,10 @@ import { takeUntil, take, retry, delay, catchError, switchMap, map, filter, fina
 import { FactureService } from '@/app/core/services/facture.service';
 import { ColisService } from '@/app/core/services/colis.service';
 import { User } from '@/app/models/user.model';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 import { StripeService } from '@/app/core/services/stripe.service';
+import { HttpClient } from '@angular/common/http';
 
 interface ExtendedPaiement extends Paiement {
   date: string;
@@ -39,6 +40,46 @@ interface ExtendedFacture extends BaseFacture {
   colisObjets?: Colis[];
 }
 
+// Types de paiement mobile
+enum MOBILE_MONEY_PROVIDER {
+  MPESA = 'MPESA',
+  ORANGE_MONEY = 'ORANGE_MONEY',
+  AIRTEL_MONEY = 'AIRTEL_MONEY'
+}
+
+// Interface pour le mode de paiement
+interface PaymentMode {
+  type: 'CARD' | 'MOBILEMONEY';
+  mobileProvider?: MOBILE_MONEY_PROVIDER;
+  phoneNumber?: string;
+}
+
+// Interface pour la demande de paiement mobile
+interface MobilePaymentRequest {
+  order: {
+    paymentPageId: string;
+    customerFullName: string;
+    customerPhoneNumber: string;
+    customerEmailAddress: string;
+    transactionReference: string;
+    amount: number;
+    currency: string;
+    redirectURL: string;
+  };
+  paymentChannel: {
+    channel: string;
+    provider: string;
+    walletID: string;
+  };
+}
+
+// Réponse de l'API de paiement mobile
+interface MobilePaymentResponse {
+  transactionId: string;
+  originatingTransactionId: string;
+  paymentLink: string;
+}
+
 @Component({
   selector: 'app-mes-commandes',
   standalone: true,
@@ -50,15 +91,17 @@ interface ExtendedFacture extends BaseFacture {
     NgbAlertModule,
     NgbTooltipModule,
     FormsModule,
-    CurrencyPipe
+    CurrencyPipe,
+    ReactiveFormsModule
   ],
   templateUrl: './mes-commandes.component.html',
   styleUrl: './mes-commandes.component.scss',
-  providers: [StripeService]
 })
 export class MesCommandesComponent implements OnInit, OnDestroy {
-  @ViewChild('stripePaymentModal') stripePaymentModal!: ElementRef;
+  @ViewChild('stripePaymentModal') stripePaymentModal!: TemplateRef<any>;
   @ViewChild('cardElement') cardElement!: ElementRef;
+  @ViewChild('paymentMethodModal') paymentMethodModal!: TemplateRef<any>;
+  @ViewChild('mobileMoneyModal') mobileMoneyModal!: TemplateRef<any>;
 
   factures: ExtendedFacture[] = [];
   facturesPayees: ExtendedFacture[] = [];
@@ -87,9 +130,19 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   detailsVisible = false;
 
   private subscriptions: Subscription[] = [];
-  private utilisateurConnecte: User | null = null;
+  private utilisateurConnecte: any | null = null;
+  private partenaireId: string | null = null;
   private destroy$ = new Subject<void>();
   private modalRef: NgbModalRef | null = null;
+
+  // Propriétés pour le mode de paiement
+  selectedPaymentMode: PaymentMode = { type: 'CARD' };
+  mobileMoneyProviders = MOBILE_MONEY_PROVIDER;
+  mobileMoneyForm: FormGroup;
+  mobilePaymentProcessing = false;
+  mobilePaymentError = '';
+  mobilePaymentSuccess = '';
+  readonly MOBILE_API_URL = 'https://araka-api-uat.azurewebsites.net/api/Pay/paymentrequest';
 
   constructor(
     private utilisateurService: UtilisateurService,
@@ -100,52 +153,73 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     private colisService: ColisService,
     private modalService: NgbModal,
     private firestore: Firestore,
-    private stripeService: StripeService
-  ) {}
+    private stripeService: StripeService,
+    private http: HttpClient,
+    private fb: FormBuilder
+  ) {
+    this.mobileMoneyForm = this.fb.group({
+      provider: [MOBILE_MONEY_PROVIDER.MPESA, Validators.required],
+      phoneNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{9}$/)]],
+    });
+  }
 
   ngOnInit(): void {
+    this.verifierUtilisateurConnecte();
+  }
+
+  private verifierUtilisateurConnecte(): void {
     this.subscriptions.push(
-      this.authService.currentUser$.pipe(
-        takeUntil(this.destroy$),
-        filter((user): user is User => !!user),
-        switchMap(user => {
-          this.utilisateurConnecte = user;
-          return this.checkFirebaseConnection();
-        }),
-        switchMap(isConnected => {
-          if (!isConnected) {
-            throw new Error('Pas de connexion à Firebase');
-          }
-          if (!this.utilisateurConnecte?.id) {
-            throw new Error('ID utilisateur non disponible');
-          }
+      this.utilisateurService.utilisateurCourant$.subscribe(async (utilisateur: any) => {
+        this.utilisateurConnecte = utilisateur;
+        this.isLoading = true;
+        this.errorMessage = '';
 
+        console.log('Utilisateur connecté:', utilisateur);
 
-          return this.firebaseService.getFacturesByPartenaire(this.utilisateurConnecte.id).pipe(
-            map((factures: Facture[]) => {
-              if (!factures || factures.length === 0) {
-                return [];
+        if (utilisateur) {
+          try {
+            // Si l'utilisateur est un partenaire, on récupère directement son ID
+            let partenaireId = null;
+
+            if (utilisateur.partenaireId) {
+              console.log('PartenaireId trouvé directement:', utilisateur.partenaireId);
+              partenaireId = utilisateur.partenaireId;
+            } else if (utilisateur.partenaire?.id) {
+              console.log('PartenaireId trouvé via objet partenaire:', utilisateur.partenaire.id);
+              partenaireId = utilisateur.partenaire.id;
+            } else {
+              // Si l'utilisateur n'a pas de partenaireId, essayer de le récupérer via l'email
+              console.log('Recherche du partenaire par email:', utilisateur.email);
+              const partenaire = await this.firebaseService.getPartenaireByEmail(utilisateur.email);
+
+              if (partenaire?.id) {
+                console.log('Partenaire trouvé par email, ID:', partenaire.id);
+                partenaireId = partenaire.id;
+
+                // Mettre à jour l'utilisateur pour la prochaine fois
+                this.firebaseService.updateUtilisateur(utilisateur.id, {
+                  partenaireId: partenaire.id
+                }).catch(err => console.error('Erreur lors de la mise à jour du partenaireId:', err));
               }
-              return factures.map(facture => ({
-                ...facture,
-                statut: this.determinerStatutFacture(facture),
-                colis: facture.colis || [],
-                colisObjets: facture.colisObjets || []
-              })) as ExtendedFacture[];
-            })
-          );
-        })
-      ).subscribe({
-        next: (extendedFactures: ExtendedFacture[]) => {
-          this.factures = extendedFactures;
-          this.facturesPayees = extendedFactures.filter(f => f.montantPaye >= f.montant);
-          this.facturesNonPayees = extendedFactures.filter(f => f.montantPaye < f.montant);
+            }
+
+            if (partenaireId) {
+              this.partenaireId = partenaireId;
+              this.chargerFactures(partenaireId);
+            } else {
+              console.warn('Aucun partenaireId trouvé pour l\'utilisateur:', utilisateur);
+              this.isLoading = false;
+              this.errorMessage = 'Aucun compte partenaire associé à votre profil.';
+            }
+          } catch (error) {
+            console.error('Erreur lors de la récupération du partenaire:', error);
+            this.isLoading = false;
+            this.errorMessage = 'Erreur lors de la récupération de votre profil.';
+          }
+        } else {
+          console.log('Aucun utilisateur connecté');
           this.isLoading = false;
-        },
-        error: (error: Error) => {
-          console.error('Erreur lors du chargement des factures:', error);
-          this.isLoading = false;
-          this.errorMessage = 'Impossible de charger les factures. Veuillez vérifier votre connexion.';
+          this.partenaireId = null;
         }
       })
     );
@@ -184,24 +258,80 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     );
   }
 
-  chargerFactures(user: User): void {
+  chargerFactures(partenaireId: string): void {
     this.isLoading = true;
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.factureService.getFacturesByUser(user.id)
+    // Vérifier si l'ID partenaire est valide
+    if (!partenaireId) {
+      this.errorMessage = 'Aucun utilisateur connecté';
+      this.isLoading = false;
+      return;
+    }
+
+    console.log('Chargement des factures pour le partenaire ID:', partenaireId);
+
+    this.firebaseService.getFacturesByPartenaire(partenaireId)
       .pipe(
         takeUntil(this.destroy$),
         map((factures: Facture[]) => {
+          console.log('Factures reçues du service:', factures);
           if (!factures || factures.length === 0) {
+            console.log('Aucune facture trouvée');
             return [];
           }
-          return factures.map(facture => ({
-            ...facture,
-            statut: this.determinerStatutFacture(facture),
-            colis: facture.colis || [],
-            colisObjets: facture.colisObjets || []
-          })) as ExtendedFacture[];
+
+          // Transformer les factures pour faciliter le traitement
+          return factures.map(facture => {
+            console.log('Traitement de la facture:', facture.id);
+            // Gérer les paiements (traiter les dates de Firebase)
+            const paiements = (facture.paiements || []).map(paiement => {
+              // Si datepaiement est un objet Firestore Timestamp
+              let datePaiement = paiement.datepaiement;
+              if (datePaiement &&
+                  typeof datePaiement === 'object' &&
+                  'seconds' in datePaiement &&
+                  typeof datePaiement.seconds === 'number') {
+                datePaiement = new Date(datePaiement.seconds * 1000);
+              }
+
+              return {
+                ...paiement,
+                datepaiement: datePaiement
+              };
+            });
+
+            // Calculer le montant total payé
+            const montantPaye = (facture.montantPaye !== undefined)
+              ? facture.montantPaye
+              : paiements.reduce((total, p) => total + (p.montant_paye || 0), 0);
+
+            // Déterminer le statut
+            const statut = this.getFactureStatus({
+              ...facture,
+              montantPaye: montantPaye,
+              dateCreation: facture.dateCreation || new Date().toISOString()
+            } as BaseFacture);
+
+            // Calculer le pourcentage payé
+            const pourcentagePaye = this.calculerPourcentagePaye({
+              ...facture,
+              montantPaye: montantPaye
+            });
+
+            const processedFacture = {
+              ...facture,
+              paiements: paiements,
+              montantPaye: montantPaye,
+              statut: statut,
+              pourcentagePaye: pourcentagePaye,
+              colis: facture.colis || []
+            } as ExtendedFacture;
+
+            console.log('Facture traitée:', processedFacture.id, 'Statut:', processedFacture.statut);
+            return processedFacture;
+          });
         }),
         retry({
           count: 2,
@@ -219,9 +349,23 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (extendedFactures: ExtendedFacture[]) => {
-          this.factures = extendedFactures;
-          this.facturesPayees = extendedFactures.filter(f => f.montantPaye >= f.montant);
-          this.facturesNonPayees = extendedFactures.filter(f => f.montantPaye < f.montant);
+          console.log('Nombre de factures traitées:', extendedFactures.length);
+
+          // Trier les factures par date de création (les plus récentes d'abord)
+          this.factures = extendedFactures.sort((a, b) => {
+            if (!a.dateCreation && !b.dateCreation) return 0;
+            if (!a.dateCreation) return 1;
+            if (!b.dateCreation) return -1;
+            return new Date(b.dateCreation).getTime() - new Date(a.dateCreation).getTime();
+          });
+
+          // Filtrer les factures payées et non payées
+          this.facturesPayees = this.factures.filter(f => f.montantPaye >= f.montant);
+          this.facturesNonPayees = this.factures.filter(f => f.montantPaye < f.montant);
+
+          console.log('Factures totales:', this.factures.length);
+          console.log('Factures payées:', this.facturesPayees.length);
+          console.log('Factures non payées:', this.facturesNonPayees.length);
 
           if (extendedFactures.length === 0 && !this.isOffline) {
             this.successMessage = 'Aucune commande trouvée';
@@ -238,8 +382,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   retryLoading(): void {
-    if (this.utilisateurConnecte) {
-      this.chargerFactures(this.utilisateurConnecte);
+    if (this.partenaireId) {
+      this.chargerFactures(this.partenaireId);
     }
   }
 
@@ -358,8 +502,18 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Calculer la commission (10%)
+      const montantBase = Number(montantRestant);
+      const commission = montantBase * 0.1;
+      const totalAvecCommission = montantBase + commission;
+
+      console.log('Détails du paiement:');
+      console.log('Montant base:', montantBase);
+      console.log('Frais Transaction:', commission);
+      console.log('Total avec frais:', totalAvecCommission);
+
       // Obtenir le client secret
-      this.clientSecret = await this.stripeService.createPaymentIntent(montantRestant);
+      this.clientSecret = await this.stripeService.createPaymentIntent(totalAvecCommission);
 
       // Obtenir l'instance de Stripe
       this.stripe = await this.stripeService.getStripeInstance();
@@ -381,7 +535,12 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       // Créer et monter l'élément de paiement avec un délai pour s'assurer que le DOM est prêt
       setTimeout(() => {
         if (this.cardElement) {
-          this.paymentElement = this.elements.create('payment');
+          this.paymentElement = this.elements.create('payment', {
+            amount: {
+              currency: 'usd',
+              value: totalAvecCommission * 100, // Stripe attend les montants en centimes
+            }
+          });
           this.paymentElement.mount(this.cardElement.nativeElement);
           this.isPaiementEnCours = false;
         }
@@ -431,6 +590,9 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         this.paymentStatus = 'success';
         this.successMessage = 'Paiement effectué avec succès!';
 
+        // Stocker la référence de paiement pour l'utiliser dans updateFactureApresPaiement
+        this.stripe.paymentIntent = paymentIntent;
+
         // Mettre à jour la facture après un paiement réussi
         await this.updateFactureApresPaiement(this.factureSelectionnee.id!);
 
@@ -438,8 +600,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         this.fermerModalPaiement();
 
         // Recharger les factures
-        if (this.utilisateurConnecte) {
-          this.chargerFactures(this.utilisateurConnecte);
+        if (this.partenaireId) {
+          this.chargerFactures(this.partenaireId);
         }
       }
     } catch (error: any) {
@@ -456,6 +618,9 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
     const montantRestant = this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye;
 
+    // Calculer la commission (10%)
+    const commission = montantRestant * 0.1;
+
     // Créer un nouveau paiement avec un ID unique
     const paiementId = `PAY${new Date().getTime()}`;
     const nouveauPaiement: Paiement = {
@@ -464,10 +629,16 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       typepaiement: TYPE_PAIEMENT.CARTE,
       datepaiement: new Date(),
       id_facture: factureId,
-      facture_reference: factureId
+      facture_reference: factureId,
+      stripe_reference: this.stripe.paymentIntent?.id || `stripe_${new Date().getTime()}`, // Référence Stripe
+      commission: commission // Commission de 10%
     };
 
     try {
+
+      // Ajouter le paiement à la collection paiements
+      await this.firebaseService.addPaiement(nouveauPaiement);
+
       // Enregistrer le paiement directement dans la mise à jour de la facture
       // puisque le service FirebaseService n'a peut-être pas de méthode addPaiement
       const paiementsActuels = this.factureSelectionnee.paiements || [];
@@ -495,27 +666,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   async payerFacture(facture: ExtendedFacture): Promise<void> {
-    try {
-      // Vérifier si la facture n'est pas déjà payée
-      const montantRestant = facture.montant - facture.montantPaye;
-      if (montantRestant <= 0) {
-        this.errorMessage = 'Cette facture est déjà payée';
-        return;
-      }
-
-      if (!this.stripePaymentModal) {
-        this.errorMessage = 'Erreur lors de l\'initialisation du formulaire de paiement';
-        return;
-      }
-
-      // Initialiser le paiement Stripe et ouvrir le modal
-      await this.initStripePayment(facture, this.stripePaymentModal);
-
-    } catch (error) {
-      console.error('Erreur lors du processus de paiement:', error);
-      this.errorMessage = 'Une erreur est survenue lors du processus de paiement';
-      this.isPaiementEnCours = false;
-    }
+    this.openPaymentMethodModal(facture);
   }
 
   getClassStatutColis(statut: STATUT_COLIS): string {
@@ -575,7 +726,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   formaterPrix(montant: number): string {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'USD'
     }).format(montant);
@@ -611,33 +762,26 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   getStatutFactureExtended(facture: ExtendedFacture): string {
-    switch (facture.statut) {
-      case 'EN_ATTENTE':
-        return 'En attente';
-      case 'PAYEE':
-        return 'Payée';
-      case 'ANNULEE':
-        return 'Annulée';
-      default:
-        return 'Statut inconnu';
+    if (facture.montantPaye >= facture.montant) {
+      return 'Payée';
+    } else if (facture.montantPaye > 0) {
+      const pourcentage = this.calculerPourcentagePaye(facture);
+      return `Payée à ${pourcentage}%`;
     }
+    return 'En attente de paiement';
   }
 
   getClassStatutPaiementExtended(facture: ExtendedFacture): string {
-    switch (facture.statut) {
-      case 'EN_ATTENTE':
-        return 'bg-warning text-dark';
-      case 'PAYEE':
-        return 'bg-success';
-      case 'ANNULEE':
-        return 'bg-danger';
-      default:
-        return 'bg-secondary';
+    if (facture.montantPaye >= facture.montant) {
+      return 'bg-success';
+    } else if (facture.montantPaye > 0) {
+      return 'bg-warning';
     }
+    return 'bg-danger';
   }
 
   estFacturePayeeExtended(facture: ExtendedFacture): boolean {
-    return facture.statut === 'PAYEE';
+    return facture.montantPaye >= facture.montant;
   }
 
   aRemiseExtended(facture: ExtendedFacture): boolean {
@@ -645,23 +789,279 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   getPrixFormateExtended(facture: ExtendedFacture): string {
-    const montant = this.aRemiseExtended(facture) ? facture.prixRemise : facture.montant;
-    // Créer une nouvelle instance de CurrencyPipe ici au lieu d'utiliser l'instance injectée
-    const currencyPipe = new CurrencyPipe('en-US');
-    return currencyPipe.transform(montant, 'USD') || '';
+    if (facture.prixRemise !== undefined) {
+      return this.formaterPrix(facture.prixRemise);
+    }
+    return this.formaterPrix(facture.montant);
   }
 
   getFactureStatus(facture: BaseFacture): FactureStatus {
-    if (facture.montantPaye >= facture.montant) {
+    if (!facture || typeof facture.montant !== 'number') {
+      console.warn('Facture invalide ou montant non défini:', facture);
+      return FactureStatus.EN_ATTENTE;
+    }
+
+    const montantPaye = typeof facture.montantPaye === 'number' ? facture.montantPaye : 0;
+
+    if (montantPaye >= facture.montant) {
       return FactureStatus.PAYEE;
-    } else if (facture.montantPaye > 0) {
+    } else if (montantPaye > 0) {
       return FactureStatus.PARTIELLEMENT_PAYEE;
     }
     return FactureStatus.EN_ATTENTE;
   }
 
-  calculerPourcentagePaye(facture: BaseFacture): number {
-    if (facture.montant === 0) return 0;
-    return (facture.montantPaye / facture.montant) * 100;
+  calculerPourcentagePaye(facture: Facture): number {
+    if (!facture.montant || facture.montant === 0) return 0;
+    return Math.min(100, Math.round((facture.montantPaye / facture.montant) * 100));
+  }
+
+  // Ouvrir modal de sélection du mode de paiement
+  openPaymentMethodModal(facture: ExtendedFacture): void {
+    this.factureSelectionnee = facture;
+    this.modalRef = this.modalService.open(this.paymentMethodModal, { centered: true });
+  }
+
+  // Sélectionner le mode de paiement
+  selectPaymentMode(mode: 'CARD' | 'MOBILEMONEY'): void {
+    this.selectedPaymentMode = { type: mode };
+
+    if (mode === 'CARD') {
+      this.modalRef?.close();
+      this.initStripePayment(this.factureSelectionnee!, this.stripePaymentModal);
+    } else {
+      this.modalRef?.close();
+      this.openMobileMoneyModal();
+    }
+  }
+
+  // Ouvrir modal de paiement mobile money
+  openMobileMoneyModal(): void {
+    this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true });
+
+    // Surveillance des changements de fournisseur pour les validations spécifiques
+    this.mobileMoneyForm.get('provider')?.valueChanges.subscribe(provider => {
+      const phoneControl = this.mobileMoneyForm.get('phoneNumber');
+      phoneControl?.setValidators([Validators.required, Validators.pattern(/^[0-9]{9}$/)]);
+      phoneControl?.updateValueAndValidity();
+    });
+  }
+
+  // Vérifier si le numéro de téléphone est valide pour le fournisseur sélectionné
+  isValidPhoneForProvider(provider: MOBILE_MONEY_PROVIDER, phone: string): boolean {
+    if (!phone || phone.length !== 9) return false;
+
+    const prefix = phone.substring(0, 2);
+
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        return ['81', '82', '83'].includes(prefix);
+      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+        return ['84', '85', '89'].includes(prefix);
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        return ['99', '97'].includes(prefix);
+      default:
+        return false;
+    }
+  }
+
+  // Obtenir le préfixe valide pour le fournisseur
+  getValidPrefixesForProvider(provider: MOBILE_MONEY_PROVIDER): string {
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        return '81, 82, 83';
+      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+        return '84, 85, 89';
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        return '99, 97';
+      default:
+        return '';
+    }
+  }
+
+  // Soumettre le paiement par mobile money
+  async submitMobilePayment(): Promise<void> {
+    if (this.mobileMoneyForm.invalid) {
+      this.mobileMoneyForm.markAllAsTouched();
+      return;
+    }
+
+    if (!this.factureSelectionnee) {
+      this.mobilePaymentError = 'Facture non sélectionnée';
+      return;
+    }
+
+    const provider = this.mobileMoneyForm.get('provider')!.value;
+    const phoneNumber = this.mobileMoneyForm.get('phoneNumber')!.value;
+
+    // Vérifier si le numéro est valide pour le fournisseur
+    if (!this.isValidPhoneForProvider(provider, phoneNumber)) {
+      this.mobilePaymentError = `Numéro invalide pour ${provider}. Le numéro doit commencer par ${this.getValidPrefixesForProvider(provider)}.`;
+      return;
+    }
+
+    this.mobilePaymentProcessing = true;
+    this.mobilePaymentError = '';
+
+    try {
+      const montantRestant = this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye;
+      const montantBase = Number(montantRestant);
+      const commission = montantBase * 0.1;
+      const totalAvecCommission = montantBase + commission;
+
+      // Récupérer les informations de l'utilisateur de manière fiable
+      let user;
+      try {
+        user = await this.getUtilisateurCourantInfo();
+      } catch (error) {
+        this.mobilePaymentError = 'Veuillez vous connecter pour effectuer ce paiement.';
+        this.mobilePaymentProcessing = false;
+        return;
+      }
+
+      // Préparer les informations client
+      const customerName = `${user.nom || ''} ${user.prenom || ''}`.trim() || 'Client';
+      const customerEmail = user.email || '';
+
+      // Créer la référence unique pour la transaction
+      const transactionReference = `MB-${Date.now()}-${this.factureSelectionnee.id}`;
+
+      // Préparer la requête pour l'API de paiement mobile
+      const paymentRequest: MobilePaymentRequest = {
+        order: {
+          paymentPageId:environment.ARAKA_PAYMENT_PAGE_ID, // À remplacer par votre ID de page de paiement
+          customerFullName: customerName,
+          customerPhoneNumber: `+243${phoneNumber}`,
+          customerEmailAddress: customerEmail,
+          transactionReference: transactionReference,
+          amount: totalAvecCommission,
+          currency: "USD",
+          redirectURL: `${window.location.origin}/mes-commandes` // URL de redirection après paiement
+        },
+        paymentChannel: {
+          channel: "MOBILEMONEY",
+          provider: provider,
+          walletID: `+243${phoneNumber}`
+        }
+      };
+
+      console.log('Envoi de la requête de paiement mobile:', paymentRequest);
+
+      // Appeler l'API de paiement mobile
+      const response = await this.http.post<MobilePaymentResponse>(
+        this.MOBILE_API_URL,
+        paymentRequest
+      ).toPromise();
+
+      if (response && response.paymentLink) {
+        // Enregistrer les informations de paiement dans Firestore
+        await this.enregistrerPaiementMobile(
+          transactionReference,
+          totalAvecCommission,
+          commission,
+          provider,
+          phoneNumber
+        );
+
+        // Rediriger vers le lien de paiement fourni par l'API
+        this.mobilePaymentSuccess = 'Redirection vers la page de paiement...';
+        window.location.href = response.paymentLink;
+      } else {
+        throw new Error('Réponse de paiement invalide');
+      }
+    } catch (error) {
+      console.error('Erreur lors du paiement mobile:', error);
+      this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
+    } finally {
+      this.mobilePaymentProcessing = false;
+    }
+  }
+
+  // Enregistrer les informations du paiement mobile
+  async enregistrerPaiementMobile(
+    reference: string,
+    montant: number,
+    commission: number,
+    provider: string,
+    phoneNumber: string
+  ): Promise<void> {
+    if (!this.factureSelectionnee || !this.factureSelectionnee.id) {
+      throw new Error('Facture non valide');
+    }
+
+    // Créer l'objet paiement
+    const paiement: Paiement = {
+      id: reference,
+      typepaiement: this.getTypePaiementFromProvider(provider),
+      montant_paye: montant - commission,
+      facture_reference: this.factureSelectionnee.id,
+      id_facture: this.factureSelectionnee.id,
+      datepaiement: new Date(),
+      stripe_reference: reference,
+      commission: commission
+    };
+
+    // Enregistrer le paiement en attente
+    await this.firebaseService.addPaiementToFacture(
+      this.factureSelectionnee.id,
+      paiement
+    );
+  }
+
+  // Convertir le fournisseur mobile en type de paiement
+  getTypePaiementFromProvider(provider: string): TYPE_PAIEMENT {
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        return TYPE_PAIEMENT.MPESA;
+      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+        return TYPE_PAIEMENT.ORANGE_MONEY;
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        return TYPE_PAIEMENT.AIRTEL_MONEY;
+      default:
+        return TYPE_PAIEMENT.ESPECE;
+    }
+  }
+
+  // Méthode pour obtenir les informations de l'utilisateur actuel de manière fiable
+  private async getUtilisateurCourantInfo(): Promise<any> {
+    // Vérifier d'abord si nous avons déjà les informations
+    if (this.utilisateurConnecte && this.utilisateurConnecte.id) {
+      return this.utilisateurConnecte;
+    }
+
+    // Essayer de récupérer les informations directement depuis le service
+    const userFromService = await this.utilisateurService.getCurrentUser();
+    if (userFromService) {
+      this.utilisateurConnecte = userFromService;
+      return userFromService;
+    }
+
+    // Si cela ne fonctionne pas, essayer via l'observable
+    try {
+      const userFromObservable = await this.utilisateurService.utilisateurCourant$.pipe(take(1)).toPromise();
+      if (userFromObservable) {
+        this.utilisateurConnecte = userFromObservable;
+        return userFromObservable;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération utilisateur via observable:', error);
+    }
+
+    // Dernier recours: vérifier dans le localStorage
+    const storedUser = localStorage.getItem('utilisateur_courant');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser && parsedUser.id) {
+          this.utilisateurConnecte = parsedUser;
+          return parsedUser;
+        }
+      } catch (e) {
+        console.error('Erreur lors du parsing utilisateur depuis localStorage:', e);
+      }
+    }
+
+    // Si aucune méthode ne fonctionne, lancer une erreur
+    throw new Error('Utilisateur non connecté ou impossible de récupérer les informations');
   }
 }

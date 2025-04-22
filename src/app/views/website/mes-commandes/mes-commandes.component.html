@@ -37,191 +37,188 @@
   <ul ngbNav #nav="ngbNav" [activeId]="activeTab" class="nav-tabs" (navChange)="onTabChange($event.nextId)">
     <li [ngbNavItem]="1">
       <a ngbNavLink>Toutes les commandes</a>
+      <ng-template ngbNavContent>
+        <!-- Toutes les commandes -->
+        <div class="tab-content mt-3">
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2">Chargement de vos commandes...</p>
+          </div>
+
+          <div *ngIf="!isLoading && factures.length === 0" class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="mt-3">Vous n'avez pas encore de commandes.</p>
+          </div>
+
+          <div *ngIf="!isLoading && factures.length > 0" class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>N° Facture</th>
+                  <th>Date</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let facture of factures">
+                  <td>{{ facture.id }}</td>
+                  <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
+                      {{ facture.montant | currency:'USD' }}
+                    </div>
+                    <div *ngIf="aRemiseExtended(facture)" class="text-success">
+                      {{ getPrixFormateExtended(facture) }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
+                      {{ getStatutFactureExtended(facture) }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
+                      <i class="bi bi-eye"></i> Détails
+                    </button>
+                    <button
+                      *ngIf="!estFacturePayeeExtended(facture)"
+                      class="btn btn-sm btn-success"
+                      (click)="payerFacture(facture)"
+                      [disabled]="isPaiementEnCours">
+                      <i class="bi bi-credit-card"></i> Payer {{ facture.montant - facture.montantPaye | currency:'USD':'symbol' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </ng-template>
     </li>
     <li [ngbNavItem]="2">
       <a ngbNavLink>Commandes payées</a>
+      <ng-template ngbNavContent>
+        <!-- Commandes payées -->
+        <div class="tab-content mt-3">
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2">Chargement de vos commandes payées...</p>
+          </div>
+
+          <div *ngIf="!isLoading && facturesPayees.length === 0" class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="mt-3">Vous n'avez pas de commandes payées.</p>
+          </div>
+
+          <div *ngIf="!isLoading && facturesPayees.length > 0" class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>N° Facture</th>
+                  <th>Date</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let facture of facturesPayees">
+                  <td>{{ facture.id }}</td>
+                  <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
+                      {{ facture.montant | currency:'USD' }}
+                    </div>
+                    <div *ngIf="aRemiseExtended(facture)" class="text-success">
+                      {{ getPrixFormateExtended(facture) }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-success">Payée</span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-primary" (click)="afficherDetailsFacture(facture)">
+                      <i class="bi bi-eye"></i> Détails
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </ng-template>
     </li>
     <li [ngbNavItem]="3">
       <a ngbNavLink>Commandes non payées</a>
+      <ng-template ngbNavContent>
+        <!-- Commandes non payées -->
+        <div class="tab-content mt-3">
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2">Chargement de vos commandes non payées...</p>
+          </div>
+
+          <div *ngIf="!isLoading && facturesNonPayees.length === 0" class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="mt-3">Vous n'avez pas de commandes non payées.</p>
+          </div>
+
+          <div *ngIf="!isLoading && facturesNonPayees.length > 0" class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>N° Facture</th>
+                  <th>Date</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let facture of facturesNonPayees">
+                  <td>{{ facture.id }}</td>
+                  <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
+                      {{ facture.montant | currency:'USD' }}
+                    </div>
+                    <div *ngIf="aRemiseExtended(facture)" class="text-success">
+                      {{ getPrixFormateExtended(facture) }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
+                      {{ getStatutFactureExtended(facture) }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
+                      <i class="bi bi-eye"></i> Détails
+                    </button>
+                    <button
+                      class="btn btn-sm btn-success"
+                      (click)="payerFacture(facture)"
+                      [disabled]="isPaiementEnCours">
+                      <i class="bi bi-credit-card"></i> Payer {{ facture.montant - facture.montantPaye | currency:'USD':'symbol' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </ng-template>
     </li>
   </ul>
-
-  <!-- Content panels -->
-  <ng-template [ngbNavContent]="1">
-    <!-- Toutes les commandes -->
-    <div class="tab-content">
-      <div *ngIf="isLoading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Chargement...</span>
-        </div>
-        <p class="mt-2">Chargement de vos commandes...</p>
-      </div>
-
-      <div *ngIf="!isLoading && factures.length === 0" class="text-center py-5">
-        <i class="bi bi-inbox fs-1 text-muted"></i>
-        <p class="mt-3">Vous n'avez pas encore de commandes.</p>
-      </div>
-
-      <div *ngIf="!isLoading && factures.length > 0" class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>N° Facture</th>
-              <th>Date</th>
-              <th>Montant</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let facture of factures">
-              <td>{{ facture.id }}</td>
-              <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>
-                <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
-                  {{ facture.montant | currency:'USD' }}
-                </div>
-                <div *ngIf="aRemiseExtended(facture)" class="text-success">
-                  {{ getPrixFormateExtended(facture) }}
-                </div>
-              </td>
-              <td>
-                <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
-                  {{ getStatutFactureExtended(facture) }}
-                </span>
-              </td>
-              <td>
-                <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
-                  <i class="bi bi-eye"></i> Détails
-                </button>
-                <button
-                  *ngIf="!estFacturePayeeExtended(facture)"
-                  class="btn btn-sm btn-success"
-                  (click)="payerFacture(facture)"
-                  [disabled]="isPaiementEnCours">
-                  <i class="bi bi-credit-card"></i> Payer
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </ng-template>
-
-  <ng-template [ngbNavContent]="2">
-    <!-- Commandes payées -->
-    <div class="tab-content">
-      <div *ngIf="isLoading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Chargement...</span>
-        </div>
-        <p class="mt-2">Chargement de vos commandes payées...</p>
-      </div>
-
-      <div *ngIf="!isLoading && facturesPayees.length === 0" class="text-center py-5">
-        <i class="bi bi-inbox fs-1 text-muted"></i>
-        <p class="mt-3">Vous n'avez pas de commandes payées.</p>
-      </div>
-
-      <div *ngIf="!isLoading && facturesPayees.length > 0" class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>N° Facture</th>
-              <th>Date</th>
-              <th>Montant</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let facture of facturesPayees">
-              <td>{{ facture.id }}</td>
-              <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>
-                <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
-                  {{ facture.montant | currency:'USD' }}
-                </div>
-                <div *ngIf="aRemiseExtended(facture)" class="text-success">
-                  {{ getPrixFormateExtended(facture) }}
-                </div>
-              </td>
-              <td>
-                <span class="badge bg-success">Payée</span>
-              </td>
-              <td>
-                <button class="btn btn-sm btn-primary" (click)="afficherDetailsFacture(facture)">
-                  <i class="bi bi-eye"></i> Détails
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </ng-template>
-
-  <ng-template [ngbNavContent]="3">
-    <!-- Commandes non payées -->
-    <div class="tab-content">
-      <div *ngIf="isLoading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Chargement...</span>
-        </div>
-        <p class="mt-2">Chargement de vos commandes non payées...</p>
-      </div>
-
-      <div *ngIf="!isLoading && facturesNonPayees.length === 0" class="text-center py-5">
-        <i class="bi bi-inbox fs-1 text-muted"></i>
-        <p class="mt-3">Vous n'avez pas de commandes non payées.</p>
-      </div>
-
-      <div *ngIf="!isLoading && facturesNonPayees.length > 0" class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>N° Facture</th>
-              <th>Date</th>
-              <th>Montant</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let facture of facturesNonPayees">
-              <td>{{ facture.id }}</td>
-              <td>{{ facture.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>
-                <div [ngClass]="{'text-decoration-line-through': aRemiseExtended(facture)}">
-                  {{ facture.montant | currency:'USD' }}
-                </div>
-                <div *ngIf="aRemiseExtended(facture)" class="text-success">
-                  {{ getPrixFormateExtended(facture) }}
-                </div>
-              </td>
-              <td>
-                <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
-                  {{ getStatutFactureExtended(facture) }}
-                </span>
-              </td>
-              <td>
-                <button class="btn btn-sm btn-primary me-2" (click)="afficherDetailsFacture(facture)">
-                  <i class="bi bi-eye"></i> Détails
-                </button>
-                <button
-                  class="btn btn-sm btn-success"
-                  (click)="payerFacture(facture)"
-                  [disabled]="isPaiementEnCours">
-                  <i class="bi bi-credit-card"></i> Payer
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </ng-template>
+  <div [ngbNavOutlet]="nav" class="mt-2"></div>
 
   <!-- Détails de la facture -->
   <div *ngIf="detailsVisible && factureSelectionnee" class="mt-4">
@@ -277,13 +274,18 @@
         <!-- Historique des paiements -->
         <div>
           <h6>Historique des paiements</h6>
-          <div class="table-responsive">
+          <div *ngIf="!factureSelectionnee?.paiements?.length" class="alert alert-info">
+            Aucun paiement enregistré pour cette facture.
+          </div>
+          <div *ngIf="factureSelectionnee?.paiements?.length" class="table-responsive">
             <table class="table table-sm">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Montant</th>
+                  <th>Commission</th>
                   <th>Méthode</th>
+                  <th>Référence</th>
                   <th>Statut</th>
                 </tr>
               </thead>
@@ -291,7 +293,12 @@
                 <tr *ngFor="let paiement of factureSelectionnee?.paiements">
                   <td>{{ paiement?.datepaiement | date:'dd/MM/yyyy HH:mm' }}</td>
                   <td>{{ paiement?.montant_paye | currency:'USD':'symbol' }}</td>
+                  <td>{{ paiement?.commission | currency:'USD':'symbol' }}</td>
                   <td>{{ getTypePaiementLabel(paiement?.typepaiement) }}</td>
+                  <td>
+                    <span *ngIf="paiement?.stripe_reference" class="small text-muted">{{ paiement?.stripe_reference }}</span>
+                    <span *ngIf="!paiement?.stripe_reference">-</span>
+                  </td>
                   <td>
                     <span class="badge bg-success">Succès</span>
                   </td>
@@ -367,6 +374,303 @@
     <button type="button" class="btn btn-primary" [disabled]="paymentProcessing" (click)="processPayment()">
       <div *ngIf="paymentProcessing" class="spinner-border spinner-border-sm me-2" role="status"></div>
       Payer maintenant
+    </button>
+  </div>
+</ng-template>
+
+<!-- Paiement par carte ou mobile money Modal -->
+<!-- <ng-template #paymentMethodModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Choisir votre méthode de paiement</h5>
+
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card h-100 payment-method-card" (click)="selectPaymentMode('CARD')">
+          <div class="card-body text-center">
+            <div class="payment-icon mb-3">
+              <i class="las la-credit-card la-3x text-primary"></i>
+            </div>
+            <h5>Carte de crédit</h5>
+            <p class="text-muted small">Visa, MasterCard</p>
+            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
+              <img src="assets/images/payement/visa.jpg" alt="Visa" height="30">
+              <img src="assets/images/payement/MasterCard.png" alt="MasterCard" height="30">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card h-100 payment-method-card" (click)="selectPaymentMode('MOBILEMONEY')">
+          <div class="card-body text-center">
+            <div class="payment-icon mb-3">
+              <i class="las la-mobile la-3x text-success"></i>
+            </div>
+            <h5>Mobile Money</h5>
+            <p class="text-muted small">M-PESA, Orange Money, Airtel Money</p>
+            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
+              <img src="assets/images/payement/mpesa.png" alt="M-PESA" height="30">
+              <img src="assets/images/payement/orange_money.png" alt="Orange Money" height="30">
+              <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" height="30">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
+      Annuler
+    </button>
+  </div>
+</ng-template> -->
+<ng-template #paymentMethodModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Choisir votre méthode de paiement</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <div class="alert alert-warning">
+      <i class="las la-exclamation-circle me-2"></i>
+      Le paiement en ligne est temporairement indisponible. Il sera opérationnel à partir du 25 Avril 2025.
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card h-100 payment-method-card opacity-50" style="pointer-events: none;">
+          <div class="card-body text-center">
+            <div class="payment-icon mb-3">
+              <i class="las la-credit-card la-3x text-primary"></i>
+            </div>
+            <h5>Carte de crédit</h5>
+            <p class="text-muted small">Visa, MasterCard</p>
+            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
+              <img src="assets/images/payement/visa.jpg" alt="Visa" height="30">
+              <img src="assets/images/payement/MasterCard.png" alt="MasterCard" height="30">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card h-100 payment-method-card opacity-50" style="pointer-events: none;">
+          <div class="card-body text-center">
+            <div class="payment-icon mb-3">
+              <i class="las la-mobile la-3x text-success"></i>
+            </div>
+            <h5>Mobile Money</h5>
+            <p class="text-muted small">M-PESA, Orange Money, Airtel Money</p>
+            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
+              <img src="assets/images/payement/mpesa.png" alt="M-PESA" height="30">
+              <img src="assets/images/payement/orange_money.png" alt="Orange Money" height="30">
+              <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" height="30">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
+      Fermer
+    </button>
+  </div>
+</ng-template>
+
+
+<!-- Paiement par carte ou mobile money Modal -->
+<!-- <ng-template #paymentMethodModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Choisir votre méthode de paiement</h5>
+
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card h-100 payment-method-card" (click)="selectPaymentMode('CARD')">
+          <div class="card-body text-center">
+            <div class="payment-icon mb-3">
+              <i class="las la-credit-card la-3x text-primary"></i>
+            </div>
+            <h5>Carte de crédit</h5>
+            <p class="text-muted small">Visa, MasterCard</p>
+            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
+              <img src="assets/images/payement/visa.jpg" alt="Visa" height="30">
+              <img src="assets/images/payement/MasterCard.png" alt="MasterCard" height="30">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card h-100 payment-method-card" (click)="selectPaymentMode('MOBILEMONEY')">
+          <div class="card-body text-center">
+            <div class="payment-icon mb-3">
+              <i class="las la-mobile la-3x text-success"></i>
+            </div>
+            <h5>Mobile Money</h5>
+            <p class="text-muted small">M-PESA, Orange Money, Airtel Money</p>
+            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
+              <img src="assets/images/payement/mpesa.png" alt="M-PESA" height="30">
+              <img src="assets/images/payement/orange_money.png" alt="Orange Money" height="30">
+              <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" height="30">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
+      Annuler
+    </button>
+  </div>
+</ng-template> -->
+
+<!-- Mobile Money Payment Modal -->
+<ng-template #mobileMoneyModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Paiement Mobile Money</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <!-- Messages d'état -->
+    <div *ngIf="mobilePaymentProcessing" class="alert alert-info text-center">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Traitement du paiement en cours...
+    </div>
+
+    <div *ngIf="mobilePaymentError" class="alert alert-danger">
+      <i class="las la-exclamation-circle me-2"></i> {{ mobilePaymentError }}
+    </div>
+
+    <div *ngIf="mobilePaymentSuccess" class="alert alert-success">
+      <i class="las la-check-circle me-2"></i> {{ mobilePaymentSuccess }}
+    </div>
+
+    <!-- Résumé de la commande -->
+    <div class="payment-summary mb-4" *ngIf="factureSelectionnee">
+      <h6 class="mb-3">Résumé de la commande</h6>
+      <div class="d-flex justify-content-between">
+        <span>Facture :</span>
+        <span>{{ factureSelectionnee.id }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Montant à payer :</span>
+        <span class="fw-bold">{{ factureSelectionnee.montant - factureSelectionnee.montantPaye | currency:'USD':'symbol' }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Frais Transaction :</span>
+        <span>{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye) * 0.1 | currency:'USD':'symbol' }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Total avec frais :</span>
+        <span class="fw-bold text-primary">{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye) * 1.1 | currency:'USD':'symbol' }}</span>
+      </div>
+    </div>
+
+    <!-- Formulaire Mobile Money -->
+    <form [formGroup]="mobileMoneyForm" (ngSubmit)="submitMobilePayment()">
+      <div class="mb-3">
+        <label class="form-label fw-bold">Choisir votre fournisseur</label>
+        <div class="mobile-providers">
+          <div class="row g-3">
+            <!-- M-PESA -->
+            <div class="col-md-4">
+              <div class="mobile-provider-card"
+                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.MPESA"
+                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.MPESA)">
+                <div class="provider-header">
+                  <input type="radio" class="form-check-input"
+                         [id]="'provider-' + mobileMoneyProviders.MPESA"
+                         [value]="mobileMoneyProviders.MPESA"
+                         formControlName="provider">
+                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.MPESA">
+                    M-PESA
+                  </label>
+                </div>
+                <div class="provider-logo">
+                  <img src="assets/images/payement/mpesa.png" alt="M-PESA" class="img-fluid">
+                </div>
+                <div class="provider-info">
+                  <small class="text-muted">Préfixes: 81, 82, 83</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- ORANGE MONEY -->
+            <div class="col-md-4">
+              <div class="mobile-provider-card"
+                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.ORANGE_MONEY"
+                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.ORANGE_MONEY)">
+                <div class="provider-header">
+                  <input type="radio" class="form-check-input"
+                         [id]="'provider-' + mobileMoneyProviders.ORANGE_MONEY"
+                         [value]="mobileMoneyProviders.ORANGE_MONEY"
+                         formControlName="provider">
+                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.ORANGE_MONEY">
+                    Orange Money
+                  </label>
+                </div>
+                <div class="provider-logo">
+                  <img src="assets/images/payement/orange_money.png" alt="Orange Money" class="img-fluid">
+                </div>
+                <div class="provider-info">
+                  <small class="text-muted">Préfixes: 84, 85, 89</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- AIRTEL MONEY -->
+            <div class="col-md-4">
+              <div class="mobile-provider-card"
+                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.AIRTEL_MONEY"
+                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.AIRTEL_MONEY)">
+                <div class="provider-header">
+                  <input type="radio" class="form-check-input"
+                         [id]="'provider-' + mobileMoneyProviders.AIRTEL_MONEY"
+                         [value]="mobileMoneyProviders.AIRTEL_MONEY"
+                         formControlName="provider">
+                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.AIRTEL_MONEY">
+                    Airtel Money
+                  </label>
+                </div>
+                <div class="provider-logo">
+                  <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" class="img-fluid">
+                </div>
+                <div class="provider-info">
+                  <small class="text-muted">Préfixes: 99, 97</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3 mt-4">
+        <label class="form-label fw-bold">Numéro de téléphone</label>
+        <div class="input-group">
+          <span class="input-group-text">+243</span>
+          <input type="text" class="form-control" formControlName="phoneNumber" placeholder="Exemple: 810000000">
+        </div>
+        <div class="form-text" *ngIf="mobileMoneyForm.get('provider')?.value">
+          Le numéro doit commencer par l'un des préfixes suivants : {{ getValidPrefixesForProvider(mobileMoneyForm.get('provider')?.value) }}
+        </div>
+        <div class="invalid-feedback d-block" *ngIf="mobileMoneyForm.get('phoneNumber')?.touched && mobileMoneyForm.get('phoneNumber')?.errors?.['required']">
+          Le numéro de téléphone est requis
+        </div>
+        <div class="invalid-feedback d-block" *ngIf="mobileMoneyForm.get('phoneNumber')?.touched && mobileMoneyForm.get('phoneNumber')?.errors?.['pattern']">
+          Veuillez entrer un numéro à 9 chiffres sans le code pays
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
+      Annuler
+    </button>
+    <button type="button" class="btn btn-success" (click)="submitMobilePayment()" [disabled]="mobileMoneyForm.invalid || mobilePaymentProcessing">
+      <i class="las la-mobile me-2"></i> Payer maintenant
     </button>
   </div>
 </ng-template>

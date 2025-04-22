@@ -1,0 +1,6 @@
+export enum FactureStatus {
+  EN_ATTENTE = 'EN_ATTENTE',
+  PAYEE = 'PAYEE',
+  PARTIELLEMENT_PAYEE = 'PARTIELLEMENT_PAYEE',
+  ANNULEE = 'ANNULEE'
+}

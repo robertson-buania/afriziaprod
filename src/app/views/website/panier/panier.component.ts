@@ -20,6 +20,7 @@ import {
   NgbAlertModule,
   NgbModal,
   NgbModalModule,
+  NgbModalRef,
 } from '@ng-bootstrap/ng-bootstrap'
 import { PanierService } from '@/app/core/services/panier.service'
 import {
@@ -41,6 +42,48 @@ import { AuthModalModule } from '@/app/views/website/components/auth-modal/auth-
 import { PaymentService } from '@/app/core/services/payment.service'
 import { FirebaseService } from '@/app/core/services/firebase.service'
 import { currentYear } from '@/app/common/constants'
+import { HttpClient } from '@angular/common/http'
+import { take } from 'rxjs/operators'
+
+// Types de paiement mobile
+enum MOBILE_MONEY_PROVIDER {
+  MPESA = 'MPESA',
+  ORANGE_MONEY = 'ORANGE_MONEY',
+  AIRTEL_MONEY = 'AIRTEL_MONEY'
+}
+
+// Interface pour le mode de paiement
+interface PaymentMode {
+  type: 'CARD' | 'MOBILEMONEY'
+  mobileProvider?: MOBILE_MONEY_PROVIDER
+  phoneNumber?: string
+}
+
+// Interface pour la demande de paiement mobile
+interface MobilePaymentRequest {
+  order: {
+    paymentPageId: string
+    customerFullName: string
+    customerPhoneNumber: string
+    customerEmailAddress: string
+    transactionReference: string
+    amount: number
+    currency: string
+    redirectURL: string
+  }
+  paymentChannel: {
+    channel: string
+    provider: string
+    walletID: string
+  }
+}
+
+// Réponse de l'API de paiement mobile
+interface MobilePaymentResponse {
+  transactionId: string
+  originatingTransactionId: string
+  paymentLink: string
+}
 
 @Component({
   selector: 'app-panier',
@@ -63,6 +106,8 @@ export class PanierComponent implements OnInit, OnDestroy {
   @ViewChild('connexionRequiseModal') connexionRequiseModal!: TemplateRef<any>
   @ViewChild('stripePaymentModal') stripePaymentModal!: TemplateRef<any>
   @ViewChild('cardElement') cardElement?: ElementRef
+  @ViewChild('paymentMethodModal') paymentMethodModal!: TemplateRef<any>
+  @ViewChild('mobileMoneyModal') mobileMoneyModal!: TemplateRef<any>
 
   colis: Colis[] = []
   total = 0
@@ -97,6 +142,17 @@ export class PanierComponent implements OnInit, OnDestroy {
   currentDate = new Date()
   invoiceNumber = `FA${currentYear}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
 
+  // Propriétés pour le paiement mobile money
+  selectedPaymentMode: PaymentMode = { type: 'CARD' }
+  mobileMoneyProviders = MOBILE_MONEY_PROVIDER
+  mobileMoneyForm: FormGroup
+  mobilePaymentProcessing = false
+  mobilePaymentError = ''
+  mobilePaymentSuccess = ''
+  readonly MOBILE_API_URL = 'https://araka-api-uat.azurewebsites.net/api/Pay/paymentrequest'
+
+  private modalRef: NgbModalRef | null = null;
+
   constructor(
     private panierService: PanierService,
     private utilisateurService: UtilisateurService,
@@ -106,12 +162,23 @@ export class PanierComponent implements OnInit, OnDestroy {
     private authModalService: AuthModalService,
     private paymentService: PaymentService,
     private firebaseService: FirebaseService,
-    private stripeService: StripeService
-  ) {}
+    private stripeService: StripeService,
+    private http: HttpClient
+  ) {
+    // Initialiser le formulaire de facturation
+    this.facturationForm = this.fb.group({
+      partenaireId: ['', [Validators.required]],
+    })
+
+    // Initialiser le formulaire Mobile Money
+    this.mobileMoneyForm = this.fb.group({
+      provider: [MOBILE_MONEY_PROVIDER.MPESA, Validators.required],
+      phoneNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{9}$/)]]
+    });
+  }
 
   ngOnInit(): void {
     this.chargerPanier()
-    this.initFacturationForm()
     this.verifierUtilisateurConnecte()
   }
 
@@ -124,7 +191,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       this.utilisateurService.utilisateurCourant$.subscribe((utilisateur) => {
         if (utilisateur) {
           this.utilisateurConnecte = utilisateur
-          console.log('utilisateur', utilisateur)
+
           this.partenaireId = utilisateur.partenaireId || null
           if (this.partenaireId) {
             this.facturationForm
@@ -137,12 +204,6 @@ export class PanierComponent implements OnInit, OnDestroy {
         }
       })
     )
-  }
-
-  private initFacturationForm(): void {
-    this.facturationForm = this.fb.group({
-      partenaireId: ['', [Validators.required]],
-    })
   }
 
   private chargerPanier(): void {
@@ -291,7 +352,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     const colisData: Colis[] = []
     this.colis.forEach((data) => {
-     
+
       const colis: Colis = {
         id: data.id,
         type: data.type,
@@ -317,11 +378,10 @@ export class PanierComponent implements OnInit, OnDestroy {
       }
       colisData.push(colis)
 
-      console.log(colis,this.utilisateurConnecte);
-      
+
     })
 
-    
+
     // Créer l'objet facture avec l'ID personnalisé
     const facture: Omit<Facture, 'id'> & { id: string } = {
       id: invoiceNumber,
@@ -351,64 +411,56 @@ export class PanierComponent implements OnInit, OnDestroy {
     await Promise.all(updatePromises)
   }
   async creerFacture(): Promise<void> {
-    if (!this.utilisateurConnecte) {
-      this.errorMessage = 'Veuillez vous connecter pour poursuivre le paiement'
-      this.ouvrirModalConnexion()
-      return
-    }
-
-    if (
-      !this.utilisateurConnecte.nom ||
-      !this.utilisateurConnecte.prenom ||
-      !this.utilisateurConnecte.telephone
-    ) {
-      this.errorMessage = 'Veuillez compléter votre profil pour pouvoir payer'
-      this.router.navigate(['/profil'])
-      return
-    }
-
-    if (this.facturationForm.invalid) {
-      this.facturationForm.markAllAsTouched()
-      return
-    }
-
-    this.isProcessing = true
-    this.errorMessage = ''
-
     try {
-      // Créer la facture
-      const factureId = await this.createFacture()
-      this.factureCreee = factureId
+      this.isProcessing = true;
+      this.errorMessage = '';
+      this.successMessage = '';
 
-      // Mettre à jour le statut des colis
-      await this.updateColisStatus(factureId)
+      // Vérifier si l'utilisateur est connecté
+      const utilisateur = this.utilisateurConnecte;
+      if (!utilisateur || !utilisateur.partenaireId) {
+        this.isProcessing = false;
+        this.ouvrirModalConnexion();
+        return;
+      }
 
-      // Initialiser le paiement Stripe
-      await this.initializeStripePayment(factureId)
+      // Créer la facture depuis le panier
+      this.factureCreee = await this.createFacture();
 
-      // Ouvrir le modal de paiement Stripe
-      this.modalService.open(this.stripePaymentModal, {
-        centered: true,
-        backdrop: 'static',
-      })
+      if (this.factureCreee) {
+        // Mettre à jour le statut des colis
+        await this.updateColisStatus(this.factureCreee);
+
+        // Ouvrir le modal de sélection de méthode de paiement
+        this.openPaymentMethodModal();
+
+        this.successMessage = 'Votre facture a été créée avec succès.';
+      } else {
+        this.errorMessage = 'Une erreur est survenue lors de la création de la facture.';
+      }
     } catch (error) {
-      console.error('Erreur lors de la préparation du paiement:', error)
-      this.errorMessage =
-        'Une erreur est survenue lors de la préparation du paiement'
-      this.isProcessing = false
+      console.error('Erreur lors de la création de la facture:', error);
+      this.errorMessage = 'Une erreur est survenue lors de la création de la facture.';
+    } finally {
+      this.isProcessing = false;
     }
   }
 
   // Initialiser les éléments de paiement Stripe
   async initializeStripePayment(factureId: string): Promise<void> {
     try {
+      // Calculer les frais de transaction (10%)
+      const montantBase = Number(this.total);
+      const commission = montantBase * 0.1;
+      const totalAvecCommission = montantBase + commission;
+
       // Obtenir le client secret via notre API
       this.clientSecret = await this.stripeService.createPaymentIntent(
-        this.total
-      )
+        totalAvecCommission
+      );
 
       // Obtenir l'instance de Stripe
-      this.stripe = await this.stripeService.getStripeInstance()
+      this.stripe = await this.stripeService.getStripeInstance();
 
       // Créer les éléments Stripe
       this.elements = this.stripe.elements({
@@ -419,17 +471,22 @@ export class PanierComponent implements OnInit, OnDestroy {
             colorPrimary: '#007bff',
           },
         },
-      })
+      });
 
       // Créer l'élément de paiement
-      this.paymentElement = this.elements.create('payment')
+      this.paymentElement = this.elements.create('payment', {
+        amount: {
+          currency: 'usd',
+          value: totalAvecCommission * 100, // Stripe attend les montants en centimes
+        }
+      });
 
       // Monter l'élément de paiement dans le DOM
       setTimeout(() => {
         if (this.cardElement?.nativeElement) {
-          this.paymentElement.mount(this.cardElement.nativeElement)
+          this.paymentElement.mount(this.cardElement.nativeElement);
         }
-      }, 100)
+      }, 100);
 
       this.isProcessing = false
     } catch (error) {
@@ -472,6 +529,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         },
         redirect: 'if_required',
       })
+      console.log("paymentIntent 1 ---------------********************",paymentIntent,error);
 
       if (error) {
         this.paymentStatus = 'error'
@@ -480,9 +538,15 @@ export class PanierComponent implements OnInit, OnDestroy {
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         this.paymentStatus = 'success'
         this.successMessage = 'Paiement effectué avec succès!'
+        console.log("paymentIntent ---------------********************",paymentIntent);
 
         // Créer un paiement avec un ID unique pour la facture créée
         if (this.factureCreee) {
+          // Calculer la commission (10%)
+          const commission = this.total * 0.1;
+          console.log("paymentIntent ---------------********************",paymentIntent);
+
+
           const paiementId = `PAY${new Date().getTime()}`
           const paiement: Paiement = {
             id: paiementId,
@@ -491,9 +555,14 @@ export class PanierComponent implements OnInit, OnDestroy {
             facture_reference: this.factureCreee,
             id_facture: this.factureCreee,
             datepaiement: new Date(),
+            stripe_reference: paymentIntent.id, // Ajouter la référence de la transaction Stripe
+            commission: commission // Ajouter la commission de 10%
           }
 
           try {
+            // Ajouter le paiement à la collection paiements
+            await this.firebaseService.addPaiement(paiement);
+
             // Mettre à jour la facture avec le nouveau paiement
             await this.firebaseService.updateFacture(this.factureCreee, {
               montantPaye: this.total,
@@ -558,5 +627,254 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   ouvrirModalInscription(): void {
     this.authModalService.openAuthModal(AuthModalType.REGISTER)
+  }
+
+  // Sélectionner le mode de paiement
+  selectPaymentMode(mode: 'CARD' | 'MOBILEMONEY'): void {
+    this.selectedPaymentMode = { type: mode };
+
+    if (mode === 'CARD') {
+      this.modalRef?.close();
+      this.initializeStripePayment(this.factureCreee);
+    } else {
+      this.modalRef?.close();
+      this.openMobileMoneyModal();
+    }
+  }
+
+  // Ouvrir modal de sélection du mode de paiement
+  openPaymentMethodModal(): void {
+    this.modalRef = this.modalService.open(this.paymentMethodModal, { centered: true });
+  }
+
+  // Ouvrir modal de paiement mobile money
+  openMobileMoneyModal(): void {
+    this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true });
+
+    // Surveillance des changements de fournisseur pour les validations spécifiques
+    this.mobileMoneyForm.get('provider')?.valueChanges.subscribe(provider => {
+      const phoneControl = this.mobileMoneyForm.get('phoneNumber');
+      phoneControl?.setValidators([Validators.required, Validators.pattern(/^[0-9]{9}$/)]);
+      phoneControl?.updateValueAndValidity();
+    });
+  }
+
+  // Vérifier si le numéro de téléphone est valide pour le fournisseur sélectionné
+  isValidPhoneForProvider(provider: MOBILE_MONEY_PROVIDER, phone: string): boolean {
+    if (!phone || phone.length !== 9) return false;
+
+    const prefix = phone.substring(0, 2);
+
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        return ['81', '82', '83'].includes(prefix);
+      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+        return ['84', '85', '89'].includes(prefix);
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        return ['99', '97'].includes(prefix);
+      default:
+        return false;
+    }
+  }
+
+  // Obtenir le préfixe valide pour le fournisseur
+  getValidPrefixesForProvider(provider: MOBILE_MONEY_PROVIDER): string {
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        return '81, 82, 83';
+      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+        return '84, 85, 89';
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        return '99, 97';
+      default:
+        return '';
+    }
+  }
+
+  // Méthode pour obtenir les informations de l'utilisateur actuel de manière fiable
+  private async getUtilisateurCourantInfo(): Promise<any> {
+    // Vérifier d'abord si nous avons déjà les informations
+    if (this.utilisateurConnecte && this.utilisateurConnecte.id) {
+      return this.utilisateurConnecte;
+    }
+
+    // Essayer de récupérer les informations directement depuis le service
+    try {
+      const userFromService = await this.utilisateurService.getCurrentUser();
+      if (userFromService) {
+        this.utilisateurConnecte = userFromService;
+        return userFromService;
+      }
+
+      // Si cela ne fonctionne pas, essayer via l'observable
+      const userFromObservable = await this.utilisateurService.utilisateurCourant$.pipe(take(1)).toPromise();
+      if (userFromObservable) {
+        this.utilisateurConnecte = userFromObservable;
+        return userFromObservable;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération utilisateur:', error);
+    }
+
+    // Dernier recours: vérifier dans le localStorage
+    const storedUser = localStorage.getItem('utilisateur_courant');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser && parsedUser.id) {
+          this.utilisateurConnecte = parsedUser;
+          return parsedUser;
+        }
+      } catch (e) {
+        console.error('Erreur lors du parsing utilisateur depuis localStorage:', e);
+      }
+    }
+
+    // Si aucune méthode ne fonctionne, lancer une erreur
+    throw new Error('Utilisateur non connecté ou impossible de récupérer les informations');
+  }
+
+  // Soumettre le paiement par mobile money
+  async submitMobilePayment(): Promise<void> {
+    if (this.mobileMoneyForm.invalid) {
+      this.mobileMoneyForm.markAllAsTouched();
+      return;
+    }
+
+    if (!this.factureCreee) {
+      this.mobilePaymentError = 'Facture non créée';
+      return;
+    }
+
+    const provider = this.mobileMoneyForm.get('provider')!.value;
+    const phoneNumber = this.mobileMoneyForm.get('phoneNumber')!.value;
+
+    // Vérifier si le numéro est valide pour le fournisseur
+    if (!this.isValidPhoneForProvider(provider, phoneNumber)) {
+      this.mobilePaymentError = `Numéro invalide pour ${provider}. Le numéro doit commencer par ${this.getValidPrefixesForProvider(provider)}.`;
+      return;
+    }
+
+    this.mobilePaymentProcessing = true;
+    this.mobilePaymentError = '';
+
+    try {
+      const montantBase = Number(this.total);
+      const commission = montantBase * 0.1;
+      const totalAvecCommission = montantBase + commission;
+
+      // Récupérer les informations de l'utilisateur de manière fiable
+      let user;
+      try {
+        user = await this.getUtilisateurCourantInfo();
+      } catch (error) {
+        this.mobilePaymentError = 'Veuillez vous connecter pour effectuer ce paiement.';
+        this.mobilePaymentProcessing = false;
+        return;
+      }
+
+      // Préparer les informations client
+      const customerName = `${user.nom || ''} ${user.prenom || ''}`.trim() || 'Client';
+      const customerEmail = user.email || '';
+
+      // Créer la référence unique pour la transaction
+      const transactionReference = `MB-PANIER-${Date.now()}-${this.factureCreee}`;
+
+      // Préparer la requête pour l'API de paiement mobile
+      const paymentRequest: MobilePaymentRequest = {
+        order: {
+          paymentPageId: "kamba-agency-payment", // À remplacer par votre ID de page de paiement
+          customerFullName: customerName,
+          customerPhoneNumber: `+243${phoneNumber}`,
+          customerEmailAddress: customerEmail,
+          transactionReference: transactionReference,
+          amount: totalAvecCommission,
+          currency: "USD",
+          redirectURL: `${window.location.origin}/mes-commandes` // URL de redirection après paiement
+        },
+        paymentChannel: {
+          channel: "MOBILEMONEY",
+          provider: provider,
+          walletID: `+243${phoneNumber}`
+        }
+      };
+
+      console.log('Envoi de la requête de paiement mobile:', paymentRequest);
+
+      // Appeler l'API de paiement mobile
+      const response = await this.http.post<MobilePaymentResponse>(
+        this.MOBILE_API_URL,
+        paymentRequest
+      ).toPromise();
+
+      if (response && response.paymentLink) {
+        // Enregistrer les informations de paiement dans Firestore
+        await this.enregistrerPaiementMobile(
+          transactionReference,
+          totalAvecCommission,
+          commission,
+          provider,
+          phoneNumber
+        );
+
+        // Rediriger vers le lien de paiement fourni par l'API
+        this.mobilePaymentSuccess = 'Redirection vers la page de paiement...';
+        window.location.href = response.paymentLink;
+      } else {
+        throw new Error('Réponse de paiement invalide');
+      }
+    } catch (error) {
+      console.error('Erreur lors du paiement mobile:', error);
+      this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
+    } finally {
+      this.mobilePaymentProcessing = false;
+    }
+  }
+
+  // Enregistrer les informations du paiement mobile
+  async enregistrerPaiementMobile(
+    reference: string,
+    montant: number,
+    commission: number,
+    provider: string,
+    phoneNumber: string
+  ): Promise<void> {
+    if (!this.factureCreee) {
+      throw new Error('Facture non valide');
+    }
+
+    // Convertir le fournisseur mobile en type de paiement
+    let typePaiement;
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        typePaiement = TYPE_PAIEMENT.MPESA;
+        break;
+      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+        typePaiement = TYPE_PAIEMENT.ORANGE_MONEY;
+        break;
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        typePaiement = TYPE_PAIEMENT.AIRTEL_MONEY;
+        break;
+      default:
+        typePaiement = TYPE_PAIEMENT.ESPECE;
+    }
+
+    // Créer l'objet paiement
+    const paiement = {
+      id: reference,
+      typepaiement: typePaiement,
+      montant_paye: montant - commission,
+      facture_reference: this.factureCreee,
+      id_facture: this.factureCreee,
+      datepaiement: new Date(),
+      stripe_reference: reference,
+      commission: commission
+    };
+
+    // Enregistrer le paiement en attente
+    await this.firebaseService.addPaiementToFacture(
+      this.factureCreee,
+      paiement
+    );
   }
 }

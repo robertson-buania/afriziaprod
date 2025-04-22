@@ -5,6 +5,7 @@ import { FirebaseService } from './firebase.service';
 import { Utilisateur, DemandeUtilisateur, ROLE_UTILISATEUR } from '@/app/models/utilisateur.model';
 import { Router } from '@angular/router';
 import { Partenaire } from '@/app/models/partenaire.model';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +16,8 @@ export class UtilisateurService {
 
   constructor(
     private firebaseService: FirebaseService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     // Vérifier si un utilisateur est déjà connecté (stocké en localStorage)
     this.restaurerSessionUtilisateur();
@@ -377,6 +379,32 @@ export class UtilisateurService {
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'utilisateur:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Récupère l'utilisateur actuellement connecté avec toutes ses informations
+   * @returns Promesse résolvant l'utilisateur ou null si non connecté
+   */
+  async getCurrentUser(): Promise<any | null> {
+    try {
+      const user = await this.authService.getCurrentUser();
+
+      if (!user || !user.uid) {
+        return null;
+      }
+
+      // Récupérer les informations détaillées de l'utilisateur depuis Firestore
+      const userDoc = await this.firebaseService.getUtilisateurById(user.uid);
+
+      if (!userDoc) {
+        throw new Error('Utilisateur connecté mais données non trouvées');
+      }
+
+      return userDoc;
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'utilisateur actuel:', error);
+      return null;
     }
   }
 }

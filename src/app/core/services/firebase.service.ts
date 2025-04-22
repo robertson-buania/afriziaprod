@@ -20,7 +20,7 @@ import {
 } from '@angular/fire/firestore';
 import { Observable, from, switchMap } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Colis, Facture, Partenaire, Paiement, Sac } from '@/app/models/partenaire.model';
+import { Colis, Facture, Partenaire, Paiement, Sac, FactureStatus } from '@/app/models/partenaire.model';
 import { Client } from '@/app/models/client.model';
 import { Utilisateur, DemandeUtilisateur, TokenUtilisateur } from '@/app/models/utilisateur.model';
 
@@ -255,6 +255,7 @@ export class FirebaseService {
   }
 
   getFacturesByPartenaire(partenaireId: string): Observable<Facture[]> {
+    console.log('Recherche des factures pour le partenaireId:', partenaireId);
     const colRef = collection(this.firestore, 'factures');
     const q = query(
       colRef,
@@ -262,10 +263,14 @@ export class FirebaseService {
     );
     return from(getDocs(q)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
-        const factures = snapshot.docs.map((doc:any) => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Facture[];
+        console.log('Nombre de documents trouvés:', snapshot.docs.length);
+        const factures = snapshot.docs.map((doc:any) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data
+          } as Facture;
+        });
 
         // Trier les factures par date
         const sortedFactures = factures.sort((a: Facture, b: Facture): number => {
@@ -482,5 +487,51 @@ export class FirebaseService {
   async updateToken(id: string, data: Partial<TokenUtilisateur>): Promise<void> {
     const tokenRef = doc(this.firestore, 'tokens', id);
     await updateDoc(tokenRef, data);
+  }
+
+  /**
+   * Ajoute un paiement à une facture
+   * @param factureId ID de la facture
+   * @param paiement Objet de paiement à ajouter
+   */
+  async addPaiementToFacture(factureId: string, paiement: Paiement): Promise<void> {
+    try {
+      // Récupérer la référence de la facture
+      const factureRef = doc(this.firestore, 'factures', factureId);
+      const factureDoc = await getDoc(factureRef);
+
+      if (!factureDoc.exists()) {
+        throw new Error(`Facture avec ID ${factureId} non trouvée`);
+      }
+
+      const factureData = factureDoc.data() as Facture;
+
+      // Ajouter le nouveau paiement à la liste des paiements
+      const paiements = factureData.paiements || [];
+      paiements.push(paiement);
+
+      // Mettre à jour le montant total payé
+      const montantPaye = paiements.reduce((total, p) => total + (p.montant_paye || 0), 0);
+
+      // Déterminer le statut de la facture
+      let statut = FactureStatus.EN_ATTENTE;
+      if (montantPaye >= factureData.montant) {
+        statut = FactureStatus.PAYEE;
+      } else if (montantPaye > 0) {
+        statut = FactureStatus.PARTIELLEMENT_PAYEE;
+      }
+
+      // Mettre à jour la facture
+      await updateDoc(factureRef, {
+        paiements: paiements,
+        montantPaye: montantPaye,
+        statut: statut
+      });
+
+      console.log(`Paiement ${paiement.id} ajouté à la facture ${factureId}`);
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du paiement à la facture:', error);
+      throw error;
+    }
   }
 }

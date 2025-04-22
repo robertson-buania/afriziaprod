@@ -55,13 +55,15 @@ export class StripeService {
 
   /**
    * Crée une PaymentIntent avec Stripe et retourne le client_secret
-   * @param amount Montant en centimes (ex: 2000 pour 20€)
+   * @param amount Montant en dollars (sera converti en centimes)
    * @param currency Code de la devise (ex: 'eur', 'usd')
    */
   async createPaymentIntent(amount: number, currency: string = 'usd'): Promise<string> {
     try {
-      // Conversion en centimes si nécessaire (Stripe attend les montants en centimes)
+      // Conversion en centimes (Stripe attend les montants en centimes)
       const amountInCents = Math.round(amount * 100);
+      console.log('Montant envoyé à Stripe (en centimes):', amountInCents);
+      console.log('Montant original (en dollars):', amount);
 
       const response = await firstValueFrom(
         this.http.post<PaymentIntentResponse>(

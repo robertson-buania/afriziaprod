@@ -28,6 +28,7 @@ export interface Facture{
   partenaireId?: string
   prixRemise?: number
   statut?: FactureStatus
+  pourcentagePaye?: number
 }
 
 
@@ -68,7 +69,9 @@ export interface Paiement{
   montant_paye:number,
   facture_reference?:string,
   id_facture?:string,
-  datepaiement:Date
+  datepaiement:Date,
+  stripe_reference?:string,
+  commission?:number
 }
 
 export enum TYPE_COLIS{
@@ -79,11 +82,11 @@ export enum TYPE_COLIS{
 }
 
 export enum  TYPE_PAIEMENT{
-
   ESPECE,
   CARTE,
   MPESA,
-  ORANGE_MONEY
+  ORANGE_MONEY,
+  AIRTEL_MONEY
 }
 
 
@@ -103,7 +106,8 @@ export enum STATUT_COLIS{
   EN_COURS_EXPEDITION,
   EN_ATTENTE_LIVRAISON,
   LIVRE,
-  ANNULE
+  ANNULE,
+  PARTIELLEMENT_PAYEE
 }
 
 export enum TYPE_EXPEDITION{

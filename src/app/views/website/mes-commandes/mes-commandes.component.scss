@@ -117,3 +117,148 @@ button {
     color: #334155;
   }
 }
+
+// Styles pour les méthodes de paiement
+.payment-method-card {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: 2px solid #e9ecef;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-5px);
+    border-color: #0d6efd;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .payment-icon {
+    i {
+      background-color: rgba(13, 110, 253, 0.1);
+      border-radius: 50%;
+      width: 70px;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+
+    .la-mobile {
+      background-color: rgba(25, 135, 84, 0.1);
+      color: #198754;
+    }
+  }
+
+  .payment-logos {
+    img {
+      height: 30px;
+      border-radius: 5px;
+    }
+  }
+}
+
+// Styles pour le formulaire de paiement mobile
+.form-check {
+  padding: 10px 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: #f8f9fa;
+  }
+}
+
+.form-check-input:checked + .form-check-label {
+  font-weight: 500;
+}
+
+// Mettre en évidence les fournisseurs
+.form-check-input:checked ~ .form-check-label {
+  color: #0d6efd;
+}
+
+// Styles pour les cartes de fournisseurs Mobile Money
+.mobile-provider-card {
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: #6c757d;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.15);
+  }
+
+  .provider-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .form-check-input {
+      margin-right: 8px;
+    }
+
+    .form-check-label {
+      font-weight: 500;
+      margin-bottom: 0;
+    }
+  }
+
+  .provider-logo {
+    text-align: center;
+    padding: 10px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      max-width: 100%;
+      max-height: 70px;
+      object-fit: contain;
+      border-radius: 8px;
+      transition: transform 0.3s ease;
+    }
+  }
+
+  &:hover .provider-logo img {
+    transform: scale(1.05);
+  }
+
+  &.selected .provider-logo img {
+    transform: scale(1.1);
+  }
+
+  .provider-info {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+  }
+}
+
+// Styles supplémentaires pour l'entrée du numéro de téléphone
+.input-group {
+  .input-group-text {
+    background-color: #0d6efd;
+    color: white;
+    font-weight: 500;
+    border: 1px solid #0d6efd;
+  }
+
+  .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+}
