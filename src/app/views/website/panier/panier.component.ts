@@ -117,6 +117,7 @@ export class PanierComponent implements OnInit, OnDestroy {
   facturationForm!: FormGroup
   isFacturationFormVisible = false
   isProcessing = false
+  isCreatingFacture = false
   partenaireId: string | null = null
   utilisateurConnecte: any = null
   private subscription = new Subscription()
@@ -413,6 +414,7 @@ export class PanierComponent implements OnInit, OnDestroy {
   async creerFacture(): Promise<void> {
     try {
       this.isProcessing = true;
+      this.isCreatingFacture = true;
       this.errorMessage = '';
       this.successMessage = '';
 
@@ -420,6 +422,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       const utilisateur = this.utilisateurConnecte;
       if (!utilisateur || !utilisateur.partenaireId) {
         this.isProcessing = false;
+        this.isCreatingFacture = false;
         this.ouvrirModalConnexion();
         return;
       }
@@ -430,6 +433,9 @@ export class PanierComponent implements OnInit, OnDestroy {
       if (this.factureCreee) {
         // Mettre à jour le statut des colis
         await this.updateColisStatus(this.factureCreee);
+
+        // Vider le panier après création de la facture pour éviter les doublons
+        this.panierService.viderPanier();
 
         // Ouvrir le modal de sélection de méthode de paiement
         this.openPaymentMethodModal();
@@ -443,6 +449,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       this.errorMessage = 'Une erreur est survenue lors de la création de la facture.';
     } finally {
       this.isProcessing = false;
+      this.isCreatingFacture = false;
     }
   }
 
@@ -535,6 +542,11 @@ export class PanierComponent implements OnInit, OnDestroy {
         this.paymentStatus = 'error'
         this.errorMessage =
           error.message || 'Une erreur est survenue lors du paiement'
+
+        // Rediriger vers mes-commandes même en cas d'erreur
+        setTimeout(() => {
+          this.router.navigate(['/mes-commandes']);
+        }, 1500);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         this.paymentStatus = 'success'
         this.successMessage = 'Paiement effectué avec succès!'
@@ -584,8 +596,6 @@ export class PanierComponent implements OnInit, OnDestroy {
           }
         }
 
-        this.panierService.viderPanier()
-
         // Fermer le modal
         this.modalService.dismissAll()
 
@@ -598,6 +608,11 @@ export class PanierComponent implements OnInit, OnDestroy {
       this.paymentStatus = 'error'
       this.errorMessage =
         error.message || 'Une erreur est survenue lors du paiement'
+
+      // Rediriger vers mes-commandes même en cas d'erreur
+      setTimeout(() => {
+        this.router.navigate(['/mes-commandes']);
+      }, 1500);
     } finally {
       this.paymentProcessing = false
     }
@@ -610,6 +625,9 @@ export class PanierComponent implements OnInit, OnDestroy {
     this.paymentElement?.unmount()
     this.elements = null
     this.paymentElement = null
+
+    // Rediriger vers la page des commandes car la facture a déjà été créée
+    this.router.navigate(['/mes-commandes'])
   }
 
   confirmerSuppression(modal: any, colisId: string): void {
@@ -645,11 +663,37 @@ export class PanierComponent implements OnInit, OnDestroy {
   // Ouvrir modal de sélection du mode de paiement
   openPaymentMethodModal(): void {
     this.modalRef = this.modalService.open(this.paymentMethodModal, { centered: true });
+
+    // Ajouter un gestionnaire pour la fermeture du modal
+    this.modalRef.result.then(
+      (result) => {
+        // Modal fermé par une action (comme choisir une méthode de paiement)
+        // La logique est gérée par les autres méthodes
+      },
+      (reason) => {
+        // Modal fermé par croix ou clic à l'extérieur
+        // Rediriger vers mes-commandes car la facture a déjà été créée
+        this.router.navigate(['/mes-commandes']);
+      }
+    );
   }
 
   // Ouvrir modal de paiement mobile money
   openMobileMoneyModal(): void {
     this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true });
+
+    // Ajouter un gestionnaire pour la fermeture du modal
+    this.modalRef.result.then(
+      (result) => {
+        // Modal fermé par une action (comme soumettre le paiement)
+        // La logique est gérée par les autres méthodes
+      },
+      (reason) => {
+        // Modal fermé par croix ou clic à l'extérieur
+        // Rediriger vers mes-commandes car la facture a déjà été créée
+        this.router.navigate(['/mes-commandes']);
+      }
+    );
 
     // Surveillance des changements de fournisseur pour les validations spécifiques
     this.mobileMoneyForm.get('provider')?.valueChanges.subscribe(provider => {
@@ -819,6 +863,8 @@ export class PanierComponent implements OnInit, OnDestroy {
 
         // Rediriger vers le lien de paiement fourni par l'API
         this.mobilePaymentSuccess = 'Redirection vers la page de paiement...';
+
+        // Rediriger vers la page de paiement mobile
         window.location.href = response.paymentLink;
       } else {
         throw new Error('Réponse de paiement invalide');
@@ -826,6 +872,11 @@ export class PanierComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Erreur lors du paiement mobile:', error);
       this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
+
+      // Rediriger vers mes-commandes même en cas d'erreur
+      setTimeout(() => {
+        this.router.navigate(['/mes-commandes']);
+      }, 1500);
     } finally {
       this.mobilePaymentProcessing = false;
     }

@@ -226,8 +226,10 @@
 
               <!-- Boutons d'action -->
               <div class="d-grid gap-2">
-                <button class="btn btn-success" (click)="creerFacture()">
-                  <i class="las la-credit-card me-2"></i>Payer maintenant
+                <button class="btn btn-success" (click)="creerFacture()" [disabled]="isCreatingFacture">
+                  <div *ngIf="isCreatingFacture" class="spinner-border spinner-border-sm me-2" role="status"></div>
+                  <i *ngIf="!isCreatingFacture" class="las la-credit-card me-2"></i>
+                  {{ isCreatingFacture ? 'Création de la facture...' : 'Payer maintenant' }}
                 </button>
               </div>
             </div>
