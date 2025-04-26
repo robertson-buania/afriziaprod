@@ -404,7 +404,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       .filter((colis) => colis.id)
       .map((colis) =>
         this.firebaseService.updateColis(colis.id!, {
-          statut: STATUT_COLIS.EN_ATTENTE_PAIEMENT,
+          statut: STATUT_COLIS.AU_PANIER,
           typeExpedition: this.selectedExpeditionType,
         })
       )
@@ -827,7 +827,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       // Préparer la requête pour l'API de paiement mobile
       const paymentRequest: MobilePaymentRequest = {
         order: {
-          paymentPageId: "kamba-agency-payment", // À remplacer par votre ID de page de paiement
+          paymentPageId: "BF139283-5051-4AFB-A714-D431BA158564", // À remplacer par votre ID de page de paiement
           customerFullName: customerName,
           customerPhoneNumber: `+243${phoneNumber}`,
           customerEmailAddress: customerEmail,
