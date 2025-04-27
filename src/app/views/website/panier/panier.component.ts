@@ -44,6 +44,7 @@ import { FirebaseService } from '@/app/core/services/firebase.service'
 import { currentYear } from '@/app/common/constants'
 import { HttpClient } from '@angular/common/http'
 import { take } from 'rxjs/operators'
+import { environment } from '@/environments/environment'
 
 // Types de paiement mobile
 enum MOBILE_MONEY_PROVIDER {
@@ -150,7 +151,6 @@ export class PanierComponent implements OnInit, OnDestroy {
   mobilePaymentProcessing = false
   mobilePaymentError = ''
   mobilePaymentSuccess = ''
-  readonly MOBILE_API_URL = 'https://araka-api-uat.azurewebsites.net/api/Pay/paymentrequest'
 
   private modalRef: NgbModalRef | null = null;
 
@@ -827,7 +827,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       // Préparer la requête pour l'API de paiement mobile
       const paymentRequest: MobilePaymentRequest = {
         order: {
-          paymentPageId: "BF139283-5051-4AFB-A714-D431BA158564", // À remplacer par votre ID de page de paiement
+          paymentPageId: environment.ARAKA_PAYMENT_PAGE_ID, // À remplacer par votre ID de page de paiement
           customerFullName: customerName,
           customerPhoneNumber: `+243${phoneNumber}`,
           customerEmailAddress: customerEmail,
@@ -847,7 +847,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
       // Appeler l'API de paiement mobile
       const response = await this.http.post<MobilePaymentResponse>(
-        this.MOBILE_API_URL,
+        environment.ARAKA_PAYMENT_URL+"pay/paymentrequest",
         paymentRequest
       ).toPromise();
 

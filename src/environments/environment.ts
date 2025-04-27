@@ -13,7 +13,8 @@ export const environment = {
     apiUrl: 'your-whatsapp-api-url',
     token: 'your-whatsapp-token'
   },
-  ARAKA_PAYMENT_PAGE_ID: '091B4125-2471-4DF0-B696-F7C3AFFB3A1A',
+  ARAKA_PAYMENT_PAGE_ID: 'BF139283-5051-4AFB-A714-D431BA158564',
+  ARAKA_PAYMENT_URL:"https://api.arakapay.com/api/pay/",
   firebaseConfig:
 
   {
