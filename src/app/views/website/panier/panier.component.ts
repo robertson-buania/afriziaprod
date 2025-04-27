@@ -822,7 +822,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       const customerEmail = user.email || '';
 
       // Créer la référence unique pour la transaction
-      const transactionReference = `MB-PANIER-${Date.now()}-${this.factureCreee}`;
+      const transactionReference = `MB-PR-${Date.now()}-${this.factureCreee}`;
 
       // Préparer la requête pour l'API de paiement mobile
       const paymentRequest: MobilePaymentRequest = {
@@ -843,7 +843,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         }
       };
 
-      console.log('Envoi de la requête de paiement mobile:', paymentRequest);
+    //  console.log('Envoi de la requête de paiement mobile:', paymentRequest);
 
       // Appeler l'API de paiement mobile
       const response = await this.http.post<MobilePaymentResponse>(
