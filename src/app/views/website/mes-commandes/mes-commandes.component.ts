@@ -16,7 +16,8 @@ import { User } from '@/app/models/user.model';
 import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 import { StripeService } from '@/app/core/services/stripe.service';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { PaiementService } from '@/app/shared/service/paiement.service';
 
 interface ExtendedPaiement extends Paiement {
   date: string;
@@ -155,6 +156,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     private firestore: Firestore,
     private stripeService: StripeService,
     private http: HttpClient,
+    private paiementService: PaiementService,
     private fb: FormBuilder
   ) {
     this.mobileMoneyForm = this.fb.group({
@@ -555,61 +557,69 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   // Traiter le paiement
   async processPayment(): Promise<void> {
-    if (!this.stripe || !this.elements || !this.factureSelectionnee) {
-      this.errorMessage = 'Le système de paiement n\'est pas initialisé';
-      return;
-    }
 
-    this.paymentProcessing = true;
-    this.paymentStatus = 'processing';
+    this.paiementService.loginWithCredential().subscribe( async(responseToken) => {
 
-    try {
-      // D'abord soumettre les éléments
-      const { error: submitError } = await this.elements.submit();
-      if (submitError) {
-        this.paymentStatus = 'error';
-        this.errorMessage = submitError.message || 'Erreur lors de la validation du formulaire de paiement';
-        this.paymentProcessing = false;
-        return;
+      if(responseToken && responseToken.token){
+        console.log('Connexion avec succès:', responseToken);
       }
 
-      // Ensuite confirmer le paiement
-      const { error, paymentIntent } = await this.stripe.confirmPayment({
-        elements: this.elements,
-        clientSecret: this.clientSecret,
-        confirmParams: {
-          return_url: `${window.location.origin}/mes-commandes`,
-        },
-        redirect: 'if_required'
-      });
+    })
+    // if (!this.stripe || !this.elements || !this.factureSelectionnee) {
+    //   this.errorMessage = 'Le système de paiement n\'est pas initialisé';
+    //   return;
+    // }
 
-      if (error) {
-        this.paymentStatus = 'error';
-        this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        this.paymentStatus = 'success';
-        this.successMessage = 'Paiement effectué avec succès!';
+    // this.paymentProcessing = true;
+    // this.paymentStatus = 'processing';
 
-        // Stocker la référence de paiement pour l'utiliser dans updateFactureApresPaiement
-        this.stripe.paymentIntent = paymentIntent;
+    // try {
+    //   // D'abord soumettre les éléments
+    //   const { error: submitError } = await this.elements.submit();
+    //   if (submitError) {
+    //     this.paymentStatus = 'error';
+    //     this.errorMessage = submitError.message || 'Erreur lors de la validation du formulaire de paiement';
+    //     this.paymentProcessing = false;
+    //     return;
+    //   }
 
-        // Mettre à jour la facture après un paiement réussi
-        await this.updateFactureApresPaiement(this.factureSelectionnee.id!);
+    //   // Ensuite confirmer le paiement
+    //   const { error, paymentIntent } = await this.stripe.confirmPayment({
+    //     elements: this.elements,
+    //     clientSecret: this.clientSecret,
+    //     confirmParams: {
+    //       return_url: `${window.location.origin}/mes-commandes`,
+    //     },
+    //     redirect: 'if_required'
+    //   });
 
-        // Fermer le modal
-        this.fermerModalPaiement();
+    //   if (error) {
+    //     this.paymentStatus = 'error';
+    //     this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
+    //   } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+    //     this.paymentStatus = 'success';
+    //     this.successMessage = 'Paiement effectué avec succès!';
 
-        // Recharger les factures
-        if (this.partenaireId) {
-          this.chargerFactures(this.partenaireId);
-        }
-      }
-    } catch (error: any) {
-      this.paymentStatus = 'error';
-      this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
-    } finally {
-      this.paymentProcessing = false;
-    }
+    //     // Stocker la référence de paiement pour l'utiliser dans updateFactureApresPaiement
+    //     this.stripe.paymentIntent = paymentIntent;
+
+    //     // Mettre à jour la facture après un paiement réussi
+    //     await this.updateFactureApresPaiement(this.factureSelectionnee.id!);
+
+    //     // Fermer le modal
+    //     this.fermerModalPaiement();
+
+    //     // Recharger les factures
+    //     if (this.partenaireId) {
+    //       this.chargerFactures(this.partenaireId);
+    //     }
+    //   }
+    // } catch (error: any) {
+    //   this.paymentStatus = 'error';
+    //   this.errorMessage = error.message || 'Une erreur est survenue lors du paiement';
+    // } finally {
+    //   this.paymentProcessing = false;
+    // }
   }
 
   // Mettre à jour la facture après un paiement réussi
@@ -881,7 +891,18 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   // Soumettre le paiement par mobile money
   async submitMobilePayment(): Promise<void> {
-    if (this.mobileMoneyForm.invalid) {
+
+    console.log("submitMobilePayment");
+    this.paiementService.loginWithCredential().subscribe( (responseToken) => {
+
+      if(responseToken && responseToken.token){
+        console.log('Connexion avec succès:', responseToken);
+      }
+
+    })
+
+
+   /*  if (this.mobileMoneyForm.invalid) {
       this.mobileMoneyForm.markAllAsTouched();
       return;
     }
@@ -945,16 +966,27 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         }
       };
 
-      console.log('Envoi de la requête de paiement mobile:', paymentRequest);
 
-      // Appeler l'API de paiement mobile
+    this.paiementService.loginWithCredential().subscribe( async(responseToken) => {
+      if(responseToken && responseToken.token){
+
+        console.log('Connexion avec succès:', responseToken);
+         // Appeler l'API de paiement mobile
       const response = await this.http.post<MobilePaymentResponse>(
-        this.MOBILE_API_URL,
-        paymentRequest
+        environment.ARAKA_PAYMENT_URL+"pay/paymentrequest",
+        paymentRequest,{
+          headers: new HttpHeaders({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + responseToken.token
+          })
+        }
       ).toPromise();
+
 
       if (response && response.paymentLink) {
         // Enregistrer les informations de paiement dans Firestore
+
+        console.log("Response MOBILE MONEY",response)
         await this.enregistrerPaiementMobile(
           transactionReference,
           totalAvecCommission,
@@ -969,12 +1001,17 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       } else {
         throw new Error('Réponse de paiement invalide');
       }
+
+      }
+
+    })
+
     } catch (error) {
       console.error('Erreur lors du paiement mobile:', error);
       this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
     } finally {
       this.mobilePaymentProcessing = false;
-    }
+    } */
   }
 
   // Enregistrer les informations du paiement mobile
@@ -985,27 +1022,31 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     provider: string,
     phoneNumber: string
   ): Promise<void> {
-    if (!this.factureSelectionnee || !this.factureSelectionnee.id) {
-      throw new Error('Facture non valide');
-    }
 
-    // Créer l'objet paiement
-    const paiement: Paiement = {
-      id: reference,
-      typepaiement: this.getTypePaiementFromProvider(provider),
-      montant_paye: montant - commission,
-      facture_reference: this.factureSelectionnee.id,
-      id_facture: this.factureSelectionnee.id,
-      datepaiement: new Date(),
-      stripe_reference: reference,
-      commission: commission
-    };
 
-    // Enregistrer le paiement en attente
-    await this.firebaseService.addPaiementToFacture(
-      this.factureSelectionnee.id,
-      paiement
-    );
+     // if(responseToken && responseToken.token){
+
+    // if (!this.factureSelectionnee || !this.factureSelectionnee.id) {
+    //   throw new Error('Facture non valide');
+    // }
+
+    // // Créer l'objet paiement
+    // const paiement: Paiement = {
+    //   id: reference,
+    //   typepaiement: this.getTypePaiementFromProvider(provider),
+    //   montant_paye: montant - commission,
+    //   facture_reference: this.factureSelectionnee.id,
+    //   id_facture: this.factureSelectionnee.id,
+    //   datepaiement: new Date(),
+    //   stripe_reference: reference,
+    //   commission: commission
+    // };
+
+    // // Enregistrer le paiement en attente
+    // await this.firebaseService.addPaiementToFacture(
+    //   this.factureSelectionnee.id,
+    //   paiement
+    // );
   }
 
   // Convertir le fournisseur mobile en type de paiement

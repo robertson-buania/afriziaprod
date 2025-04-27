@@ -14,7 +14,9 @@ export const environment = {
     token: 'your-whatsapp-token'
   },
   ARAKA_PAYMENT_PAGE_ID: 'BF139283-5051-4AFB-A714-D431BA158564',
-  ARAKA_PAYMENT_URL:"https://api.arakapay.com/api/pay/",
+  ARAKA_PAYMENT_URL:"https://api.arakapay.com/api/",
+  ARAKA_PAYMENT_CLIENT_ID:"moiseeloko@gmail.com",
+  ARAKA_PAYMENT_CLIENT_SECRET:"GR@PK=Y62bjzKX[",
   firebaseConfig:
 
   {

@@ -42,9 +42,10 @@ import { AuthModalModule } from '@/app/views/website/components/auth-modal/auth-
 import { PaymentService } from '@/app/core/services/payment.service'
 import { FirebaseService } from '@/app/core/services/firebase.service'
 import { currentYear } from '@/app/common/constants'
-import { HttpClient } from '@angular/common/http'
+import { HttpClient, HttpHeaders } from '@angular/common/http'
 import { take } from 'rxjs/operators'
 import { environment } from '@/environments/environment'
+import { PaiementService } from '@/app/shared/service/paiement.service'
 
 // Types de paiement mobile
 enum MOBILE_MONEY_PROVIDER {
@@ -164,6 +165,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     private paymentService: PaymentService,
     private firebaseService: FirebaseService,
     private stripeService: StripeService,
+    private paiementService: PaiementService,
     private http: HttpClient
   ) {
     // Initialiser le formulaire de facturation
@@ -845,13 +847,25 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     //  console.log('Envoi de la requête de paiement mobile:', paymentRequest);
 
-      // Appeler l'API de paiement mobile
+    this.paiementService.loginWithCredential().subscribe( async(responseToken) => {
+      if(responseToken && responseToken.token){
+
+        console.log('Connexion avec succès:', responseToken);
+         // Appeler l'API de paiement mobile
       const response = await this.http.post<MobilePaymentResponse>(
         environment.ARAKA_PAYMENT_URL+"pay/paymentrequest",
-        paymentRequest
+        paymentRequest,{
+          headers: new HttpHeaders({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + responseToken.token
+          })
+        }
       ).toPromise();
 
       if (response && response.paymentLink) {
+
+        console.log("Response From Mobile Money", response);
+
         // Enregistrer les informations de paiement dans Firestore
         await this.enregistrerPaiementMobile(
           transactionReference,
@@ -869,6 +883,10 @@ export class PanierComponent implements OnInit, OnDestroy {
       } else {
         throw new Error('Réponse de paiement invalide');
       }
+      }
+    });
+
+
     } catch (error) {
       console.error('Erreur lors du paiement mobile:', error);
       this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
