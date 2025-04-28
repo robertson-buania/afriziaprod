@@ -85,7 +85,7 @@ export enum  TYPE_PAIEMENT{
   ESPECE,
   CARTE,
   MPESA,
-  ORANGE_MONEY,
+  ORANGE,
   AIRTEL_MONEY
 }
 

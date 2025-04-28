@@ -93,7 +93,7 @@ export class PaiementFactureComponent implements OnInit {
         return 'Carte bancaire';
       case TYPE_PAIEMENT.MPESA:
         return 'M-Pesa';
-      case TYPE_PAIEMENT.ORANGE_MONEY:
+      case TYPE_PAIEMENT.ORANGE:
         return 'Orange Money';
       default:
         return 'Inconnu';

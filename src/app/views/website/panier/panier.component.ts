@@ -50,7 +50,7 @@ import { PaiementService } from '@/app/shared/service/paiement.service'
 // Types de paiement mobile
 enum MOBILE_MONEY_PROVIDER {
   MPESA = 'MPESA',
-  ORANGE_MONEY = 'ORANGE_MONEY',
+  ORANGE = 'ORANGE',
   AIRTEL_MONEY = 'AIRTEL_MONEY'
 }
 
@@ -714,7 +714,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
         return ['81', '82', '83'].includes(prefix);
-      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+      case MOBILE_MONEY_PROVIDER.ORANGE:
         return ['84', '85', '89'].includes(prefix);
       case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
         return ['99', '97'].includes(prefix);
@@ -728,7 +728,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
         return '81, 82, 83';
-      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+      case MOBILE_MONEY_PROVIDER.ORANGE:
         return '84, 85, 89';
       case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
         return '99, 97';
@@ -918,8 +918,8 @@ export class PanierComponent implements OnInit, OnDestroy {
       case MOBILE_MONEY_PROVIDER.MPESA:
         typePaiement = TYPE_PAIEMENT.MPESA;
         break;
-      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
-        typePaiement = TYPE_PAIEMENT.ORANGE_MONEY;
+      case MOBILE_MONEY_PROVIDER.ORANGE:
+        typePaiement = TYPE_PAIEMENT.ORANGE;
         break;
       case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
         typePaiement = TYPE_PAIEMENT.AIRTEL_MONEY;

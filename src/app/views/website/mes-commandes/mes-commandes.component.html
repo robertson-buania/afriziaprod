@@ -601,14 +601,14 @@
             <!-- ORANGE MONEY -->
             <div class="col-md-4">
               <div class="mobile-provider-card"
-                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.ORANGE_MONEY"
-                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.ORANGE_MONEY)">
+                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.ORANGE"
+                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.ORANGE)">
                 <div class="provider-header">
                   <input type="radio" class="form-check-input"
-                         [id]="'provider-' + mobileMoneyProviders.ORANGE_MONEY"
-                         [value]="mobileMoneyProviders.ORANGE_MONEY"
+                         [id]="'provider-' + mobileMoneyProviders.ORANGE"
+                         [value]="mobileMoneyProviders.ORANGE"
                          formControlName="provider">
-                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.ORANGE_MONEY">
+                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.ORANGE">
                     Orange Money
                   </label>
                 </div>

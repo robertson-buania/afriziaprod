@@ -18,6 +18,7 @@ import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 import { StripeService } from '@/app/core/services/stripe.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { PaiementService } from '@/app/shared/service/paiement.service';
+import { ArakaPaymentService } from '@/app/core/services/araka-payment.service';
 
 interface ExtendedPaiement extends Paiement {
   date: string;
@@ -44,7 +45,7 @@ interface ExtendedFacture extends BaseFacture {
 // Types de paiement mobile
 enum MOBILE_MONEY_PROVIDER {
   MPESA = 'MPESA',
-  ORANGE_MONEY = 'ORANGE_MONEY',
+  ORANGE = 'ORANGE',
   AIRTEL_MONEY = 'AIRTEL_MONEY'
 }
 
@@ -157,7 +158,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     private stripeService: StripeService,
     private http: HttpClient,
     private paiementService: PaiementService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private arakaPaymentService: ArakaPaymentService
   ) {
     this.mobileMoneyForm = this.fb.group({
       provider: [MOBILE_MONEY_PROVIDER.MPESA, Validators.required],
@@ -167,6 +169,9 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.verifierUtilisateurConnecte();
+
+    // Vérifier les paiements mobiles en attente
+    this.verifierPaiementsEnAttente();
   }
 
   private verifierUtilisateurConnecte(): void {
@@ -418,7 +423,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         return 'Carte bancaire';
       case TYPE_PAIEMENT.MPESA:
         return 'M-Pesa';
-      case TYPE_PAIEMENT.ORANGE_MONEY:
+      case TYPE_PAIEMENT.ORANGE:
         return 'Orange Money';
       default:
         return 'Inconnu';
@@ -866,7 +871,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
         return ['81', '82', '83'].includes(prefix);
-      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+      case MOBILE_MONEY_PROVIDER.ORANGE:
         return ['84', '85', '89'].includes(prefix);
       case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
         return ['99', '97'].includes(prefix);
@@ -880,7 +885,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
         return '81, 82, 83';
-      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
+      case MOBILE_MONEY_PROVIDER.ORANGE:
         return '84, 85, 89';
       case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
         return '99, 97';
@@ -891,18 +896,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   // Soumettre le paiement par mobile money
   async submitMobilePayment(): Promise<void> {
-
-    console.log("submitMobilePayment");
-    this.paiementService.loginWithCredential().subscribe( (responseToken) => {
-
-      if(responseToken && responseToken.token){
-        console.log('Connexion avec succès:', responseToken);
-      }
-
-    })
-
-
-   /*  if (this.mobileMoneyForm.invalid) {
+    // Démarrer le processus de paiement
+    if (this.mobileMoneyForm.invalid) {
       this.mobileMoneyForm.markAllAsTouched();
       return;
     }
@@ -924,94 +919,67 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     this.mobilePaymentProcessing = true;
     this.mobilePaymentError = '';
 
+    // Prepare the payment data
+    const paymentData = {
+      provider,
+      phoneNumber,
+      amount: this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye,
+      customerName: `${this.utilisateurConnecte.nom} ${this.utilisateurConnecte.prenom}`,
+      customerEmail: this.utilisateurConnecte.email,
+      transactionReference: `MB-${Date.now()}-${this.factureSelectionnee.id}`,
+      redirection_URL: `${window.location.origin}/mes-commandes`
+    };
+
     try {
-      const montantRestant = this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye;
-      const montantBase = Number(montantRestant);
-      const commission = montantBase * 0.1;
-      const totalAvecCommission = montantBase + commission;
+      const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
+      console.log('Payment response:', response);
 
-      // Récupérer les informations de l'utilisateur de manière fiable
-      let user;
-      try {
-        user = await this.getUtilisateurCourantInfo();
-      } catch (error) {
-        this.mobilePaymentError = 'Veuillez vous connecter pour effectuer ce paiement.';
-        this.mobilePaymentProcessing = false;
-        return;
-      }
-
-      // Préparer les informations client
-      const customerName = `${user.nom || ''} ${user.prenom || ''}`.trim() || 'Client';
-      const customerEmail = user.email || '';
-
-      // Créer la référence unique pour la transaction
-      const transactionReference = `MB-${Date.now()}-${this.factureSelectionnee.id}`;
-
-      // Préparer la requête pour l'API de paiement mobile
-      const paymentRequest: MobilePaymentRequest = {
-        order: {
-          paymentPageId:environment.ARAKA_PAYMENT_PAGE_ID, // À remplacer par votre ID de page de paiement
-          customerFullName: customerName,
-          customerPhoneNumber: `+243${phoneNumber}`,
-          customerEmailAddress: customerEmail,
-          transactionReference: transactionReference,
-          amount: totalAvecCommission,
-          currency: "USD",
-          redirectURL: `${window.location.origin}/mes-commandes` // URL de redirection après paiement
-        },
-        paymentChannel: {
-          channel: "MOBILEMONEY",
-          provider: provider,
-          walletID: `+243${phoneNumber}`
-        }
-      };
-
-
-    this.paiementService.loginWithCredential().subscribe( async(responseToken) => {
-      if(responseToken && responseToken.token){
-
-        console.log('Connexion avec succès:', responseToken);
-         // Appeler l'API de paiement mobile
-      const response = await this.http.post<MobilePaymentResponse>(
-        environment.ARAKA_PAYMENT_URL+"pay/paymentrequest",
-        paymentRequest,{
-          headers: new HttpHeaders({
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + responseToken.token
-          })
-        }
-      ).toPromise();
-
-
-      if (response && response.paymentLink) {
-        // Enregistrer les informations de paiement dans Firestore
-
-        console.log("Response MOBILE MONEY",response)
-        await this.enregistrerPaiementMobile(
-          transactionReference,
-          totalAvecCommission,
-          commission,
-          provider,
-          phoneNumber
-        );
-
-        // Rediriger vers le lien de paiement fourni par l'API
-        this.mobilePaymentSuccess = 'Redirection vers la page de paiement...';
-        window.location.href = response.paymentLink;
+      if (response.statusCode === '202') {
+        this.mobilePaymentSuccess = 'Transaction acceptée. Veuillez confirmer le paiement sur votre appareil.';
+        this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
       } else {
-        throw new Error('Réponse de paiement invalide');
+        this.mobilePaymentError = 'Erreur inattendue lors du traitement du paiement.';
       }
-
-      }
-
-    })
-
     } catch (error) {
-      console.error('Erreur lors du paiement mobile:', error);
-      this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
+      console.error('Payment error:', error);
+      this.mobilePaymentError = 'An error occurred while processing the payment.';
     } finally {
       this.mobilePaymentProcessing = false;
-    } */
+    }
+  }
+
+  private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): void {
+    const checkInterval = 20000; // 20 seconds
+    const timeout = 120000; // 2 minutes
+    let elapsedTime = 0;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
+        console.log('Status response:', statusResponse);
+
+        if (statusResponse.statusCode === '200' && statusResponse.statusDescription === 'APPROUVE') {
+          clearInterval(intervalId);
+          this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+          if (this.factureSelectionnee) {
+            await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse);
+          } else {
+            console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
+          }
+        } else if (statusResponse.statusCode === '400' || statusResponse.statusCode === '500') {
+          clearInterval(intervalId);
+          this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+
+      elapsedTime += checkInterval;
+      if (elapsedTime >= timeout) {
+        clearInterval(intervalId);
+        this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
+      }
+    }, checkInterval);
   }
 
   // Enregistrer les informations du paiement mobile
@@ -1020,33 +988,46 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     montant: number,
     commission: number,
     provider: string,
-    phoneNumber: string
+    phoneNumber: string,
+    transactionId: string = '' // Paramètre optionnel avec valeur par défaut
   ): Promise<void> {
+    if (!this.factureSelectionnee || !this.factureSelectionnee.id) {
+      throw new Error('Facture non valide');
+    }
 
+    // Créer l'objet paiement
+    const paiement: Paiement = {
+      id: reference,
+      typepaiement: this.getTypePaiementFromProvider(provider),
+      montant_paye: montant - commission,
+      facture_reference: this.factureSelectionnee.id,
+      id_facture: this.factureSelectionnee.id,
+      datepaiement: new Date(),
+      stripe_reference: reference,
+      commission: commission
+    };
 
-     // if(responseToken && responseToken.token){
+    // Enregistrer le paiement en attente
+    await this.firebaseService.addPaiementToFacture(
+      this.factureSelectionnee.id,
+      paiement
+    );
 
-    // if (!this.factureSelectionnee || !this.factureSelectionnee.id) {
-    //   throw new Error('Facture non valide');
-    // }
+    // Stocker les informations du paiement mobile dans localStorage pour référence future
+    if (transactionId) {
+      localStorage.setItem(`paiement_mobile_${reference}`, JSON.stringify({
+        factureId: this.factureSelectionnee.id,
+        transactionId: transactionId,
+        originatingTransactionId: reference, // La référence est l'originatingTransactionId
+        statut: 'EN_ATTENTE',
+        dateCreation: new Date().toISOString(),
+        provider: provider,
+        phoneNumber: phoneNumber
+      }));
+    }
 
-    // // Créer l'objet paiement
-    // const paiement: Paiement = {
-    //   id: reference,
-    //   typepaiement: this.getTypePaiementFromProvider(provider),
-    //   montant_paye: montant - commission,
-    //   facture_reference: this.factureSelectionnee.id,
-    //   id_facture: this.factureSelectionnee.id,
-    //   datepaiement: new Date(),
-    //   stripe_reference: reference,
-    //   commission: commission
-    // };
-
-    // // Enregistrer le paiement en attente
-    // await this.firebaseService.addPaiementToFacture(
-    //   this.factureSelectionnee.id,
-    //   paiement
-    // );
+    // Note: Pour une implémentation complète, il faudrait créer un service de suivi des paiements
+    // qui vérifie périodiquement le statut des transactions via l'API Araka
   }
 
   // Convertir le fournisseur mobile en type de paiement
@@ -1054,8 +1035,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
         return TYPE_PAIEMENT.MPESA;
-      case MOBILE_MONEY_PROVIDER.ORANGE_MONEY:
-        return TYPE_PAIEMENT.ORANGE_MONEY;
+      case MOBILE_MONEY_PROVIDER.ORANGE:
+        return TYPE_PAIEMENT.ORANGE;
       case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
         return TYPE_PAIEMENT.AIRTEL_MONEY;
       default:
@@ -1104,5 +1085,319 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
     // Si aucune méthode ne fonctionne, lancer une erreur
     throw new Error('Utilisateur non connecté ou impossible de récupérer les informations');
+  }
+
+  // Méthode de test pour déboguer le problème d'authentification
+  testDirectLogin(): void {
+    console.log("Test de connexion directe...");
+
+    // Afficher les valeurs des variables d'environnement (sans les secrets)
+    console.log("ARAKA_PAYMENT_URL:", environment.ARAKA_PAYMENT_URL);
+    console.log("ARAKA_PAYMENT_CLIENT_ID:", environment.ARAKA_PAYMENT_CLIENT_ID);
+
+    // 1. Test avec HttpClient standard
+    console.log("1. Test avec HttpClient standard");
+    this.paiementService.loginWithCredential().subscribe({
+      next: (response) => {
+        console.log("Connexion réussie (HttpClient):", response);
+      },
+      error: (error) => {
+        console.error("Échec de la connexion (HttpClient):", error);
+      }
+    });
+
+    // 2. Test avec le proxy local (nécessite de démarrer Angular avec --proxy-config)
+    console.log("2. Test avec proxy local");
+    this.paiementService.loginWithCredentialViaProxy().subscribe({
+      next: (response) => {
+        console.log("Connexion réussie (proxy):", response);
+      },
+      error: (error) => {
+        console.error("Échec de la connexion (proxy):", error);
+        console.log("NOTE: Le proxy nécessite de démarrer Angular avec ng serve --proxy-config proxy.conf.json");
+      }
+    });
+
+    // 3. Test avec Fetch API natif (évite certaines limitations d'Angular)
+    console.log("3. Test avec Fetch API natif");
+    fetch(environment.ARAKA_PAYMENT_URL + "login", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        "emailAddress": "moiseeloko@gmail.com",
+        "password": "GR@PK=Y62bjzKX["
+      })
+    })
+    .then(response => {
+      console.log("Fetch status:", response.status);
+      console.log("Fetch content-type:", response.headers.get('content-type'));
+      console.log("Fetch access-control-allow-origin:", response.headers.get('access-control-allow-origin'));
+      if (!response.ok) {
+        return response.text().then(text => {
+          try {
+            const json = JSON.parse(text);
+            console.error("Réponse d'erreur (Fetch JSON):", json);
+            throw json;
+          } catch (e) {
+            console.error("Réponse d'erreur (Fetch text):", text);
+            throw new Error(`HTTP error! Status: ${response.status}, Body: ${text}`);
+          }
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log("Connexion réussie (Fetch):", data);
+    })
+    .catch(error => {
+      console.error("Échec de la connexion (Fetch):", error);
+    });
+
+    // 4. Test avec XMLHttpRequest (méthode la plus basique)
+    console.log("4. Test avec XMLHttpRequest");
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', environment.ARAKA_PAYMENT_URL + "login", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Accept', 'application/json');
+
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        console.log("Connexion réussie (XHR):", JSON.parse(xhr.responseText));
+      } else {
+        console.error("Échec de la connexion (XHR):", xhr.status, xhr.statusText);
+        try {
+          const errorJson = JSON.parse(xhr.responseText);
+          console.error("Réponse d'erreur (XHR JSON):", errorJson);
+        } catch (e) {
+          console.error("Réponse d'erreur (XHR text):", xhr.responseText);
+        }
+      }
+    };
+
+    xhr.onerror = function() {
+      console.error("Erreur réseau lors de la requête XHR");
+    };
+
+    xhr.send(JSON.stringify({
+      "emailAddress": "moiseeloko@gmail.com",
+      "password": "GR@PK=Y62bjzKX["
+    }));
+
+    // 5. Test avec une URL modifiée (sans /api/)
+    const urlBase = environment.ARAKA_PAYMENT_URL.replace("api/", "");
+    console.log("URL sans 'api/':", urlBase);
+
+    this.http.post(urlBase + "login", {
+      "emailAddress": "moiseeloko@gmail.com",
+      "password": "GR@PK=Y62bjzKX["
+    }, {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json'
+      })
+    }).subscribe({
+      next: (altResponse) => {
+        console.log("Connexion réussie (URL modifiée):", altResponse);
+      },
+      error: (altError) => {
+        console.error("Échec de la connexion (URL modifiée):", altError);
+      }
+    });
+
+    // 6. Afficher comment configurer Postman et ng serve
+    console.log("Pour déboguer :");
+    console.log("1. Postman :");
+    console.log("- URL: " + environment.ARAKA_PAYMENT_URL + "login");
+    console.log("- Méthode: POST");
+    console.log("- Headers: Content-Type: application/json");
+    console.log("- Body (raw/JSON): ", JSON.stringify({
+      "emailAddress": "moiseeloko@gmail.com",
+      "password": "GR@PK=Y62bjzKX["
+    }, null, 2));
+    console.log("2. Pour utiliser le proxy local :");
+    console.log("- Ajouter proxy.conf.json à la racine du projet");
+    console.log("- Exécuter: ng serve --proxy-config proxy.conf.json");
+  }
+
+  // Vérifier le statut d'un paiement mobile
+  verifierStatutPaiementMobile(transactionId: string, originatingTransactionId: string, factureId: string): void {
+    console.log(`Vérification du statut du paiement: ID=${transactionId}, Ref=${originatingTransactionId}`);
+
+    // Obtenir d'abord un token d'authentification
+    this.paiementService.loginWithCredential().subscribe({
+      next: (authResponse) => {
+        if (authResponse && authResponse.token) {
+          // Effectuer une double vérification - par ID et par référence
+          // 1. Vérification par ID de transaction
+          this.paiementService.verifierStatutPaiement(authResponse.token, transactionId).subscribe({
+            next: (statusResponse) => {
+              console.log("Réponse de statut par ID:", statusResponse);
+              this.traiterReponseStatut(statusResponse, factureId);
+            },
+            error: (error) => {
+              console.error("Erreur lors de la vérification par ID:", error);
+
+              // 2. Si échec, essayer par référence
+              this.paiementService.verifierStatutPaiementParReference(authResponse.token, originatingTransactionId).subscribe({
+                next: (refStatusResponse) => {
+                  console.log("Réponse de statut par référence:", refStatusResponse);
+                  this.traiterReponseStatut(refStatusResponse, factureId);
+                },
+                error: (refError) => {
+                  console.error("Erreur lors de la vérification par référence:", refError);
+                  this.mobilePaymentError = "Impossible de vérifier l'état du paiement. Veuillez réessayer plus tard.";
+                }
+              });
+            }
+          });
+        } else {
+          console.error("Token d'authentification invalide");
+          this.mobilePaymentError = "Erreur d'authentification lors de la vérification du paiement.";
+        }
+      },
+      error: (authError) => {
+        console.error("Erreur d'authentification:", authError);
+        this.mobilePaymentError = "Erreur d'authentification lors de la vérification du paiement.";
+      }
+    });
+  }
+
+  // Traiter la réponse de statut et mettre à jour la facture si nécessaire
+  private async traiterReponseStatut(statusResponse: any, factureId: string): Promise<void> {
+    try {
+      if (!statusResponse) {
+        console.error("Réponse de statut invalide");
+        return;
+      }
+
+      // Interpréter le statut selon la documentation
+      const interpretation = this.paiementService.interpreterStatutPaiement(
+        statusResponse.statusCode,
+        statusResponse.statusDescription
+      );
+
+      console.log(`Interprétation du statut: ${interpretation.statut} - ${interpretation.message}`);
+
+      // Mettre à jour l'interface utilisateur avec le message approprié
+      if (interpretation.statut === 'APPROUVE') {
+        this.successMessage = interpretation.message;
+        // Mettre à jour la facture comme payée
+        if (this.factureSelectionnee) {
+          await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse);
+        } else {
+          console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
+        }
+
+        // Recharger les factures
+        if (this.partenaireId) {
+          this.chargerFactures(this.partenaireId);
+        }
+
+        // Supprimer les entrées du localStorage pour ce paiement
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`paiement_mobile_`) &&
+              key.includes(factureId) && key.includes(statusResponse.transactionId)) {
+            localStorage.removeItem(key);
+          }
+        }
+      } else if (interpretation.statut === 'REFUSE') {
+        this.errorMessage = interpretation.message;
+        // Supprimer les entrées du localStorage pour ce paiement
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`paiement_mobile_`) &&
+              key.includes(factureId) && key.includes(statusResponse.transactionId)) {
+            localStorage.removeItem(key);
+          }
+        }
+      } else if (interpretation.statut === 'ACCEPTE' || interpretation.statut === 'EN_ATTENTE') {
+        // Ne rien faire, attendre que le client confirme sur son téléphone
+        console.log("Paiement en attente de confirmation par le client");
+      }
+    } catch (error) {
+      console.error("Erreur lors du traitement de la réponse de statut:", error);
+    }
+  }
+
+  // Vérifier les paiements mobiles en attente au chargement de la page
+  verifierPaiementsEnAttente(): void {
+    // Parcourir le localStorage pour trouver les paiements mobiles en attente
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('paiement_mobile_')) {
+        try {
+          const paiementData = JSON.parse(localStorage.getItem(key) || '{}');
+          if (paiementData.factureId && paiementData.transactionId &&
+              paiementData.originatingTransactionId && paiementData.statut === 'EN_ATTENTE') {
+            // Vérifier si le paiement a moins de 24h (durée de validité typique)
+            const dateCreation = new Date(paiementData.dateCreation);
+            const maintenant = new Date();
+            const diffHeures = (maintenant.getTime() - dateCreation.getTime()) / (1000 * 60 * 60);
+
+            if (diffHeures < 24) {
+              // Vérifier le statut du paiement
+              this.verifierStatutPaiementMobile(
+                paiementData.transactionId,
+                paiementData.originatingTransactionId,
+                paiementData.factureId
+              );
+            } else {
+              // Supprimer les paiements trop anciens
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (error) {
+          console.error(`Erreur lors du traitement du paiement en attente ${key}:`, error);
+        }
+      }
+    }
+  }
+
+  // Mettre à jour la facture après confirmation d'un paiement mobile
+  private async updateFactureApresConfirmationMobile(factureId: string, statusResponse: any): Promise<void> {
+    try {
+      // Récupérer la facture actuelle
+      const facture = await this.firebaseService.getFactureById(factureId);
+
+      if (!facture) {
+        console.error(`Facture non trouvée: ${factureId}`);
+        return;
+      }
+
+      // Mettre à jour le statut des paiements existants qui sont en attente
+      const paiementsUpdated = facture.paiements.map(paiement => {
+        if (paiement.stripe_reference && paiement.stripe_reference.includes('MB-')) {
+          return {
+            ...paiement,
+            statut: 'CONFIRME'
+          };
+        }
+        return paiement;
+      });
+
+      // Mettre à jour la facture
+      await this.firebaseService.updateFacture(factureId, {
+        paiements: paiementsUpdated,
+        montantPaye: facture.montant, // Considérer comme entièrement payée
+      });
+
+      // Mettre à jour le statut des colis
+      if (facture.colis && facture.colis.length > 0) {
+        for (const colisId of facture.colis) {
+          if (typeof colisId === 'string') {
+            await this.firebaseService.updateColis(colisId, {
+              statut: STATUT_COLIS.PAYE
+            });
+          }
+        }
+      }
+
+      console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+    } catch (error) {
+      console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
+    }
   }
 }
