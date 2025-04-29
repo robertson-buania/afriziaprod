@@ -33,114 +33,116 @@ import { LanguageSelectorComponent } from '@/app/shared/components/language-sele
             </div>
           </div>
         </a>
+        <div class="d-flex align-items-center mx-auto">
+          <a class="nav-link position-relative" routerLink="/panier" routerLinkActive="active"
+             (click)="isMenuCollapsed = true">
+            <i class="las la-shopping-cart me-1"></i>
+            <span translate="NAVBAR.CART"></span>
+            <span *ngIf="nombreArticles > 0" class="cart-counter">{{ nombreArticles }}</span>
+          </a>
+          <ng-container *ngIf="utilisateur">
+            <a class="nav-link" routerLink="/mes-commandes" routerLinkActive="active"
+               (click)="isMenuCollapsed = true">
+              <i class="las la-file-invoice me-1"></i>
+              <span translate="NAVBAR.MY_ORDERS"></span>
+            </a>
+          </ng-container>
+        </div>
         <button class="navbar-toggler" type="button" (click)="isMenuCollapsed = !isMenuCollapsed"
                 aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
+      </div>
 
-        <div class="collapse navbar-collapse" [ngbCollapse]="isMenuCollapsed">
-          <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
-                 (click)="isMenuCollapsed = true">
-                <i class="las la-home me-1"></i>
-                <span translate="NAVBAR.HOME"></span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/tracking" routerLinkActive="active"
-                 (click)="isMenuCollapsed = true">
-                <i class="las la-search me-1"></i>
-                <span translate="NAVBAR.TRACK_PACKAGE"></span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/recherche-colis" routerLinkActive="active"
-                 (click)="isMenuCollapsed = true">
-                <i class="las la-box me-1"></i>
-                <span translate="NAVBAR.SEARCH_PACKAGE"></span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link position-relative" routerLink="/panier" routerLinkActive="active"
-                 (click)="isMenuCollapsed = true">
-                <i class="las la-shopping-cart me-1"></i>
-                <span translate="NAVBAR.CART"></span>
-                <span *ngIf="nombreArticles > 0" class="cart-counter">{{ nombreArticles }}</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/about" routerLinkActive="active"
-                 (click)="isMenuCollapsed = true">
-                <i class="las la-info-circle me-1"></i>
-                <span translate="NAVBAR.ABOUT"></span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/contact" routerLinkActive="active"
-                 (click)="isMenuCollapsed = true">
-                <i class="las la-envelope me-1"></i>
-                <span translate="NAVBAR.CONTACT"></span>
-              </a>
-            </li>
+      <div class="collapse navbar-collapse" [ngbCollapse]="isMenuCollapsed">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
+               (click)="isMenuCollapsed = true">
+              <i class="las la-home me-1"></i>
+              <span translate="NAVBAR.HOME"></span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" routerLink="/tracking" routerLinkActive="active"
+               (click)="isMenuCollapsed = true">
+              <i class="las la-search me-1"></i>
+              <span translate="NAVBAR.TRACK_PACKAGE"></span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" routerLink="/recherche-colis" routerLinkActive="active"
+               (click)="isMenuCollapsed = true">
+              <i class="las la-box me-1"></i>
+              <span translate="NAVBAR.SEARCH_PACKAGE"></span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" routerLink="/about" routerLinkActive="active"
+               (click)="isMenuCollapsed = true">
+              <i class="las la-info-circle me-1"></i>
+              <span translate="NAVBAR.ABOUT"></span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" routerLink="/contact" routerLinkActive="active"
+               (click)="isMenuCollapsed = true">
+              <i class="las la-envelope me-1"></i>
+              <span translate="NAVBAR.CONTACT"></span>
+            </a>
+          </li>
 
-            <!-- Sélecteur de langue -->
-            <li class="nav-item">
-              <app-language-selector></app-language-selector>
-            </li>
+          <!-- Sélecteur de langue -->
+          <li class="nav-item">
+            <app-language-selector></app-language-selector>
+          </li>
 
-            <!-- Menu utilisateur -->
-            <li class="nav-item" ngbDropdown *ngIf="utilisateur">
-              <a class="nav-link user-link" role="button" ngbDropdownToggle id="userDropdown">
-                <i class="las la-user-circle me-1"></i>
-                <span class="user-name">{{ utilisateur.prenom }}</span>
-              </a>
-              <div ngbDropdownMenu aria-labelledby="userDropdown" class="dropdown-menu-end">
-                <div class="dropdown-header d-flex align-items-center">
-                  <div class="user-avatar">
-                    <i class="las la-user-circle"></i>
-                  </div>
-                  <div class="user-info ms-2">
-                    <div class="fw-bold">{{ utilisateur.prenom }} {{ utilisateur.nom }}</div>
-                    <small class="text-muted">{{ utilisateur.email }}</small>
-                  </div>
+          <!-- Menu utilisateur -->
+          <li class="nav-item" ngbDropdown *ngIf="utilisateur">
+            <a class="nav-link user-link d-flex align-items-center" role="button" ngbDropdownToggle id="userDropdown">
+              <i class="las la-user-circle me-1"></i>
+              <span class="user-name">{{ utilisateur.prenom }}</span>
+            </a>
+            <div ngbDropdownMenu aria-labelledby="userDropdown" class="dropdown-menu-end">
+              <div class="dropdown-header d-flex align-items-center">
+                <div class="user-avatar">
+                  <i class="las la-user-circle"></i>
                 </div>
-                <div class="dropdown-divider"></div>
-                <a ngbDropdownItem routerLink="/profil" (click)="isMenuCollapsed = true">
-                  <i class="las la-user me-2"></i>
-                  <span translate="NAVBAR.MY_PROFILE"></span>
-                </a>
-                <a ngbDropdownItem routerLink="/mes-commandes" (click)="isMenuCollapsed = true">
-                  <i class="las la-file-invoice me-2"></i>
-                  <span translate="NAVBAR.MY_ORDERS"></span>
-                </a>
-                <div class="dropdown-divider"></div>
-                <a ngbDropdownItem (click)="deconnecter()" class="text-danger">
-                  <i class="las la-sign-out-alt me-2"></i>
-                  <span translate="NAVBAR.LOGOUT"></span>
-                </a>
+                <div class="user-info ms-2">
+                  <div class="fw-bold">{{ utilisateur.prenom }} {{ utilisateur.nom }}</div>
+                  <small class="text-muted">{{ utilisateur.email }}</small>
+                </div>
               </div>
-            </li>
-
-            <!-- Menu connexion/inscription si non connecté -->
-            <li class="nav-item" ngbDropdown *ngIf="!utilisateur">
-              <a class="nav-link" role="button" ngbDropdownToggle id="authDropdown">
-                <i class="las la-user me-1"></i>
-                <span translate="NAVBAR.ACCOUNT"></span>
+              <div class="dropdown-divider"></div>
+              <a ngbDropdownItem routerLink="/profil" (click)="isMenuCollapsed = true">
+                <i class="las la-user me-2"></i>
+                <span translate="NAVBAR.MY_PROFILE"></span>
               </a>
-              <div ngbDropdownMenu aria-labelledby="authDropdown" class="dropdown-menu-end">
-                <a ngbDropdownItem (click)="ouvrirModalConnexion()">
-                  <i class="las la-sign-in-alt me-2"></i>
-                  <span translate="NAVBAR.LOGIN"></span>
-                </a>
-                <a ngbDropdownItem (click)="ouvrirModalInscription()">
-                  <i class="las la-user-plus me-2"></i>
-                  <span translate="NAVBAR.REGISTER"></span>
-                </a>
-              </div>
-            </li>
-          </ul>
-        </div>
+              <a ngbDropdownItem (click)="deconnecter()" class="text-danger">
+                <i class="las la-sign-out-alt me-2"></i>
+                <span translate="NAVBAR.LOGOUT"></span>
+              </a>
+            </div>
+          </li>
+
+          <!-- Menu connexion/inscription si non connecté -->
+          <li class="nav-item" ngbDropdown *ngIf="!utilisateur">
+            <a class="nav-link d-flex align-items-center" role="button" ngbDropdownToggle id="authDropdown">
+              <i class="las la-user me-1"></i>
+              <span translate="NAVBAR.ACCOUNT"></span>
+            </a>
+            <div ngbDropdownMenu aria-labelledby="authDropdown" class="dropdown-menu-end">
+              <a ngbDropdownItem (click)="ouvrirModalConnexion()">
+                <i class="las la-sign-in-alt me-2"></i>
+                <span translate="NAVBAR.LOGIN"></span>
+              </a>
+              <a ngbDropdownItem (click)="ouvrirModalInscription()">
+                <i class="las la-user-plus me-2"></i>
+                <span translate="NAVBAR.REGISTER"></span>
+              </a>
+            </div>
+          </li>
+        </ul>
       </div>
     </nav>
     <div class="navbar-spacer"></div>
@@ -240,6 +242,13 @@ import { LanguageSelectorComponent } from '@/app/shared/components/language-sele
       }
       .navbar-nav .nav-item {
         margin: 0.25rem 0;
+        display: block;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: auto;
       }
       .brand-name {
         font-size: 1.2rem;
@@ -255,6 +264,7 @@ export class WebsiteNavbarComponent implements OnInit, OnDestroy {
   utilisateur: Utilisateur | null = null;
   isMenuCollapsed = true;
   private subscription: Subscription = new Subscription();
+
 
   constructor(
     private panierService: PanierService,

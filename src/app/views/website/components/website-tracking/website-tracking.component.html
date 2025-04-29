@@ -15,16 +15,16 @@
               <label for="codeSuivi" class="form-label">Code de suivi ou d'expédition</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><i class="las la-search"></i></span>
-                <input 
-                  type="text" 
-                  id="codeSuivi" 
-                  formControlName="codeSuivi" 
-                  class="form-control" 
+                <input
+                  type="text"
+                  id="codeSuivi"
+                  formControlName="codeSuivi"
+                  class="form-control"
                   placeholder="Entrez votre code de suivi ou d'expédition"
                 >
-                <button 
-                  type="submit" 
-                  class="btn btn-primary" 
+                <button
+                  type="submit"
+                  class="btn btn-primary"
                   [disabled]="trackingForm.get('codeSuivi')?.invalid || isLoading"
                 >
                   <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -117,7 +117,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Traçage du parcours -->
         <div class="card shadow-sm mb-4">
           <div class="card-header bg-light">
@@ -136,7 +136,7 @@
                   <small *ngIf="isStatusReached(STATUT_COLIS.EN_ATTENTE_PAIEMENT)">Complété le {{ formatDate(colis.dateCreation) }}</small>
                 </div>
               </div>
-              
+
               <!-- Étape 2: Payé -->
               <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.PAYE), 'current': colis.statut === STATUT_COLIS.PAYE}">
                 <div class="step-icon">
@@ -148,7 +148,7 @@
                   <small *ngIf="isStatusReached(STATUT_COLIS.PAYE)">Complété le {{ formatDate(colis.dateCreation) }}</small>
                 </div>
               </div>
-              
+
               <!-- Étape 3: En attente d'expédition -->
               <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_ATTENTE_EXPEDITION), 'current': colis.statut === STATUT_COLIS.EN_ATTENTE_EXPEDITION}">
                 <div class="step-icon">
@@ -160,7 +160,7 @@
                   <small *ngIf="isStatusReached(STATUT_COLIS.EN_ATTENTE_EXPEDITION)">Complété le {{ formatDate(colis.dateCreation) }}</small>
                 </div>
               </div>
-              
+
               <!-- Étape 4: En cours d'expédition -->
               <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION), 'current': colis.statut === STATUT_COLIS.EN_COURS_EXPEDITION}">
                 <div class="step-icon">
@@ -172,7 +172,7 @@
                   <small *ngIf="isStatusReached(STATUT_COLIS.EN_COURS_EXPEDITION)">Complété le {{ formatDate(colis.dateCreation) }}</small>
                 </div>
               </div>
-              
+
               <!-- Étape 5: En attente de livraison -->
               <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON), 'current': colis.statut === STATUT_COLIS.EN_ATTENTE_LIVRAISON}">
                 <div class="step-icon">
@@ -184,7 +184,7 @@
                   <small *ngIf="isStatusReached(STATUT_COLIS.EN_ATTENTE_LIVRAISON)">Complété le {{ formatDate(colis.dateCreation) }}</small>
                 </div>
               </div>
-              
+
               <!-- Étape 6: Livré -->
               <div class="tracking-step" [ngClass]="{'completed': isStatusReached(STATUT_COLIS.LIVRE), 'current': colis.statut === STATUT_COLIS.LIVRE}">
                 <div class="step-icon">
@@ -344,47 +344,47 @@
   .tracking-step {
     margin-bottom: 1rem;
   }
-  
+
   .step-icon {
     width: 32px;
     height: 32px;
   }
-  
+
   .tracking-step::before {
     left: 16px;
     top: 24px;
     bottom: -24px;
   }
-  
+
   .input-group-lg > .form-control,
   .input-group-lg > .input-group-text,
   .input-group-lg > .btn {
     padding: 0.5rem 0.75rem;
     font-size: 1rem;
   }
-  
+
   .card-body {
     padding: 1rem;
   }
-  
+
   .list-group-item {
     padding: 0.5rem 0.75rem;
   }
-  
+
   .btn {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
   }
-  
+
   .btn-lg {
     padding: 0.5rem 1rem;
     font-size: 1rem;
   }
-  
+
   h1.h2 {
     font-size: 1.5rem;
   }
-  
+
   .lead {
     font-size: 1rem;
   }
@@ -398,23 +398,32 @@
     padding: 0.4rem 0.6rem;
     font-size: 0.9rem;
   }
-  
+
   .step-icon {
     width: 28px;
     height: 28px;
   }
-  
+
   .tracking-step::before {
     left: 14px;
     top: 20px;
     bottom: -20px;
   }
-  
+
   .step-content h5 {
     font-size: 1rem;
   }
-  
+
   .step-content p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .input-group-lg > .form-control,
+  .input-group-lg > .input-group-text,
+  .input-group-lg > .btn {
+    padding: 0.4rem 0.6rem;
     font-size: 0.9rem;
   }
 }

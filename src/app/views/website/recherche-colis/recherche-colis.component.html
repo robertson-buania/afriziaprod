@@ -36,7 +36,8 @@
                   class="btn btn-primary"
                   [disabled]="searchForm.invalid || isLoading">
                   <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Rechercher
+                  <span class="d-none d-sm-inline">Rechercher</span>
+                  <i class="las la-search d-sm-none"></i>
                 </button>
               </div>
               <div *ngIf="searchForm.get('codeSuivi')?.invalid && searchForm.get('codeSuivi')?.touched" class="invalid-feedback d-block">
@@ -122,3 +123,14 @@
     </div>
   </div>
 </div>
+
+<style>
+  @media (max-width: 576px) {
+    .input-group > .form-control,
+    .input-group > .input-group-text,
+    .input-group > .btn {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+    }
+  }
+</style>

@@ -7,12 +7,12 @@ import { environment } from '@/environments/environment';
   providedIn: 'root'
 })
 export class ArakaPaymentService {
-  private readonly CLOUD_FUNCTION_URL =  environment.firebaseFunctionsUrl+'/processMobilePayment';
+  private readonly CLOUD_FUNCTION_URL =  environment.firebaseFunctionsUrl;
 
   constructor(private http: HttpClient) {}
 
   processPayment(data: any): Observable<any> {
-    return this.http.post(this.CLOUD_FUNCTION_URL, data);
+    return this.http.post(this.CLOUD_FUNCTION_URL+'/processMobilePayment', data);
   }
 
   checkTransactionStatusById(transactionId: string): Observable<any> {

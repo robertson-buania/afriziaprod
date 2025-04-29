@@ -379,106 +379,6 @@
 </ng-template>
 
 <!-- Paiement par carte ou mobile money Modal -->
-<!-- <ng-template #paymentMethodModal let-modal>
-  <div class="modal-header">
-    <h5 class="modal-title">Choisir votre méthode de paiement</h5>
-
-    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
-  </div>
-  <div class="modal-body">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card h-100 payment-method-card" (click)="selectPaymentMode('CARD')">
-          <div class="card-body text-center">
-            <div class="payment-icon mb-3">
-              <i class="las la-credit-card la-3x text-primary"></i>
-            </div>
-            <h5>Carte de crédit</h5>
-            <p class="text-muted small">Visa, MasterCard</p>
-            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
-              <img src="assets/images/payement/visa.jpg" alt="Visa" height="30">
-              <img src="assets/images/payement/MasterCard.png" alt="MasterCard" height="30">
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card h-100 payment-method-card" (click)="selectPaymentMode('MOBILEMONEY')">
-          <div class="card-body text-center">
-            <div class="payment-icon mb-3">
-              <i class="las la-mobile la-3x text-success"></i>
-            </div>
-            <h5>Mobile Money</h5>
-            <p class="text-muted small">M-PESA, Orange Money, Airtel Money</p>
-            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
-              <img src="assets/images/payement/mpesa.png" alt="M-PESA" height="30">
-              <img src="assets/images/payement/orange_money.png" alt="Orange Money" height="30">
-              <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" height="30">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
-      Annuler
-    </button>
-  </div>
-</ng-template> -->
-<!-- <ng-template #paymentMethodModal let-modal>
-  <div class="modal-header">
-    <h5 class="modal-title">Choisir votre méthode de paiement</h5>
-    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
-  </div>
-  <div class="modal-body">
-    <div class="alert alert-warning">
-      <i class="las la-exclamation-circle me-2"></i>
-      Le paiement en ligne est temporairement indisponible. Il sera opérationnel à partir du 25 Avril 2025.
-    </div>
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card h-100 payment-method-card opacity-50" style="pointer-events: none;">
-          <div class="card-body text-center">
-            <div class="payment-icon mb-3">
-              <i class="las la-credit-card la-3x text-primary"></i>
-            </div>
-            <h5>Carte de crédit</h5>
-            <p class="text-muted small">Visa, MasterCard</p>
-            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
-              <img src="assets/images/payement/visa.jpg" alt="Visa" height="30">
-              <img src="assets/images/payement/MasterCard.png" alt="MasterCard" height="30">
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card h-100 payment-method-card opacity-50" style="pointer-events: none;">
-          <div class="card-body text-center">
-            <div class="payment-icon mb-3">
-              <i class="las la-mobile la-3x text-success"></i>
-            </div>
-            <h5>Mobile Money</h5>
-            <p class="text-muted small">M-PESA, Orange Money, Airtel Money</p>
-            <div class="payment-logos d-flex justify-content-center gap-2 mt-2">
-              <img src="assets/images/payement/mpesa.png" alt="M-PESA" height="30">
-              <img src="assets/images/payement/orange_money.png" alt="Orange Money" height="30">
-              <img src="assets/images/payement/aitel_money.png" alt="Airtel Money" height="30">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
-      Fermer
-    </button>
-  </div>
-</ng-template>
- -->
-
-<!-- Paiement par carte ou mobile money Modal -->
 <ng-template #paymentMethodModal let-modal>
   <div class="modal-header">
     <h5 class="modal-title">Choisir votre méthode de paiement</h5>
@@ -535,18 +435,6 @@
   </div>
   <div class="modal-body">
     <!-- Messages d'état -->
-    <div *ngIf="mobilePaymentProcessing" class="alert alert-info text-center">
-      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-      Traitement du paiement en cours...
-    </div>
-
-    <div *ngIf="mobilePaymentError" class="alert alert-danger">
-      <i class="las la-exclamation-circle me-2"></i> {{ mobilePaymentError }}
-    </div>
-
-    <div *ngIf="mobilePaymentSuccess" class="alert alert-success">
-      <i class="las la-check-circle me-2"></i> {{ mobilePaymentSuccess }}
-    </div>
 
     <!-- Résumé de la commande -->
     <div class="payment-summary mb-4" *ngIf="factureSelectionnee">
@@ -570,7 +458,7 @@
     </div>
 
     <!-- Formulaire Mobile Money -->
-    <form [formGroup]="mobileMoneyForm" (ngSubmit)="submitMobilePayment()">
+    <form [formGroup]="mobileMoneyForm" >
       <div class="mb-3">
         <label class="form-label fw-bold">Choisir votre fournisseur</label>
         <div class="mobile-providers">
@@ -665,12 +553,27 @@
       </div>
     </form>
   </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
-      Annuler
-    </button>
-    <button type="button" class="btn btn-success" (click)="submitMobilePayment()" [disabled]="mobileMoneyForm.invalid || mobilePaymentProcessing">
-      <i class="las la-mobile me-2"></i> Payer maintenant
-    </button>
+  <div class="my-2">
+    <div *ngIf="mobilePaymentProcessing" class="alert alert-info text-center">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Traitement du paiement en cours...
+    </div>
+
+    <div *ngIf="mobilePaymentError" class="alert alert-danger">
+      <i class="las la-exclamation-circle me-2"></i> {{ mobilePaymentError }}
+    </div>
+
+    <div *ngIf="mobilePaymentSuccess" class="alert alert-success">
+      <i class="las la-check-circle me-2"></i> {{ mobilePaymentSuccess }}
+    </div>
   </div>
+
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="closeMobileMoneyModal()">Annuler</button>
+    <button  (click)="submitMobilePayment()" type="submit" class="btn btn-primary" [disabled]="mobileMoneyForm.invalid || processpaymentProcessing">
+      <span *ngIf="processpaymentProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      Payer maintenant
+    </button>
+    </div>
 </ng-template>

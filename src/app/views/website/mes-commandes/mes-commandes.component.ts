@@ -144,7 +144,10 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   mobilePaymentProcessing = false;
   mobilePaymentError = '';
   mobilePaymentSuccess = '';
+  processpaymentProcessing = false;
   readonly MOBILE_API_URL = 'https://araka-api-uat.azurewebsites.net/api/Pay/paymentrequest';
+
+  private mobileMoneyModalRef: NgbModalRef | null = null;
 
   constructor(
     private utilisateurService: UtilisateurService,
@@ -852,14 +855,14 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   // Ouvrir modal de paiement mobile money
   openMobileMoneyModal(): void {
-    this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true });
+    this.mobileMoneyModalRef = this.modalService.open(this.mobileMoneyModal);
+  }
 
-    // Surveillance des changements de fournisseur pour les validations spécifiques
-    this.mobileMoneyForm.get('provider')?.valueChanges.subscribe(provider => {
-      const phoneControl = this.mobileMoneyForm.get('phoneNumber');
-      phoneControl?.setValidators([Validators.required, Validators.pattern(/^[0-9]{9}$/)]);
-      phoneControl?.updateValueAndValidity();
-    });
+  closeMobileMoneyModal(): void {
+    if (this.mobileMoneyModalRef) {
+      this.mobileMoneyModalRef.dismiss();
+      this.mobileMoneyModalRef = null;
+    }
   }
 
   // Vérifier si le numéro de téléphone est valide pour le fournisseur sélectionné
@@ -896,6 +899,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
   // Soumettre le paiement par mobile money
   async submitMobilePayment(): Promise<void> {
+    console.log('submitMobilePayment method called');
+
     // Démarrer le processus de paiement
     if (this.mobileMoneyForm.invalid) {
       this.mobileMoneyForm.markAllAsTouched();
@@ -919,11 +924,15 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     this.mobilePaymentProcessing = true;
     this.mobilePaymentError = '';
 
+    const montantBase = Number(this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye);
+      const commission = montantBase * 0.1;
+      const totalAvecCommission = montantBase + commission;
+
     // Prepare the payment data
     const paymentData = {
       provider,
       phoneNumber,
-      amount: this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye,
+      amount: totalAvecCommission,
       customerName: `${this.utilisateurConnecte.nom} ${this.utilisateurConnecte.prenom}`,
       customerEmail: this.utilisateurConnecte.email,
       transactionReference: `MB-${Date.now()}-${this.factureSelectionnee.id}`,
@@ -931,16 +940,19 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     };
 
     try {
+      this.processpaymentProcessing = true;
       const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
       console.log('Payment response:', response);
 
       if (response.statusCode === '202') {
         this.mobilePaymentSuccess = 'Transaction acceptée. Veuillez confirmer le paiement sur votre appareil.';
-        this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
+        this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId, this.mobileMoneyModal);
       } else {
+        this.processpaymentProcessing = false;
         this.mobilePaymentError = 'Erreur inattendue lors du traitement du paiement.';
       }
     } catch (error) {
+      this.processpaymentProcessing = false;
       console.error('Payment error:', error);
       this.mobilePaymentError = 'An error occurred while processing the payment.';
     } finally {
@@ -948,35 +960,49 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): void {
-    const checkInterval = 20000; // 20 seconds
-    const timeout = 120000; // 2 minutes
+  private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string, modal: any): void {
+    const checkInterval = 5000; // 5 seconds
+    const timeout = 60000; // 1 minute
     let elapsedTime = 0;
 
     const intervalId = setInterval(async () => {
       try {
+        this.processpaymentProcessing = true;
         const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
         console.log('Status response:', statusResponse);
 
-        if (statusResponse.statusCode === '200' && statusResponse.statusDescription === 'APPROUVE') {
+        if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
           clearInterval(intervalId);
+          this.processpaymentProcessing = false;
           this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
           if (this.factureSelectionnee) {
             await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse);
           } else {
+            this.processpaymentProcessing = false;
             console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
           }
-        } else if (statusResponse.statusCode === '400' || statusResponse.statusCode === '500') {
+        } else if (statusResponse.statusCode == '202') {
+          this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
+        }else
+        if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
           clearInterval(intervalId);
+          this.processpaymentProcessing = false;
+          this.mobilePaymentError = 'Le paiement a été refusé.';
+        }else
+        if (statusResponse.statusCode == '500') {
+          clearInterval(intervalId);
+          this.processpaymentProcessing = false;
           this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
         }
       } catch (error) {
+        this.processpaymentProcessing = false;
         console.error('Error checking payment status:', error);
       }
 
       elapsedTime += checkInterval;
       if (elapsedTime >= timeout) {
         clearInterval(intervalId);
+        this.processpaymentProcessing = false;
         this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
       }
     }, checkInterval);
@@ -1087,139 +1113,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     throw new Error('Utilisateur non connecté ou impossible de récupérer les informations');
   }
 
-  // Méthode de test pour déboguer le problème d'authentification
-  testDirectLogin(): void {
-    console.log("Test de connexion directe...");
 
-    // Afficher les valeurs des variables d'environnement (sans les secrets)
-    console.log("ARAKA_PAYMENT_URL:", environment.ARAKA_PAYMENT_URL);
-    console.log("ARAKA_PAYMENT_CLIENT_ID:", environment.ARAKA_PAYMENT_CLIENT_ID);
-
-    // 1. Test avec HttpClient standard
-    console.log("1. Test avec HttpClient standard");
-    this.paiementService.loginWithCredential().subscribe({
-      next: (response) => {
-        console.log("Connexion réussie (HttpClient):", response);
-      },
-      error: (error) => {
-        console.error("Échec de la connexion (HttpClient):", error);
-      }
-    });
-
-    // 2. Test avec le proxy local (nécessite de démarrer Angular avec --proxy-config)
-    console.log("2. Test avec proxy local");
-    this.paiementService.loginWithCredentialViaProxy().subscribe({
-      next: (response) => {
-        console.log("Connexion réussie (proxy):", response);
-      },
-      error: (error) => {
-        console.error("Échec de la connexion (proxy):", error);
-        console.log("NOTE: Le proxy nécessite de démarrer Angular avec ng serve --proxy-config proxy.conf.json");
-      }
-    });
-
-    // 3. Test avec Fetch API natif (évite certaines limitations d'Angular)
-    console.log("3. Test avec Fetch API natif");
-    fetch(environment.ARAKA_PAYMENT_URL + "login", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        "emailAddress": "moiseeloko@gmail.com",
-        "password": "GR@PK=Y62bjzKX["
-      })
-    })
-    .then(response => {
-      console.log("Fetch status:", response.status);
-      console.log("Fetch content-type:", response.headers.get('content-type'));
-      console.log("Fetch access-control-allow-origin:", response.headers.get('access-control-allow-origin'));
-      if (!response.ok) {
-        return response.text().then(text => {
-          try {
-            const json = JSON.parse(text);
-            console.error("Réponse d'erreur (Fetch JSON):", json);
-            throw json;
-          } catch (e) {
-            console.error("Réponse d'erreur (Fetch text):", text);
-            throw new Error(`HTTP error! Status: ${response.status}, Body: ${text}`);
-          }
-        });
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log("Connexion réussie (Fetch):", data);
-    })
-    .catch(error => {
-      console.error("Échec de la connexion (Fetch):", error);
-    });
-
-    // 4. Test avec XMLHttpRequest (méthode la plus basique)
-    console.log("4. Test avec XMLHttpRequest");
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', environment.ARAKA_PAYMENT_URL + "login", true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('Accept', 'application/json');
-
-    xhr.onload = function() {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        console.log("Connexion réussie (XHR):", JSON.parse(xhr.responseText));
-      } else {
-        console.error("Échec de la connexion (XHR):", xhr.status, xhr.statusText);
-        try {
-          const errorJson = JSON.parse(xhr.responseText);
-          console.error("Réponse d'erreur (XHR JSON):", errorJson);
-        } catch (e) {
-          console.error("Réponse d'erreur (XHR text):", xhr.responseText);
-        }
-      }
-    };
-
-    xhr.onerror = function() {
-      console.error("Erreur réseau lors de la requête XHR");
-    };
-
-    xhr.send(JSON.stringify({
-      "emailAddress": "moiseeloko@gmail.com",
-      "password": "GR@PK=Y62bjzKX["
-    }));
-
-    // 5. Test avec une URL modifiée (sans /api/)
-    const urlBase = environment.ARAKA_PAYMENT_URL.replace("api/", "");
-    console.log("URL sans 'api/':", urlBase);
-
-    this.http.post(urlBase + "login", {
-      "emailAddress": "moiseeloko@gmail.com",
-      "password": "GR@PK=Y62bjzKX["
-    }, {
-      headers: new HttpHeaders({
-        'Content-Type': 'application/json'
-      })
-    }).subscribe({
-      next: (altResponse) => {
-        console.log("Connexion réussie (URL modifiée):", altResponse);
-      },
-      error: (altError) => {
-        console.error("Échec de la connexion (URL modifiée):", altError);
-      }
-    });
-
-    // 6. Afficher comment configurer Postman et ng serve
-    console.log("Pour déboguer :");
-    console.log("1. Postman :");
-    console.log("- URL: " + environment.ARAKA_PAYMENT_URL + "login");
-    console.log("- Méthode: POST");
-    console.log("- Headers: Content-Type: application/json");
-    console.log("- Body (raw/JSON): ", JSON.stringify({
-      "emailAddress": "moiseeloko@gmail.com",
-      "password": "GR@PK=Y62bjzKX["
-    }, null, 2));
-    console.log("2. Pour utiliser le proxy local :");
-    console.log("- Ajouter proxy.conf.json à la racine du projet");
-    console.log("- Exécuter: ng serve --proxy-config proxy.conf.json");
-  }
 
   // Vérifier le statut d'un paiement mobile
   verifierStatutPaiementMobile(transactionId: string, originatingTransactionId: string, factureId: string): void {
@@ -1275,13 +1169,13 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       // Interpréter le statut selon la documentation
       const interpretation = this.paiementService.interpreterStatutPaiement(
         statusResponse.statusCode,
-        statusResponse.statusDescription
+        statusResponse.status
       );
 
       console.log(`Interprétation du statut: ${interpretation.statut} - ${interpretation.message}`);
 
       // Mettre à jour l'interface utilisateur avec le message approprié
-      if (interpretation.statut === 'APPROUVE') {
+      if (interpretation.statut == 'APPROUVE') {
         this.successMessage = interpretation.message;
         // Mettre à jour la facture comme payée
         if (this.factureSelectionnee) {
@@ -1359,6 +1253,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   // Mettre à jour la facture après confirmation d'un paiement mobile
   private async updateFactureApresConfirmationMobile(factureId: string, statusResponse: any): Promise<void> {
     try {
+      this.processpaymentProcessing = true;
       // Récupérer la facture actuelle
       const facture = await this.firebaseService.getFactureById(factureId);
 
@@ -1395,9 +1290,14 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         }
       }
 
+      if (this.partenaireId) {
+        this.chargerFactures(this.partenaireId);
+      }
       console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+      this.processpaymentProcessing = false;
     } catch (error) {
       console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
+      this.processpaymentProcessing = false;
     }
   }
 }

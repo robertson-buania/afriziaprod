@@ -210,26 +210,26 @@ export class PaiementService {
   }
 
   // Interpréter le code de statut et la description selon la documentation
-  interpreterStatutPaiement(statusCode: string, statusDescription: string): {
+  interpreterStatutPaiement(statusCode: string, status: string): {
     statut: 'EN_ATTENTE' | 'APPROUVE' | 'REFUSE' | 'ACCEPTE',
     message: string
   } {
-    if (statusCode === '202' && statusDescription === 'ACCEPTED') {
+    if (statusCode === '202' && status === 'ACCEPTED') {
       return {
         statut: 'ACCEPTE',
         message: 'La demande de paiement a été envoyée au téléphone du client. En attente de confirmation.'
       };
-    } else if (statusCode === '000' || statusDescription === 'APPROVED') {
+    } else if (statusCode === '000' || status === 'APPROVED') {
       return {
         statut: 'APPROUVE',
         message: 'Le paiement a été approuvé avec succès.'
       };
-    } else if (statusCode === '400' || statusDescription === 'DECLINED') {
+    } else if (statusCode === '400' || status === 'DECLINED') {
       return {
         statut: 'REFUSE',
         message: 'Le paiement a été refusé.'
       };
-    } else if (statusDescription === 'PENDING') {
+    } else if (status === 'PENDING') {
       return {
         statut: 'EN_ATTENTE',
         message: 'Le paiement est toujours en attente de traitement.'
@@ -237,7 +237,7 @@ export class PaiementService {
     } else {
       return {
         statut: 'EN_ATTENTE',
-        message: `Statut inconnu: ${statusCode} - ${statusDescription}`
+        message: `Statut inconnu: ${statusCode} - ${status}`
       };
     }
   }

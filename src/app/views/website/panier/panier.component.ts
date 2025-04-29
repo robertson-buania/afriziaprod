@@ -46,6 +46,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http'
 import { take } from 'rxjs/operators'
 import { environment } from '@/environments/environment'
 import { PaiementService } from '@/app/shared/service/paiement.service'
+import { ArakaPaymentService } from '@/app/core/services/araka-payment.service'
 
 // Types de paiement mobile
 enum MOBILE_MONEY_PROVIDER {
@@ -166,7 +167,8 @@ export class PanierComponent implements OnInit, OnDestroy {
     private firebaseService: FirebaseService,
     private stripeService: StripeService,
     private paiementService: PaiementService,
-    private http: HttpClient
+    private http: HttpClient,
+    private arakaPaymentService: ArakaPaymentService
   ) {
     // Initialiser le formulaire de facturation
     this.facturationForm = this.fb.group({
@@ -795,7 +797,6 @@ export class PanierComponent implements OnInit, OnDestroy {
     const provider = this.mobileMoneyForm.get('provider')!.value;
     const phoneNumber = this.mobileMoneyForm.get('phoneNumber')!.value;
 
-    // Vérifier si le numéro est valide pour le fournisseur
     if (!this.isValidPhoneForProvider(provider, phoneNumber)) {
       this.mobilePaymentError = `Numéro invalide pour ${provider}. Le numéro doit commencer par ${this.getValidPrefixesForProvider(provider)}.`;
       return;
@@ -803,101 +804,70 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     this.mobilePaymentProcessing = true;
     this.mobilePaymentError = '';
+    const montantBase = Number(this.total);
+    const commission = montantBase * 0.1;
+    const totalAvecCommission = montantBase + commission;
+
+    const paymentData = {
+      provider,
+      phoneNumber,
+      amount: totalAvecCommission,
+      customerName: `${this.utilisateurConnecte.nom} ${this.utilisateurConnecte.prenom}`,
+      customerEmail: this.utilisateurConnecte.email,
+      transactionReference: `MB-${Date.now()}-${this.factureCreee}`,
+      redirection_URL: `${window.location.origin}/mes-commandes`
+    };
 
     try {
-      const montantBase = Number(this.total);
-      const commission = montantBase * 0.1;
-      const totalAvecCommission = montantBase + commission;
+      const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
+      console.log('Payment response:', response);
 
-      // Récupérer les informations de l'utilisateur de manière fiable
-      let user;
-      try {
-        user = await this.getUtilisateurCourantInfo();
-      } catch (error) {
-        this.mobilePaymentError = 'Veuillez vous connecter pour effectuer ce paiement.';
-        this.mobilePaymentProcessing = false;
-        return;
-      }
-
-      // Préparer les informations client
-      const customerName = `${user.nom || ''} ${user.prenom || ''}`.trim() || 'Client';
-      const customerEmail = user.email || '';
-
-      // Créer la référence unique pour la transaction
-      const transactionReference = `MB-PR-${Date.now()}-${this.factureCreee}`;
-
-      // Préparer la requête pour l'API de paiement mobile
-      const paymentRequest: MobilePaymentRequest = {
-        order: {
-          paymentPageId: environment.ARAKA_PAYMENT_PAGE_ID, // À remplacer par votre ID de page de paiement
-          customerFullName: customerName,
-          customerPhoneNumber: `+243${phoneNumber}`,
-          customerEmailAddress: customerEmail,
-          transactionReference: transactionReference,
-          amount: totalAvecCommission,
-          currency: "USD",
-          redirectURL: `${window.location.origin}/mes-commandes` // URL de redirection après paiement
-        },
-        paymentChannel: {
-          channel: "MOBILEMONEY",
-          provider: provider,
-          walletID: `+243${phoneNumber}`
-        }
-      };
-
-    //  console.log('Envoi de la requête de paiement mobile:', paymentRequest);
-
-    this.paiementService.loginWithCredential().subscribe( async(responseToken) => {
-      if(responseToken && responseToken.token){
-
-        console.log('Connexion avec succès:', responseToken);
-         // Appeler l'API de paiement mobile
-      const response = await this.http.post<MobilePaymentResponse>(
-        environment.ARAKA_PAYMENT_URL+"pay/paymentrequest",
-        paymentRequest,{
-          headers: new HttpHeaders({
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + responseToken.token
-          })
-        }
-      ).toPromise();
-
-      if (response && response.paymentLink) {
-
-        console.log("Response From Mobile Money", response);
-
-        // Enregistrer les informations de paiement dans Firestore
-        await this.enregistrerPaiementMobile(
-          transactionReference,
-          totalAvecCommission,
-          commission,
-          provider,
-          phoneNumber
-        );
-
-        // Rediriger vers le lien de paiement fourni par l'API
-        this.mobilePaymentSuccess = 'Redirection vers la page de paiement...';
-
-        // Rediriger vers la page de paiement mobile
-        window.location.href = response.paymentLink;
+      if (response.statusCode === '202') {
+        this.mobilePaymentSuccess = 'Transaction acceptée. Veuillez confirmer le paiement sur votre appareil.';
+        this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
       } else {
-        throw new Error('Réponse de paiement invalide');
+        this.mobilePaymentError = 'Erreur inattendue lors du traitement du paiement.';
       }
-      }
-    });
-
-
     } catch (error) {
-      console.error('Erreur lors du paiement mobile:', error);
-      this.mobilePaymentError = `Erreur lors du paiement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
-
-      // Rediriger vers mes-commandes même en cas d'erreur
-      setTimeout(() => {
-        this.router.navigate(['/mes-commandes']);
-      }, 1500);
+      console.error('Payment error:', error);
+      this.mobilePaymentError = 'An error occurred while processing the payment.';
     } finally {
       this.mobilePaymentProcessing = false;
     }
+  }
+
+  private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): void {
+    const checkInterval = 20000; // 20 seconds
+    const timeout = 60000; // 1 minute
+    let elapsedTime = 0;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
+        console.log('Status response:', statusResponse);
+
+        if (statusResponse.statusCode === '200' && statusResponse.statusDescription === 'APPROUVE') {
+          clearInterval(intervalId);
+          this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+          if (this.factureCreee) {
+            await this.updateFactureApresConfirmationMobile(this.factureCreee, statusResponse);
+          } else {
+            console.error('Facture créée est null lors de la mise à jour après confirmation.');
+          }
+        } else if (statusResponse.statusCode === '400' || statusResponse.statusCode === '500') {
+          clearInterval(intervalId);
+          this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+
+      elapsedTime += checkInterval;
+      if (elapsedTime >= timeout) {
+        clearInterval(intervalId);
+        this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
+      }
+    }, checkInterval);
   }
 
   // Enregistrer les informations du paiement mobile
@@ -945,5 +915,49 @@ export class PanierComponent implements OnInit, OnDestroy {
       this.factureCreee,
       paiement
     );
+  }
+
+  private async updateFactureApresConfirmationMobile(factureId: string, statusResponse: any): Promise<void> {
+    try {
+      // Retrieve the current invoice
+      const facture = await this.firebaseService.getFactureById(factureId);
+
+      if (!facture) {
+        console.error(`Facture non trouvée: ${factureId}`);
+        return;
+      }
+
+      // Update the status of existing payments that are pending
+      const paiementsUpdated = facture.paiements.map(paiement => {
+        if (paiement.stripe_reference && paiement.stripe_reference.includes('MB-')) {
+          return {
+            ...paiement,
+            statut: 'CONFIRME'
+          };
+        }
+        return paiement;
+      });
+
+      // Update the invoice
+      await this.firebaseService.updateFacture(factureId, {
+        paiements: paiementsUpdated,
+        montantPaye: facture.montant, // Consider as fully paid
+      });
+
+      // Update the status of colis
+      if (facture.colis && facture.colis.length > 0) {
+        for (const colisId of facture.colis) {
+          if (typeof colisId === 'string') {
+            await this.firebaseService.updateColis(colisId, {
+              statut: STATUT_COLIS.PAYE
+            });
+          }
+        }
+      }
+
+      console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+    } catch (error) {
+      console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
+    }
   }
 }
