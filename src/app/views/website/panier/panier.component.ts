@@ -153,6 +153,7 @@ export class PanierComponent implements OnInit, OnDestroy {
   mobilePaymentProcessing = false
   mobilePaymentError = ''
   mobilePaymentSuccess = ''
+  processpaymentProcessing = false;
 
   private modalRef: NgbModalRef | null = null;
 
@@ -803,6 +804,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     }
 
     this.mobilePaymentProcessing = true;
+    this.processpaymentProcessing = true;
     this.mobilePaymentError = '';
     const montantBase = Number(this.total);
     const commission = montantBase * 0.1;
@@ -819,6 +821,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     };
 
     try {
+      this.processpaymentProcessing = true;
       const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
       console.log('Payment response:', response);
 
@@ -826,12 +829,15 @@ export class PanierComponent implements OnInit, OnDestroy {
         this.mobilePaymentSuccess = 'Transaction acceptée. Veuillez confirmer le paiement sur votre appareil.';
         this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
       } else {
+        this.processpaymentProcessing = false;
         this.mobilePaymentError = 'Erreur inattendue lors du traitement du paiement.';
       }
     } catch (error) {
+      this.processpaymentProcessing = false;
       console.error('Payment error:', error);
       this.mobilePaymentError = 'An error occurred while processing the payment.';
     } finally {
+      this.processpaymentProcessing = false;
       this.mobilePaymentProcessing = false;
     }
   }
@@ -849,6 +855,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         if (statusResponse.statusCode === '200' && statusResponse.statusDescription === 'APPROUVE') {
           clearInterval(intervalId);
           this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+          this.processpaymentProcessing = false;
           if (this.factureCreee) {
             await this.updateFactureApresConfirmationMobile(this.factureCreee, statusResponse);
           } else {
@@ -857,6 +864,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         } else if (statusResponse.statusCode === '400' || statusResponse.statusCode === '500') {
           clearInterval(intervalId);
           this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
+          this.processpaymentProcessing = false;
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
@@ -866,6 +874,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       if (elapsedTime >= timeout) {
         clearInterval(intervalId);
         this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
+        this.processpaymentProcessing = false;
       }
     }, checkInterval);
   }

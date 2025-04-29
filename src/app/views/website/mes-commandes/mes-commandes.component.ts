@@ -1017,43 +1017,39 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     phoneNumber: string,
     transactionId: string = '' // Paramètre optionnel avec valeur par défaut
   ): Promise<void> {
-    if (!this.factureSelectionnee || !this.factureSelectionnee.id) {
-      throw new Error('Facture non valide');
-    }
-
-    // Créer l'objet paiement
-    const paiement: Paiement = {
-      id: reference,
+    const paiementId = `PAY${new Date().getTime()}`;
+    const nouveauPaiement: Paiement = {
+      id: paiementId,
+      montant_paye: montant,
       typepaiement: this.getTypePaiementFromProvider(provider),
-      montant_paye: montant - commission,
-      facture_reference: this.factureSelectionnee.id,
-      id_facture: this.factureSelectionnee.id,
       datepaiement: new Date(),
-      stripe_reference: reference,
+      id_facture: this.factureSelectionnee?.id,
+      facture_reference: this.factureSelectionnee?.id,
+      stripe_reference: transactionId,
       commission: commission
     };
 
-    // Enregistrer le paiement en attente
-    await this.firebaseService.addPaiementToFacture(
-      this.factureSelectionnee.id,
-      paiement
-    );
+    try {
+      await this.firebaseService.addPaiement(nouveauPaiement);
+      const paiementsActuels = this.factureSelectionnee?.paiements || [];
+      await this.firebaseService.updateFacture(this.factureSelectionnee?.id!, {
+        montantPaye: (this.factureSelectionnee?.montantPaye || 0) + montant,
+        paiements: [...paiementsActuels, nouveauPaiement]
+      });
 
-    // Stocker les informations du paiement mobile dans localStorage pour référence future
-    if (transactionId) {
-      localStorage.setItem(`paiement_mobile_${reference}`, JSON.stringify({
-        factureId: this.factureSelectionnee.id,
-        transactionId: transactionId,
-        originatingTransactionId: reference, // La référence est l'originatingTransactionId
-        statut: 'EN_ATTENTE',
-        dateCreation: new Date().toISOString(),
-        provider: provider,
-        phoneNumber: phoneNumber
-      }));
+      if (this.factureSelectionnee?.colisObjets) {
+        for (const colis of this.factureSelectionnee.colisObjets) {
+          if (colis.id) {
+            await this.firebaseService.updateColis(colis.id, {
+              statut: STATUT_COLIS.PAYE
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour après paiement mobile:', err);
+      this.errorMessage = 'Le paiement a réussi mais une erreur est survenue lors de la mise à jour. Veuillez contacter le support.';
     }
-
-    // Note: Pour une implémentation complète, il faudrait créer un service de suivi des paiements
-    // qui vérifie périodiquement le statut des transactions via l'API Araka
   }
 
   // Convertir le fournisseur mobile en type de paiement
