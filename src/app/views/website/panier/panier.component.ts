@@ -31,6 +31,7 @@ import {
   Facture,
   Paiement,
   TYPE_PAIEMENT,
+  STATUT_PAIEMENT,
 } from '@/app/models/partenaire.model'
 import { UtilisateurService } from '@/app/core/services/utilisateur.service'
 import { Subscription } from 'rxjs'
@@ -463,7 +464,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     try {
       // Calculer les frais de transaction (10%)
       const montantBase = Number(this.total);
-      const commission = montantBase * 0.1;
+      const commission = montantBase > 50 ? montantBase * 0.05: montantBase * 0.075;
       const totalAvecCommission = montantBase + commission;
 
       // Obtenir le client secret via notre API
@@ -510,6 +511,12 @@ export class PanierComponent implements OnInit, OnDestroy {
     }
   }
 
+  formaterMontant(montant: number): string {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(Number(Number(montant).toFixed(4)));
+  }
   // Traiter le paiement
   async processPayment(): Promise<void> {
     if (!this.stripe || !this.elements) {
@@ -541,7 +548,6 @@ export class PanierComponent implements OnInit, OnDestroy {
         },
         redirect: 'if_required',
       })
-      console.log("paymentIntent 1 ---------------********************",paymentIntent,error);
 
       if (error) {
         this.paymentStatus = 'error'
@@ -560,7 +566,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         // Créer un paiement avec un ID unique pour la facture créée
         if (this.factureCreee) {
           // Calculer la commission (10%)
-          const commission = this.total * 0.1;
+          const commission = this.total > 50 ? this.total * 0.05 : this.total * 0.075;
           console.log("paymentIntent ---------------********************",paymentIntent);
 
 
@@ -572,8 +578,10 @@ export class PanierComponent implements OnInit, OnDestroy {
             facture_reference: this.factureCreee,
             id_facture: this.factureCreee,
             datepaiement: new Date(),
-            stripe_reference: paymentIntent.id, // Ajouter la référence de la transaction Stripe
-            commission: commission // Ajouter la commission de 10%
+            transaction_reference: paymentIntent.id, // Ajouter la référence de la transaction Stripe
+            transaction_id: paymentIntent.id, // Ajouter la référence de la transaction Stripe
+            commission: commission, // Ajouter la commission de 10%
+            statut: STATUT_PAIEMENT.CONFIRME
           }
 
           try {
@@ -636,7 +644,7 @@ export class PanierComponent implements OnInit, OnDestroy {
   }
 
   confirmerSuppression(modal: any, colisId: string): void {
-    this.modalService.open(modal, { centered: true }).result.then((result) => {
+    this.modalService.open(modal, { centered: true,backdrop: 'static' }).result.then((result) => {
       if (result === 'confirm') {
         this.supprimerColis(colisId)
       }
@@ -667,7 +675,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   // Ouvrir modal de sélection du mode de paiement
   openPaymentMethodModal(): void {
-    this.modalRef = this.modalService.open(this.paymentMethodModal, { centered: true });
+    this.modalRef = this.modalService.open(this.paymentMethodModal, { centered: true ,backdrop: 'static'});
 
     // Ajouter un gestionnaire pour la fermeture du modal
     this.modalRef.result.then(
@@ -685,7 +693,7 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   // Ouvrir modal de paiement mobile money
   openMobileMoneyModal(): void {
-    this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true });
+    this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true,backdrop: 'static' });
 
     // Ajouter un gestionnaire pour la fermeture du modal
     this.modalRef.result.then(
@@ -807,7 +815,7 @@ export class PanierComponent implements OnInit, OnDestroy {
     this.processpaymentProcessing = true;
     this.mobilePaymentError = '';
     const montantBase = Number(this.total);
-    const commission = montantBase * 0.1;
+    const commission =montantBase > 50 ? montantBase * 0.05 : montantBase * 0.075// montantBase * 0.1;
     const totalAvecCommission = montantBase + commission;
 
     const paymentData = {
@@ -817,17 +825,23 @@ export class PanierComponent implements OnInit, OnDestroy {
       customerName: `${this.utilisateurConnecte.nom} ${this.utilisateurConnecte.prenom}`,
       customerEmail: this.utilisateurConnecte.email,
       transactionReference: `MB-${Date.now()}-${this.factureCreee}`,
-      redirection_URL: `${window.location.origin}/mes-commandes`
+      montantBase:montantBase // Utiliser l'URL actuelle pour éviter le rechargement
     };
 
     try {
       this.processpaymentProcessing = true;
       const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
-      console.log('Payment response:', response);
 
-      if (response.statusCode === '202') {
-        this.mobilePaymentSuccess = 'Transaction acceptée. Veuillez confirmer le paiement sur votre appareil.';
-        this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
+      this.firebaseService.paiements_transactions_data(response)
+
+      if (response.statusCode == '202') {
+        this.mobilePaymentSuccess = 'Paiement en attente de confirmation dans les 5 minutes : Veuillez confirmer ce paiement sur votre appareil...';
+
+
+        this.updateFactureApresConfirmationMobile(this.factureCreee, response.originatingTransactionId, response.transactionId, provider, montantBase, commission);
+
+
+        //  this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
       } else {
         this.processpaymentProcessing = false;
         this.mobilePaymentError = 'Erreur inattendue lors du traitement du paiement.';
@@ -842,42 +856,179 @@ export class PanierComponent implements OnInit, OnDestroy {
     }
   }
 
-  private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): void {
-    const checkInterval = 20000; // 20 seconds
-    const timeout = 60000; // 1 minute
+  private async startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): Promise<void> {
+    const checkInterval = 1000; // 5 seconds
+    const timeout = 10000; // 10 seconds
     let elapsedTime = 0;
 
     const intervalId = setInterval(async () => {
       try {
+        this.processpaymentProcessing = true;
         const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
-        console.log('Status response:', statusResponse);
 
-        if (statusResponse.statusCode === '200' && statusResponse.statusDescription === 'APPROUVE') {
+        this.firebaseService.paiements_transactions_data(statusResponse)
+
+        if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
           clearInterval(intervalId);
-          this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
-          this.processpaymentProcessing = false;
-          if (this.factureCreee) {
-            await this.updateFactureApresConfirmationMobile(this.factureCreee, statusResponse);
-          } else {
-            console.error('Facture créée est null lors de la mise à jour après confirmation.');
-          }
-        } else if (statusResponse.statusCode === '400' || statusResponse.statusCode === '500') {
+        //  this.processpaymentProcessing = false;
+      //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+         // if (this.factureSelectionnee) {
+            this.updatePaiementByReferenceArakaId(transactionId, originatingTransactionId);
+
+           //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
+          // } else {
+          //   this.processpaymentProcessing = false;
+          //   console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
+          // }
+        } else if (statusResponse.statusCode == '202') {
+       //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
+        }else
+        if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
           clearInterval(intervalId);
-          this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
-          this.processpaymentProcessing = false;
+         // this.processpaymentProcessing = false;
+          this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+
+        //  this.mobilePaymentError = 'Le paiement a été refusé.';
+        }else
+        if (statusResponse.statusCode == '500') {
+          clearInterval(intervalId);
+          //this.processpaymentProcessing = false;
+          this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+
+     //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
         }
       } catch (error) {
+       // this.processpaymentProcessing = false;
+
         console.error('Error checking payment status:', error);
       }
 
       elapsedTime += checkInterval;
       if (elapsedTime >= timeout) {
         clearInterval(intervalId);
-        this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
-        this.processpaymentProcessing = false;
+        //this.processpaymentProcessing = false;
+      //  this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
       }
     }, checkInterval);
   }
+
+
+  private async updatePaiementByReferenceArakaId(transactionId: string, originatingTransactionId: string) {
+
+    const factureId = originatingTransactionId.split('-')[2];
+
+      const facture = await this.firebaseService.getFactureById(factureId);
+
+        if (!facture) {
+          console.error(`Facture non trouvée: ${factureId}`);
+          return;
+        }
+        let montantPaye=0;
+        // Mettre à jour le statut des paiements existants qui sont en attente
+        const paiementsUpdated = facture.paiements.map(paiement => {
+          if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+            montantPaye+=Number(paiement.montant_paye);
+            return {
+              ...paiement,
+              statut: STATUT_PAIEMENT.CONFIRME
+            };
+          }
+          return paiement;
+        });
+
+        // Mettre à jour la facture
+        await this.firebaseService.updateFacture(factureId, {
+          paiements: paiementsUpdated,
+          montantPaye: Number(facture.montantPaye)+montantPaye, // Considérer comme entièrement payée
+        });
+
+        // Mettre à jour le statut des colis
+        if (facture.colis && facture.colis.length > 0) {
+          const montantPaye =facture.paiements.reduce((acc, p) => (p.statut === STATUT_PAIEMENT.CONFIRME)?acc + (p.montant_paye || 0) : acc, 0)  ;
+          const montant = facture.montant;
+
+
+          for (const colisId of facture.colis) {
+            if (typeof colisId === 'string') {
+              await this.firebaseService.updateColis(colisId, {
+                statut: montantPaye >= montant ? STATUT_COLIS.PAYE : STATUT_COLIS.PARTIELLEMENT_PAYEE
+              });
+            }
+          }
+        }
+
+    }
+
+    private async updatePaiementByReferenceArakaId2(transactionId: string, originatingTransactionId: string, statut: STATUT_PAIEMENT) {
+
+      const factureId = originatingTransactionId.split('-')[2];
+
+        const facture = await this.firebaseService.getFactureById(factureId);
+
+        //console.log('Facture:', facture);
+          if (!facture) {
+            console.error(`Facture non trouvée: ${factureId}`);
+            return;
+          }
+          let montantPaye=0;
+          // Mettre à jour le statut des paiements existants qui sont en attente
+          const paiementsUpdated = facture.paiements.map(paiement => {
+            if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+              montantPaye+=paiement.montant_paye;
+              return {
+                ...paiement,
+                statut: STATUT_PAIEMENT.ANNULE
+              };
+            }
+            return paiement;
+          });
+
+          // Mettre à jour la facture
+          await this.firebaseService.updateFacture(factureId, {
+            paiements: paiementsUpdated,
+            montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
+          });
+
+          // Mettre à jour le statut des colis
+
+
+      }
+  // private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): void {
+  //   const checkInterval = 20000; // 20 seconds
+  //   const timeout = 60000; // 1 minute
+  //   let elapsedTime = 0;
+
+  //   const intervalId = setInterval(async () => {
+  //     try {
+  //       const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
+  //       console.log('Status response:', statusResponse);
+
+  //       if (statusResponse.statusCode === '200' && statusResponse.statusDescription === 'APPROUVE') {
+  //         clearInterval(intervalId);
+  //         this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+  //         this.processpaymentProcessing = false;
+  //         if (this.factureCreee) {
+  //           await this.updateFactureApresConfirmationMobile(this.factureCreee, statusResponse);
+  //         } else {
+  //           console.error('Facture créée est null lors de la mise à jour après confirmation.');
+  //         }
+  //       } else if (statusResponse.statusCode === '400' || statusResponse.statusCode === '500') {
+  //         clearInterval(intervalId);
+  //         this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
+  //         this.processpaymentProcessing = false;
+  //       }
+  //     } catch (error) {
+  //       console.error('Error checking payment status:', error);
+  //     }
+
+  //     elapsedTime += checkInterval;
+  //     if (elapsedTime >= timeout) {
+  //       clearInterval(intervalId);
+  //       this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
+  //       this.processpaymentProcessing = false;
+  //     }
+  //   }, checkInterval);
+  // }
 
   // Enregistrer les informations du paiement mobile
   async enregistrerPaiementMobile(
@@ -916,7 +1067,8 @@ export class PanierComponent implements OnInit, OnDestroy {
       id_facture: this.factureCreee,
       datepaiement: new Date(),
       stripe_reference: reference,
-      commission: commission
+      commission: commission,
+      statut: STATUT_PAIEMENT.EN_ATTENTE
     };
 
     // Enregistrer le paiement en attente
@@ -926,47 +1078,111 @@ export class PanierComponent implements OnInit, OnDestroy {
     );
   }
 
-  private async updateFactureApresConfirmationMobile(factureId: string, statusResponse: any): Promise<void> {
+  private async updateFactureApresConfirmationMobile(factureId: string, transaction_reference: any, transaction_id: any, provider: string, montantRestant: number, commission: number): Promise<void> {
     try {
-      // Retrieve the current invoice
+      this.processpaymentProcessing = true;
+      // Récupérer la facture actuelle
+      const paiementId = `PAY${new Date().getTime()}`;
+      const nouveauPaiement: Paiement = {
+        id: paiementId,
+        montant_paye: montantRestant,
+        typepaiement: this.getTypePaiementFromProvider(provider),
+        datepaiement: new Date(),
+        id_facture: factureId,
+        facture_reference: factureId,
+        transaction_reference: transaction_reference, // Référence Stripe
+        transaction_id: transaction_id, // Référence Stripe
+        commission: commission, // Commission de 10%,
+        statut: STATUT_PAIEMENT.EN_ATTENTE
+      };
+
+
       const facture = await this.firebaseService.getFactureById(factureId);
 
-      if (!facture) {
-        console.error(`Facture non trouvée: ${factureId}`);
-        return;
-      }
 
-      // Update the status of existing payments that are pending
-      const paiementsUpdated = facture.paiements.map(paiement => {
-        if (paiement.stripe_reference && paiement.stripe_reference.includes('MB-')) {
-          return {
-            ...paiement,
-            statut: 'CONFIRME'
-          };
-        }
-        return paiement;
-      });
-
-      // Update the invoice
+      await this.firebaseService.addPaiement(nouveauPaiement);
+      const paiementsActuels = facture?.paiements || [];
       await this.firebaseService.updateFacture(factureId, {
-        paiements: paiementsUpdated,
-        montantPaye: facture.montant, // Consider as fully paid
+        montantPaye: (facture?.montantPaye || 0) + montantRestant,
+        paiements: [...paiementsActuels, nouveauPaiement]
       });
 
-      // Update the status of colis
-      if (facture.colis && facture.colis.length > 0) {
-        for (const colisId of facture.colis) {
-          if (typeof colisId === 'string') {
-            await this.firebaseService.updateColis(colisId, {
-              statut: STATUT_COLIS.PAYE
-            });
-          }
-        }
-      }
+      setTimeout(() => {
+        this.startPaymentStatusCheck(transaction_id, transaction_reference);
+      }, 20000);
 
-      console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+      // if (this.factureSelectionnee?.colisObjets) {
+      //   for (const colis of this.factureSelectionnee.colisObjets) {
+      //     if (colis.id) {
+      //       await this.firebaseService.updateColis(colis.id, {
+      //         statut: STATUT_COLIS.PAYE
+      //       });
+      //     }
+      //   }
+      // }
+
+      this.router.navigateByUrl('mes-commandes')
+    //  console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+      this.processpaymentProcessing = false;
     } catch (error) {
-      console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
+      //console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
+      this.processpaymentProcessing = false;
     }
   }
+
+  getTypePaiementFromProvider(provider: string): TYPE_PAIEMENT {
+    switch (provider) {
+      case MOBILE_MONEY_PROVIDER.MPESA:
+        return TYPE_PAIEMENT.MPESA;
+      case MOBILE_MONEY_PROVIDER.ORANGE:
+        return TYPE_PAIEMENT.ORANGE;
+      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+        return TYPE_PAIEMENT.AIRTEL_MONEY;
+      default:
+        return TYPE_PAIEMENT.ESPECE;
+    }
+  }
+  // private async updateFactureApresConfirmationMobile(factureId: string, statusResponse: any): Promise<void> {
+  //   try {
+  //     // Retrieve the current invoice
+  //     const facture = await this.firebaseService.getFactureById(factureId);
+
+  //     if (!facture) {
+  //       console.error(`Facture non trouvée: ${factureId}`);
+  //       return;
+  //     }
+
+  //     // Update the status of existing payments that are pending
+  //     const paiementsUpdated = facture.paiements.map(paiement => {
+  //       if (paiement.transaction_reference && paiement.transaction_reference.includes('MB-')) {
+  //         return {
+  //           ...paiement,
+  //           statut: STATUT_PAIEMENT.CONFIRME
+  //         };
+  //       }
+  //       return paiement;
+  //     });
+
+  //     // Update the invoice
+  //     await this.firebaseService.updateFacture(factureId, {
+  //       paiements: paiementsUpdated,
+  //       montantPaye: facture.montant, // Consider as fully paid
+  //     });
+
+  //     // Update the status of colis
+  //     if (facture.colis && facture.colis.length > 0) {
+  //       for (const colisId of facture.colis) {
+  //         if (typeof colisId === 'string') {
+  //           await this.firebaseService.updateColis(colisId, {
+  //             statut: STATUT_COLIS.PAYE
+  //           });
+  //         }
+  //       }
+  //     }
+
+  //     console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+  //   } catch (error) {
+  //     console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
+  //   }
+  // }
 }

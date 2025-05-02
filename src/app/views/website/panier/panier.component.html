@@ -448,11 +448,11 @@
       </div>
       <div class="d-flex justify-content-between">
         <span>Frais Transaction :</span>
-        <span>{{ total * 0.1 | currency:'USD':'symbol' }}</span>
+        <span>{{ total>50 ? formaterMontant (total * 0.05) : formaterMontant (total * 0.075) }}</span>
       </div>
       <div class="d-flex justify-content-between">
         <span>Total avec frais :</span>
-        <span class="fw-bold text-primary">{{ total * 1.1 | currency:'USD':'symbol' }}</span>
+        <span class="fw-bold text-primary">{{ total>50 ? formaterMontant (total * 1.05) : formaterMontant (total * 1.075) }}</span>
       </div>
     </div>
 
@@ -553,11 +553,13 @@
     </form>
   </div>
   <div class="modal-footer">
+
     <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('Cancel')">
       Annuler
+    </button> <button  (click)="submitMobilePayment()" type="submit" class="btn btn-primary" [disabled]="mobileMoneyForm.invalid || processpaymentProcessing">
+      <span *ngIf="processpaymentProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      Payer maintenant
     </button>
-    <button type="button" class="btn btn-success" (click)="submitMobilePayment()" [disabled]="mobileMoneyForm.invalid || mobilePaymentProcessing">
-      <i class="las la-mobile me-2"></i> Payer maintenant
-    </button>
+
   </div>
 </ng-template>

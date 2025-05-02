@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NgbAlertModule } from '@ng-bootstrap/ng-bootstrap';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Facture, Paiement, TYPE_PAIEMENT } from '@/app/models/partenaire.model';
+import { Facture, Paiement, STATUT_PAIEMENT, TYPE_PAIEMENT } from '@/app/models/partenaire.model';
 
 @Component({
   selector: 'app-paiement-facture',
@@ -134,7 +134,8 @@ export class PaiementFactureComponent implements OnInit {
         typepaiement: typePaiement,
         montant_paye: montant,
         id_facture: this.factureId,
-        datepaiement: new Date()
+        datepaiement: new Date(),
+        statut: STATUT_PAIEMENT.EN_ATTENTE
       };
 
       // Ajouter le paiement

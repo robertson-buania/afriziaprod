@@ -140,7 +140,9 @@
                     </div>
                   </td>
                   <td>
-                    <span class="badge bg-success">Payée</span>
+                    <span class="badge" [ngClass]="getClassStatutPaiementExtended(facture)">
+                      {{ getStatutFactureExtended(facture) }}
+                    </span>
                   </td>
                   <td>
                     <button class="btn btn-sm btn-primary" (click)="afficherDetailsFacture(facture)">
@@ -283,7 +285,7 @@
                 <tr>
                   <th>Date</th>
                   <th>Montant</th>
-                  <th>Commission</th>
+
                   <th>Méthode</th>
                   <th>Référence</th>
                   <th>Statut</th>
@@ -293,14 +295,20 @@
                 <tr *ngFor="let paiement of factureSelectionnee?.paiements">
                   <td>{{ paiement?.datepaiement | date:'dd/MM/yyyy HH:mm' }}</td>
                   <td>{{ paiement?.montant_paye | currency:'USD':'symbol' }}</td>
-                  <td>{{ paiement?.commission | currency:'USD':'symbol' }}</td>
+
                   <td>{{ getTypePaiementLabel(paiement?.typepaiement) }}</td>
                   <td>
-                    <span *ngIf="paiement?.stripe_reference" class="small text-muted">{{ paiement?.stripe_reference }}</span>
-                    <span *ngIf="!paiement?.stripe_reference">-</span>
+                    <span *ngIf="paiement?.transaction_reference" class="small text-muted">{{ paiement?.transaction_reference }}</span>
+                    <span *ngIf="!paiement?.transaction_reference">-</span>
                   </td>
                   <td>
-                    <span class="badge bg-success">Succès</span>
+                    <span class="badge" [ngClass]="{
+                      'bg-success': paiement.statut === STATUT_PAIEMENT.CONFIRME,
+                      'bg-warning': paiement.statut === STATUT_PAIEMENT.EN_ATTENTE,
+                      'bg-danger': paiement.statut === STATUT_PAIEMENT.ANNULE
+                    }">
+                      {{ paiement.statut === STATUT_PAIEMENT.CONFIRME ? 'Succès' : (paiement.statut === STATUT_PAIEMENT.EN_ATTENTE ? 'En attente' : 'Annulé') }}
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -445,15 +453,15 @@
       </div>
       <div class="d-flex justify-content-between">
         <span>Montant à payer :</span>
-        <span class="fw-bold">{{ factureSelectionnee.montant - factureSelectionnee.montantPaye | currency:'USD':'symbol' }}</span>
+        <span class="fw-bold">{{ formaterMontant (factureSelectionnee.montant - factureSelectionnee.montantPaye) }}</span>
       </div>
       <div class="d-flex justify-content-between">
         <span>Frais Transaction :</span>
-        <span>{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye) * 0.1 | currency:'USD':'symbol' }}</span>
+        <span>{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye)>50 ? formaterMontant ((factureSelectionnee.montant - factureSelectionnee.montantPaye) * 0.05) : formaterMontant ((factureSelectionnee.montant - factureSelectionnee.montantPaye) * 0.075) }}</span>
       </div>
       <div class="d-flex justify-content-between">
         <span>Total avec frais :</span>
-        <span class="fw-bold text-primary">{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye) * 1.1 | currency:'USD':'symbol' }}</span>
+        <span class="fw-bold text-primary">{{ (factureSelectionnee.montant - factureSelectionnee.montantPaye)>50 ?formaterMontant ((factureSelectionnee.montant - factureSelectionnee.montantPaye) * 1.05) : formaterMontant ((factureSelectionnee.montant - factureSelectionnee.montantPaye) * 1.075) }}</span>
       </div>
     </div>
 
@@ -572,7 +580,7 @@
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="closeMobileMoneyModal()">Annuler</button>
     <button  (click)="submitMobilePayment()" type="submit" class="btn btn-primary" [disabled]="mobileMoneyForm.invalid || processpaymentProcessing">
-      <span *ngIf="processpaymentProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      <span *ngIf="mobilePaymentProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       Payer maintenant
     </button>
     </div>

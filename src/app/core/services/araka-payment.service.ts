@@ -15,7 +15,13 @@ export class ArakaPaymentService {
     return this.http.post(this.CLOUD_FUNCTION_URL+'/processMobilePayment', data);
   }
 
+  processMobilePaymentAndUpdateFacture(data: any): Observable<any> {
+    return this.http.post(this.CLOUD_FUNCTION_URL+'/processMobilePaymentAndUpdateFacture', data);
+  }
+
   checkTransactionStatusById(transactionId: string): Observable<any> {
     return this.http.post(`${this.CLOUD_FUNCTION_URL}/checkTransactionStatusById`, { transactionId });
   }
+
+ 
 }

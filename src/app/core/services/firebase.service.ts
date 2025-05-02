@@ -244,6 +244,11 @@ export class FirebaseService {
     return docRef.id;
   }
 
+  async paiements_transactions_data(data:any){
+    const colRef = collection(this.firestore, 'paiements_transactions_data');
+    const docRef = await addDoc(colRef, data);
+    return docRef.id;
+  }
   async updatePaiement(id: string, data: Partial<Paiement>): Promise<void> {
     const docRef = doc(this.firestore, 'paiements', id);
     await updateDoc(docRef, data as DocumentData);

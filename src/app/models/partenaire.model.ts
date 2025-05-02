@@ -70,10 +70,16 @@ export interface Paiement{
   facture_reference?:string,
   id_facture?:string,
   datepaiement:Date,
-  stripe_reference?:string,
+  statut:STATUT_PAIEMENT,
+  transaction_reference?:any,
+  transaction_id?:any,
   commission?:number
 }
-
+export enum STATUT_PAIEMENT{
+  EN_ATTENTE,
+  CONFIRME,
+  ANNULE
+}
 export enum TYPE_COLIS{
   ORDINAIRE,
   AVEC_BATTERIE,
