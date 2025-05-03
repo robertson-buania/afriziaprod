@@ -225,6 +225,19 @@ export class FirebaseService {
     return null;
   }
 
+  async updatePaiementByTransactionReference(transactionReference: string, data: Partial<Paiement>): Promise<void> {
+    const colRef = collection(this.firestore, 'paiements');
+    const q = query(colRef, where('transaction_reference', '==', transactionReference));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const docRef = snapshot.docs[0].ref; // Récupérer la référence du premier document trouvé
+      await updateDoc(docRef, data as DocumentData); // Mettre à jour le document
+    } else {
+      console.error('Aucun paiement trouvé avec cette référence de transaction');
+    }
+  }
+
   // Méthodes pour les paiements
   getPaiements(): Observable<Paiement[]> {
     const colRef = collection(this.firestore, 'paiements');

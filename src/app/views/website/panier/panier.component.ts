@@ -401,6 +401,8 @@ export class PanierComponent implements OnInit, OnDestroy {
     }
 
     await this.firebaseService.createFacture(facture)
+
+
     return facture.id
   }
 
@@ -409,9 +411,24 @@ export class PanierComponent implements OnInit, OnDestroy {
     const updatePromises = this.colis
       .filter((colis) => colis.id)
       .map((colis) =>
+
+        /**
+         * await this.firebaseService.updateColis(colis.id, {
+      partenaireId: this.utilisateurConnecte.partenaireId,
+      clientNom: this.utilisateurConnecte.nom,
+      clientPrenom: this.utilisateurConnecte.prenom,
+      clientEmail: this.utilisateurConnecte.email,
+      clientTelephone: this.utilisateurConnecte.telephone
+    });
+         */
         this.firebaseService.updateColis(colis.id!, {
           statut: STATUT_COLIS.AU_PANIER,
           typeExpedition: this.selectedExpeditionType,
+          partenaireId: this.utilisateurConnecte.partenaireId,
+          clientNom: this.utilisateurConnecte.nom,
+          clientPrenom: this.utilisateurConnecte.prenom,
+          clientEmail: this.utilisateurConnecte.email,
+          clientTelephone: this.utilisateurConnecte.telephone
         })
       )
 
@@ -926,7 +943,12 @@ export class PanierComponent implements OnInit, OnDestroy {
         let montantPaye=0;
         // Mettre à jour le statut des paiements existants qui sont en attente
         const paiementsUpdated = facture.paiements.map(paiement => {
+
           if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+            this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
+              ...paiement,
+              statut: STATUT_PAIEMENT.CONFIRME
+            });
             montantPaye+=Number(paiement.montant_paye);
             return {
               ...paiement,
@@ -973,7 +995,12 @@ export class PanierComponent implements OnInit, OnDestroy {
           let montantPaye=0;
           // Mettre à jour le statut des paiements existants qui sont en attente
           const paiementsUpdated = facture.paiements.map(paiement => {
+
             if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+              this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
+                ...paiement,
+                statut: STATUT_PAIEMENT.ANNULE
+              });
               montantPaye+=paiement.montant_paye;
               return {
                 ...paiement,
@@ -986,7 +1013,7 @@ export class PanierComponent implements OnInit, OnDestroy {
           // Mettre à jour la facture
           await this.firebaseService.updateFacture(factureId, {
             paiements: paiementsUpdated,
-            montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
+          //  montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
           });
 
           // Mettre à jour le statut des colis
@@ -1103,7 +1130,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       await this.firebaseService.addPaiement(nouveauPaiement);
       const paiementsActuels = facture?.paiements || [];
       await this.firebaseService.updateFacture(factureId, {
-        montantPaye: (facture?.montantPaye || 0) + montantRestant,
+      //  montantPaye: (facture?.montantPaye || 0) + montantRestant,
         paiements: [...paiementsActuels, nouveauPaiement]
       });
 

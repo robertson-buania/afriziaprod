@@ -637,59 +637,59 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   // Mettre à jour la facture après un paiement réussi
-  private async updateFactureApresPaiement(factureId: string): Promise<void> {
-    if (!this.factureSelectionnee) return;
+  // private async updateFactureApresPaiement(factureId: string): Promise<void> {
+  //   if (!this.factureSelectionnee) return;
 
-    const montantRestant = this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye;
+  //   const montantRestant = this.factureSelectionnee.montant - this.factureSelectionnee.montantPaye;
 
-    // Calculer la commission (10%)
-    const commission = montantRestant > 50 ? montantRestant * 0.05: montantRestant * 0.075;
+  //   // Calculer la commission (10%)
+  //   const commission = montantRestant > 50 ? montantRestant * 0.05: montantRestant * 0.075;
 
-    // Créer un nouveau paiement avec un ID unique
-    const paiementId = `PAY${new Date().getTime()}`;
-    const nouveauPaiement: Paiement = {
-      id: paiementId,
-      montant_paye: montantRestant,
-      typepaiement: TYPE_PAIEMENT.CARTE,
-      datepaiement: new Date(),
-      id_facture: factureId,
-      facture_reference: factureId,
-      transaction_reference: this.stripe.paymentIntent?.id || `stripe_${new Date().getTime()}`, // Référence Stripe
-      transaction_id: this.stripe.paymentIntent?.id || `stripe_${new Date().getTime()}`, // Référence Stripe
-      commission: commission, // Commission de 10%
-      statut: STATUT_PAIEMENT.CONFIRME
-    };
+  //   // Créer un nouveau paiement avec un ID unique
+  //   const paiementId = `PAY${new Date().getTime()}`;
+  //   const nouveauPaiement: Paiement = {
+  //     id: paiementId,
+  //     montant_paye: montantRestant,
+  //     typepaiement: TYPE_PAIEMENT.CARTE,
+  //     datepaiement: new Date(),
+  //     id_facture: factureId,
+  //     facture_reference: factureId,
+  //     transaction_reference: this.stripe.paymentIntent?.id || `stripe_${new Date().getTime()}`, // Référence Stripe
+  //     transaction_id: this.stripe.paymentIntent?.id || `stripe_${new Date().getTime()}`, // Référence Stripe
+  //     commission: commission, // Commission de 10%
+  //     statut: STATUT_PAIEMENT.CONFIRME
+  //   };
 
-    try {
+  //   try {
 
-      // Ajouter le paiement à la collection paiements
-      await this.firebaseService.addPaiement(nouveauPaiement);
+  //     // Ajouter le paiement à la collection paiements
+  //     await this.firebaseService.addPaiement(nouveauPaiement);
 
-      // Enregistrer le paiement directement dans la mise à jour de la facture
-      // puisque le service FirebaseService n'a peut-être pas de méthode addPaiement
-      const paiementsActuels = this.factureSelectionnee.paiements || [];
+  //     // Enregistrer le paiement directement dans la mise à jour de la facture
+  //     // puisque le service FirebaseService n'a peut-être pas de méthode addPaiement
+  //     const paiementsActuels = this.factureSelectionnee.paiements || [];
 
-      // Mettre à jour la facture avec le nouveau paiement
-      await this.firebaseService.updateFacture(factureId, {
-        montantPaye: this.factureSelectionnee.montant, // Maintenant complètement payé
-        paiements: [...paiementsActuels, nouveauPaiement]
-      });
+  //     // Mettre à jour la facture avec le nouveau paiement
+  //     await this.firebaseService.updateFacture(factureId, {
+  //       montantPaye: this.factureSelectionnee.montant, // Maintenant complètement payé
+  //       paiements: [...paiementsActuels, nouveauPaiement]
+  //     });
 
-      // Mettre à jour le statut des colis
-      if (this.factureSelectionnee.colisObjets) {
-        for (const colis of this.factureSelectionnee.colisObjets) {
-          if (colis.id) {
-            await this.firebaseService.updateColis(colis.id, {
-              statut: STATUT_COLIS.PAYE
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la facture:', error);
-      throw error;
-    }
-  }
+  //     // Mettre à jour le statut des colis
+  //     if (this.factureSelectionnee.colisObjets) {
+  //       for (const colis of this.factureSelectionnee.colisObjets) {
+  //         if (colis.id) {
+  //           await this.firebaseService.updateColis(colis.id, {
+  //             statut: STATUT_COLIS.PAYE
+  //           });
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Erreur lors de la mise à jour de la facture:', error);
+  //     throw error;
+  //   }
+  // }
 
   async payerFacture(facture: ExtendedFacture): Promise<void> {
     this.openPaymentMethodModal(facture);
@@ -1061,7 +1061,13 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       let montantPaye=0;
       // Mettre à jour le statut des paiements existants qui sont en attente
       const paiementsUpdated = facture.paiements.map(paiement => {
+
+
         if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+          this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
+            ...paiement,
+            statut: STATUT_PAIEMENT.CONFIRME
+          });
           montantPaye+=Number(paiement.montant_paye);
           return {
             ...paiement,
@@ -1105,11 +1111,17 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
           console.error(`Facture non trouvée: ${factureId}`);
           return;
         }
-        let montantPaye=0;
+       // let montantPaye=0;
         // Mettre à jour le statut des paiements existants qui sont en attente
         const paiementsUpdated = facture.paiements.map(paiement => {
+
+
           if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
-            montantPaye+=paiement.montant_paye;
+          //  montantPaye+=paiement.montant_paye;
+          this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
+            ...paiement,
+            statut: STATUT_PAIEMENT.ANNULE
+          });
             return {
               ...paiement,
               statut: STATUT_PAIEMENT.ANNULE
@@ -1121,7 +1133,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         // Mettre à jour la facture
         await this.firebaseService.updateFacture(factureId, {
           paiements: paiementsUpdated,
-          montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
+          //montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
         });
 
         // Mettre à jour le statut des colis
@@ -1129,50 +1141,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
     }
   // Enregistrer les informations du paiement mobile
-  async enregistrerPaiementMobile(
-    reference: string,
-    montant: number,
-    commission: number,
-    provider: string,
-    phoneNumber: string,
-    transactionId: string = '' // Paramètre optionnel avec valeur par défaut
-  ): Promise<void> {
-    const paiementId = `PAY${new Date().getTime()}`;
-    const nouveauPaiement: Paiement = {
-      id: paiementId,
-      montant_paye: montant,
-      typepaiement: this.getTypePaiementFromProvider(provider),
-      datepaiement: new Date(),
-      id_facture: this.factureSelectionnee?.id,
-      facture_reference: this.factureSelectionnee?.id,
-      transaction_reference: transactionId,
-      transaction_id: transactionId,
-      commission: commission,
-      statut: STATUT_PAIEMENT.EN_ATTENTE
-    };
 
-    try {
-      await this.firebaseService.addPaiement(nouveauPaiement);
-      const paiementsActuels = this.factureSelectionnee?.paiements || [];
-      await this.firebaseService.updateFacture(this.factureSelectionnee?.id!, {
-        montantPaye: (this.factureSelectionnee?.montantPaye || 0) + montant,
-        paiements: [...paiementsActuels, nouveauPaiement]
-      });
-
-      if (this.factureSelectionnee?.colisObjets) {
-        for (const colis of this.factureSelectionnee.colisObjets) {
-          if (colis.id) {
-            await this.firebaseService.updateColis(colis.id, {
-              statut: STATUT_COLIS.PAYE
-            });
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Erreur lors de la mise à jour après paiement mobile:', err);
-      this.errorMessage = 'Le paiement a réussi mais une erreur est survenue lors de la mise à jour. Veuillez contacter le support.';
-    }
-  }
 
   // Convertir le fournisseur mobile en type de paiement
   getTypePaiementFromProvider(provider: string): TYPE_PAIEMENT {
@@ -1232,142 +1201,6 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
 
-
-  // Vérifier le statut d'un paiement mobile
-  // verifierStatutPaiementMobile(transactionId: string, originatingTransactionId: string, factureId: string): void {
-  //   console.log(`Vérification du statut du paiement: ID=${transactionId}, Ref=${originatingTransactionId}`);
-
-  //   // Obtenir d'abord un token d'authentification
-  //   this.paiementService.loginWithCredential().subscribe({
-  //     next: (authResponse) => {
-  //       if (authResponse && authResponse.token) {
-  //         // Effectuer une double vérification - par ID et par référence
-  //         // 1. Vérification par ID de transaction
-  //         this.paiementService.verifierStatutPaiement(authResponse.token, transactionId).subscribe({
-  //           next: (statusResponse) => {
-  //             console.log("Réponse de statut par ID:", statusResponse);
-  //             this.traiterReponseStatut(statusResponse, factureId);
-  //           },
-  //           error: (error) => {
-  //             console.error("Erreur lors de la vérification par ID:", error);
-
-  //             // 2. Si échec, essayer par référence
-  //             this.paiementService.verifierStatutPaiementParReference(authResponse.token, originatingTransactionId).subscribe({
-  //               next: (refStatusResponse) => {
-  //                 console.log("Réponse de statut par référence:", refStatusResponse);
-  //                 this.traiterReponseStatut(refStatusResponse, factureId);
-  //               },
-  //               error: (refError) => {
-  //                 console.error("Erreur lors de la vérification par référence:", refError);
-  //                 this.mobilePaymentError = "Impossible de vérifier l'état du paiement. Veuillez réessayer plus tard.";
-  //               }
-  //             });
-  //           }
-  //         });
-  //       } else {
-  //         console.error("Token d'authentification invalide");
-  //         this.mobilePaymentError = "Erreur d'authentification lors de la vérification du paiement.";
-  //       }
-  //     },
-  //     error: (authError) => {
-  //       console.error("Erreur d'authentification:", authError);
-  //       this.mobilePaymentError = "Erreur d'authentification lors de la vérification du paiement.";
-  //     }
-  //   });
-  // }
-
-  // Traiter la réponse de statut et mettre à jour la facture si nécessaire
-  // private async traiterReponseStatut(statusResponse: any, factureId: string): Promise<void> {
-  //   try {
-  //     if (!statusResponse) {
-  //       console.error("Réponse de statut invalide");
-  //       return;
-  //     }
-
-  //     // Interpréter le statut selon la documentation
-  //     const interpretation = this.paiementService.interpreterStatutPaiement(
-  //       statusResponse.statusCode,
-  //       statusResponse.status
-  //     );
-
-  //     console.log(`Interprétation du statut: ${interpretation.statut} - ${interpretation.message}`);
-
-  //     // Mettre à jour l'interface utilisateur avec le message approprié
-  //     if (interpretation.statut == 'APPROUVE') {
-  //       this.successMessage = interpretation.message;
-  //       // Mettre à jour la facture comme payée
-  //       if (this.factureSelectionnee) {
-  //         await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
-  //       } else {
-  //         console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
-  //       }
-
-  //       // Recharger les factures
-  //       if (this.partenaireId) {
-  //         this.chargerFactures(this.partenaireId);
-  //       }
-
-  //       // Supprimer les entrées du localStorage pour ce paiement
-  //       for (let i = 0; i < localStorage.length; i++) {
-  //         const key = localStorage.key(i);
-  //         if (key && key.startsWith(`paiement_mobile_`) &&
-  //             key.includes(factureId) && key.includes(statusResponse.transactionId)) {
-  //           localStorage.removeItem(key);
-  //         }
-  //       }
-  //     } else if (interpretation.statut === 'REFUSE') {
-  //       this.errorMessage = interpretation.message;
-  //       // Supprimer les entrées du localStorage pour ce paiement
-  //       for (let i = 0; i < localStorage.length; i++) {
-  //         const key = localStorage.key(i);
-  //         if (key && key.startsWith(`paiement_mobile_`) &&
-  //             key.includes(factureId) && key.includes(statusResponse.transactionId)) {
-  //           localStorage.removeItem(key);
-  //         }
-  //       }
-  //     } else if (interpretation.statut === 'ACCEPTE' || interpretation.statut === 'EN_ATTENTE') {
-  //       // Ne rien faire, attendre que le client confirme sur son téléphone
-  //       console.log("Paiement en attente de confirmation par le client");
-  //     }
-  //   } catch (error) {
-  //     console.error("Erreur lors du traitement de la réponse de statut:", error);
-  //   }
-  // }
-
-  // Vérifier les paiements mobiles en attente au chargement de la page
-  // verifierPaiementsEnAttente(): void {
-  //   // Parcourir le localStorage pour trouver les paiements mobiles en attente
-  //   for (let i = 0; i < localStorage.length; i++) {
-  //     const key = localStorage.key(i);
-  //     if (key && key.startsWith('paiement_mobile_')) {
-  //       try {
-  //         const paiementData = JSON.parse(localStorage.getItem(key) || '{}');
-  //         if (paiementData.factureId && paiementData.transactionId &&
-  //             paiementData.originatingTransactionId && paiementData.statut === 'EN_ATTENTE') {
-  //           // Vérifier si le paiement a moins de 24h (durée de validité typique)
-  //           const dateCreation = new Date(paiementData.dateCreation);
-  //           const maintenant = new Date();
-  //           const diffHeures = (maintenant.getTime() - dateCreation.getTime()) / (1000 * 60 * 60);
-
-  //           if (diffHeures < 24) {
-  //             // Vérifier le statut du paiement
-  //             this.verifierStatutPaiementMobile(
-  //               paiementData.transactionId,
-  //               paiementData.originatingTransactionId,
-  //               paiementData.factureId
-  //             );
-  //           } else {
-  //             // Supprimer les paiements trop anciens
-  //             localStorage.removeItem(key);
-  //           }
-  //         }
-  //       } catch (error) {
-  //         console.error(`Erreur lors du traitement du paiement en attente ${key}:`, error);
-  //       }
-  //     }
-  //   }
-  // }
-
   // Mettre à jour la facture après confirmation d'un paiement mobile
   private async updateFactureApresConfirmationMobile(factureId: string, transaction_reference: any, transaction_id: any, provider: string, montantRestant: number, commission: number): Promise<void> {
     try {
@@ -1391,7 +1224,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       await this.firebaseService.addPaiement(nouveauPaiement);
       const paiementsActuels = this.factureSelectionnee?.paiements || [];
       await this.firebaseService.updateFacture(this.factureSelectionnee?.id!, {
-        montantPaye: (this.factureSelectionnee?.montantPaye || 0) + montantRestant,
+       // montantPaye: (this.factureSelectionnee?.montantPaye || 0) + montantRestant,
         paiements: [...paiementsActuels, nouveauPaiement]
       });
       this.modalService.dismissAll()
