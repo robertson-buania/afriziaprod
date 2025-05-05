@@ -71,9 +71,19 @@ export interface Paiement{
   id_facture?:string,
   datepaiement:Date,
   statut:STATUT_PAIEMENT,
+  statut_araka:STATUT_PAIEMENT_ARAKA,
   transaction_reference?:any,
   transaction_id?:any,
   commission?:number
+}
+
+
+export enum STATUT_PAIEMENT_ARAKA{
+  APPROVED="APPROVED",
+  DECLINED="DECLINED",
+  ACCEPTED="ACCEPTED",
+  CARD_STRIPE="CARD_STRIPE",
+  AUTRE="AUTRE"
 }
 export enum STATUT_PAIEMENT{
   EN_ATTENTE,

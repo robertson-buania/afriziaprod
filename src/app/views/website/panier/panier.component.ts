@@ -32,6 +32,7 @@ import {
   Paiement,
   TYPE_PAIEMENT,
   STATUT_PAIEMENT,
+  STATUT_PAIEMENT_ARAKA,
 } from '@/app/models/partenaire.model'
 import { UtilisateurService } from '@/app/core/services/utilisateur.service'
 import { Subscription } from 'rxjs'
@@ -598,7 +599,8 @@ export class PanierComponent implements OnInit, OnDestroy {
             transaction_reference: paymentIntent.id, // Ajouter la référence de la transaction Stripe
             transaction_id: paymentIntent.id, // Ajouter la référence de la transaction Stripe
             commission: commission, // Ajouter la commission de 10%
-            statut: STATUT_PAIEMENT.CONFIRME
+            statut: STATUT_PAIEMENT.CONFIRME,
+            statut_araka:STATUT_PAIEMENT_ARAKA.CARD_STRIPE
           }
 
           try {
@@ -849,11 +851,11 @@ export class PanierComponent implements OnInit, OnDestroy {
       this.processpaymentProcessing = true;
       const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
 
-      this.firebaseService.paiements_transactions_data(response)
 
       if (response.statusCode == '202') {
         this.mobilePaymentSuccess = 'Paiement en attente de confirmation dans les 5 minutes : Veuillez confirmer ce paiement sur votre appareil...';
 
+        this.firebaseService.paiements_transactions_data({...response,source:"PANIER"})
 
         this.updateFactureApresConfirmationMobile(this.factureCreee, response.originatingTransactionId, response.transactionId, provider, montantBase, commission);
 
@@ -865,7 +867,7 @@ export class PanierComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.processpaymentProcessing = false;
-      console.error('Payment error:', error);
+
       this.mobilePaymentError = 'An error occurred while processing the payment.';
     } finally {
       this.processpaymentProcessing = false;
@@ -874,59 +876,49 @@ export class PanierComponent implements OnInit, OnDestroy {
   }
 
   private async startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): Promise<void> {
-    const checkInterval = 1000; // 5 seconds
-    const timeout = 10000; // 10 seconds
-    let elapsedTime = 0;
+    try {
+      this.processpaymentProcessing = true;
+      const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
 
-    const intervalId = setInterval(async () => {
-      try {
-        this.processpaymentProcessing = true;
-        const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
 
-        this.firebaseService.paiements_transactions_data(statusResponse)
+      if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
 
-        if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
-          clearInterval(intervalId);
-        //  this.processpaymentProcessing = false;
-      //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
-         // if (this.factureSelectionnee) {
-            this.updatePaiementByReferenceArakaId(transactionId, originatingTransactionId);
+        this.firebaseService.paiements_transactions_data({...statusResponse,source:"PANIER"})
 
-           //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
-          // } else {
-          //   this.processpaymentProcessing = false;
-          //   console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
-          // }
-        } else if (statusResponse.statusCode == '202') {
-       //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
-        }else
-        if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
-          clearInterval(intervalId);
-         // this.processpaymentProcessing = false;
-          this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+      //  this.processpaymentProcessing = false;
+    //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+       // if (this.factureSelectionnee) {
+          this.updatePaiementByReferenceArakaId(transactionId, originatingTransactionId);
 
-        //  this.mobilePaymentError = 'Le paiement a été refusé.';
-        }else
-        if (statusResponse.statusCode == '500') {
-          clearInterval(intervalId);
-          //this.processpaymentProcessing = false;
-          this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+         //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
+        // } else {
+        //   this.processpaymentProcessing = false;
+        //   console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
+        // }
+      } else if (statusResponse.statusCode == '202') {
+     //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
+      }else
+      if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
 
-     //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
-        }
-      } catch (error) {
        // this.processpaymentProcessing = false;
+       this.firebaseService.paiements_transactions_data({...statusResponse,source:"PANIER"})
 
-        console.error('Error checking payment status:', error);
-      }
+        this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
 
-      elapsedTime += checkInterval;
-      if (elapsedTime >= timeout) {
-        clearInterval(intervalId);
+      //  this.mobilePaymentError = 'Le paiement a été refusé.';
+      }else
+      if (statusResponse.statusCode == '500') {
+
         //this.processpaymentProcessing = false;
-      //  this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
+        this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+
+   //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
       }
-    }, checkInterval);
+    } catch (error) {
+     // this.processpaymentProcessing = false;
+
+      //console.error('Error checking payment status:', error);
+    }
   }
 
 
@@ -944,16 +936,20 @@ export class PanierComponent implements OnInit, OnDestroy {
         // Mettre à jour le statut des paiements existants qui sont en attente
         const paiementsUpdated = facture.paiements.map(paiement => {
 
-          if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+          if (paiement.transaction_reference==originatingTransactionId && paiement.transaction_id==transactionId) {
+
             this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
               ...paiement,
-              statut: STATUT_PAIEMENT.CONFIRME
+              statut: STATUT_PAIEMENT.CONFIRME,
+              statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
             });
-            montantPaye+=Number(paiement.montant_paye);
+            montantPaye=Number(paiement.montant_paye);
             return {
               ...paiement,
-              statut: STATUT_PAIEMENT.CONFIRME
+              statut: STATUT_PAIEMENT.CONFIRME,
+              statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
             };
+
           }
           return paiement;
         });
@@ -992,19 +988,21 @@ export class PanierComponent implements OnInit, OnDestroy {
             console.error(`Facture non trouvée: ${factureId}`);
             return;
           }
-          let montantPaye=0;
+
           // Mettre à jour le statut des paiements existants qui sont en attente
           const paiementsUpdated = facture.paiements.map(paiement => {
 
-            if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
+            if (paiement.transaction_reference==originatingTransactionId && paiement.transaction_id==transactionId) {
               this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
                 ...paiement,
-                statut: STATUT_PAIEMENT.ANNULE
+                statut: STATUT_PAIEMENT.ANNULE,
+                statut_araka:STATUT_PAIEMENT_ARAKA.DECLINED
               });
-              montantPaye+=paiement.montant_paye;
+
               return {
                 ...paiement,
-                statut: STATUT_PAIEMENT.ANNULE
+                statut: STATUT_PAIEMENT.ANNULE,
+                statut_araka:STATUT_PAIEMENT_ARAKA.DECLINED
               };
             }
             return paiement;
@@ -1058,52 +1056,52 @@ export class PanierComponent implements OnInit, OnDestroy {
   // }
 
   // Enregistrer les informations du paiement mobile
-  async enregistrerPaiementMobile(
-    reference: string,
-    montant: number,
-    commission: number,
-    provider: string,
-    phoneNumber: string
-  ): Promise<void> {
-    if (!this.factureCreee) {
-      throw new Error('Facture non valide');
-    }
+  // async enregistrerPaiementMobile(
+  //   reference: string,
+  //   montant: number,
+  //   commission: number,
+  //   provider: string,
+  //   phoneNumber: string
+  // ): Promise<void> {
+  //   if (!this.factureCreee) {
+  //     throw new Error('Facture non valide');
+  //   }
 
-    // Convertir le fournisseur mobile en type de paiement
-    let typePaiement;
-    switch (provider) {
-      case MOBILE_MONEY_PROVIDER.MPESA:
-        typePaiement = TYPE_PAIEMENT.MPESA;
-        break;
-      case MOBILE_MONEY_PROVIDER.ORANGE:
-        typePaiement = TYPE_PAIEMENT.ORANGE;
-        break;
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
-        typePaiement = TYPE_PAIEMENT.AIRTEL_MONEY;
-        break;
-      default:
-        typePaiement = TYPE_PAIEMENT.ESPECE;
-    }
+  //   // Convertir le fournisseur mobile en type de paiement
+  //   let typePaiement;
+  //   switch (provider) {
+  //     case MOBILE_MONEY_PROVIDER.MPESA:
+  //       typePaiement = TYPE_PAIEMENT.MPESA;
+  //       break;
+  //     case MOBILE_MONEY_PROVIDER.ORANGE:
+  //       typePaiement = TYPE_PAIEMENT.ORANGE;
+  //       break;
+  //     case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+  //       typePaiement = TYPE_PAIEMENT.AIRTEL_MONEY;
+  //       break;
+  //     default:
+  //       typePaiement = TYPE_PAIEMENT.ESPECE;
+  //   }
 
-    // Créer l'objet paiement
-    const paiement = {
-      id: reference,
-      typepaiement: typePaiement,
-      montant_paye: montant - commission,
-      facture_reference: this.factureCreee,
-      id_facture: this.factureCreee,
-      datepaiement: new Date(),
-      stripe_reference: reference,
-      commission: commission,
-      statut: STATUT_PAIEMENT.EN_ATTENTE
-    };
+  //   // Créer l'objet paiement
+  //   const paiement = {
+  //     id: reference,
+  //     typepaiement: typePaiement,
+  //     montant_paye: montant - commission,
+  //     facture_reference: this.factureCreee,
+  //     id_facture: this.factureCreee,
+  //     datepaiement: new Date(),
+  //     stripe_reference: reference,
+  //     commission: commission,
+  //     statut: STATUT_PAIEMENT.EN_ATTENTE
+  //   };
 
-    // Enregistrer le paiement en attente
-    await this.firebaseService.addPaiementToFacture(
-      this.factureCreee,
-      paiement
-    );
-  }
+  //   // Enregistrer le paiement en attente
+  //   await this.firebaseService.addPaiementToFacture(
+  //     this.factureCreee,
+  //     paiement
+  //   );
+  // }
 
   private async updateFactureApresConfirmationMobile(factureId: string, transaction_reference: any, transaction_id: any, provider: string, montantRestant: number, commission: number): Promise<void> {
     try {
@@ -1120,7 +1118,8 @@ export class PanierComponent implements OnInit, OnDestroy {
         transaction_reference: transaction_reference, // Référence Stripe
         transaction_id: transaction_id, // Référence Stripe
         commission: commission, // Commission de 10%,
-        statut: STATUT_PAIEMENT.EN_ATTENTE
+        statut: STATUT_PAIEMENT.EN_ATTENTE,
+        statut_araka:STATUT_PAIEMENT_ARAKA.ACCEPTED
       };
 
 

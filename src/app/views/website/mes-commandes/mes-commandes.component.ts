@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { NgbNavModule, NgbAccordionModule, NgbAlertModule, NgbTooltipModule, NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT, FactureStatus, STATUT_PAIEMENT } from '@/app/models/partenaire.model';
+import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT, FactureStatus, STATUT_PAIEMENT, STATUT_PAIEMENT_ARAKA } from '@/app/models/partenaire.model';
 import { Subscription, of, Subject, timer, from, Observable } from 'rxjs';
 import { PaymentService } from '@/app/core/services/payment.service';
 import { AuthService } from '@/app/core/services/auth.service';
@@ -326,7 +326,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
             const montantPaye = (facture.montantPaye !== undefined)
               ? facture.montantPaye
-              : paiements.reduce((total, p) => p.statut === STATUT_PAIEMENT.CONFIRME ? total + (p.montant_paye || 0) : total, 0);
+              : paiements.reduce((total, p) => (p.statut === STATUT_PAIEMENT.CONFIRME )? total + (p.montant_paye || 0) : total, 0);
               facture.paiements.forEach(async paiement=>{
                 if(paiement.statut === STATUT_PAIEMENT.EN_ATTENTE ){
 
@@ -960,10 +960,10 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
       this.processpaymentProcessing = true;
 
       const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
-      this.firebaseService.paiements_transactions_data(response)
 
       if (response.statusCode == '202') {
         this.mobilePaymentSuccess = 'Paiement en attente de confirmation dans les 5 minutes : Veuillez confirmer ce paiement sur votre appareil...';
+        this.firebaseService.paiements_transactions_data({...response,source:"COMMANDES"})
 
         this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, response.originatingTransactionId, response.transactionId, provider, montantBase, commission);
 
@@ -996,56 +996,43 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   }
 
   private async startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): Promise<void> {
-    const checkInterval = 1000; // 5 seconds
-    const timeout = 10000; // 10 seconds
-    let elapsedTime = 0;
+    try {
+      this.processpaymentProcessing = true;
+      const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
 
-    const intervalId = setInterval(async () => {
-      try {
-        this.processpaymentProcessing = true;
-        const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
-        this.firebaseService.paiements_transactions_data(statusResponse)
+      if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
+        this.firebaseService.paiements_transactions_data({...statusResponse,source:"COMMANDES"})
 
-        if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
-          clearInterval(intervalId);
-        //  this.processpaymentProcessing = false;
-      //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
-         // if (this.factureSelectionnee) {
-            this.updatePaiementByReferenceArakaId(transactionId, originatingTransactionId);
+      //  this.processpaymentProcessing = false;
+    //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+       // if (this.factureSelectionnee) {
+          this.updatePaiementByReferenceArakaId(transactionId, originatingTransactionId);
 
-           //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
-          // } else {
-          //   this.processpaymentProcessing = false;
-          //   console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
-          // }
-        } else if (statusResponse.statusCode == '202') {
-       //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
-        }else
-        if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
-          clearInterval(intervalId);
-         // this.processpaymentProcessing = false;
-          this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+         //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
+        // } else {
+        //   this.processpaymentProcessing = false;
+        //   console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
+        // }
+      } else if (statusResponse.statusCode == '202') {
+     //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
+      }else
+      if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
 
-        //  this.mobilePaymentError = 'Le paiement a été refusé.';
-        }else
-        if (statusResponse.statusCode == '500') {
-          clearInterval(intervalId);
-          //this.processpaymentProcessing = false;
-          this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+       // this.processpaymentProcessing = false;
+        this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
 
-     //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
-        }
-      } catch (error) {
-         console.error('Error checking payment status:', error);
-      }
+      //  this.mobilePaymentError = 'Le paiement a été refusé.';
+      }else
+      if (statusResponse.statusCode == '500') {
 
-      elapsedTime += checkInterval;
-      if (elapsedTime >= timeout) {
-        clearInterval(intervalId);
         //this.processpaymentProcessing = false;
-      //  this.mobilePaymentError = "Le paiement n'a pas été confirmé dans le délai imparti. Veuillez réessayer.";
+        this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+
+   //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
       }
-    }, checkInterval);
+    } catch (error) {
+       console.error('Error checking payment status:', error);
+    }
   }
 
  private async updatePaiementByReferenceArakaId(transactionId: string, originatingTransactionId: string) {
@@ -1066,12 +1053,14 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
           this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
             ...paiement,
-            statut: STATUT_PAIEMENT.CONFIRME
+            statut: STATUT_PAIEMENT.CONFIRME,
+            statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
           });
-          montantPaye+=Number(paiement.montant_paye);
+          montantPaye=Number(paiement.montant_paye);
           return {
             ...paiement,
-            statut: STATUT_PAIEMENT.CONFIRME
+            statut: STATUT_PAIEMENT.CONFIRME,
+            statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
           };
         }
         return paiement;
@@ -1120,11 +1109,13 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
           //  montantPaye+=paiement.montant_paye;
           this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
             ...paiement,
-            statut: STATUT_PAIEMENT.ANNULE
+            statut: STATUT_PAIEMENT.ANNULE,
+            statut_araka:STATUT_PAIEMENT_ARAKA.DECLINED
           });
             return {
               ...paiement,
-              statut: STATUT_PAIEMENT.ANNULE
+              statut: STATUT_PAIEMENT.ANNULE,
+              statut_araka:STATUT_PAIEMENT_ARAKA.DECLINED
             };
           }
           return paiement;
@@ -1217,7 +1208,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         transaction_reference: transaction_reference, // Référence Stripe
         transaction_id: transaction_id, // Référence Stripe
         commission: commission, // Commission de 10%,
-        statut: STATUT_PAIEMENT.EN_ATTENTE
+        statut: STATUT_PAIEMENT.EN_ATTENTE,
+        statut_araka:STATUT_PAIEMENT_ARAKA.ACCEPTED
       };
 
 

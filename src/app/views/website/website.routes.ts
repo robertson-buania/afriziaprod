@@ -40,20 +40,20 @@ export const WEBSITE_ROUTES: Route[] = [
             .then(m => m.MesCommandesComponent),
         data: { title: 'Mes commandes' }
       },
-      {
-        path: 'paiement/:id',
-        loadComponent: () =>
-          import('./paiement-facture/paiement-facture.component')
-            .then(m => m.PaiementFactureComponent),
-        data: { title: 'Paiement de facture' }
-      },
-      {
-        path: 'paiement/resultat/:id',
-        loadComponent: () =>
-          import('./paiement/paiement-resultat/paiement-resultat.component')
-            .then(m => m.PaiementResultatComponent),
-        data: { title: 'Résultat du paiement' }
-      },
+      // {
+      //   path: 'paiement/:id',
+      //   loadComponent: () =>
+      //     import('./paiement-facture/paiement-facture.component')
+      //       .then(m => m.PaiementFactureComponent),
+      //   data: { title: 'Paiement de facture' }
+      // },
+      // {
+      //   path: 'paiement/resultat/:id',
+      //   loadComponent: () =>
+      //     import('./paiement/paiement-resultat/paiement-resultat.component')
+      //       .then(m => m.PaiementResultatComponent),
+      //   data: { title: 'Résultat du paiement' }
+      // },
       {
         path: 'profil',
         loadComponent: () =>
