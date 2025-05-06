@@ -54,7 +54,7 @@ import { ArakaPaymentService } from '@/app/core/services/araka-payment.service'
 enum MOBILE_MONEY_PROVIDER {
   MPESA = 'MPESA',
   ORANGE = 'ORANGE',
-  AIRTEL_MONEY = 'AIRTEL_MONEY'
+  AIRTEL = 'AIRTEL',
 }
 
 // Interface pour le mode de paiement
@@ -155,9 +155,9 @@ export class PanierComponent implements OnInit, OnDestroy {
   mobilePaymentProcessing = false
   mobilePaymentError = ''
   mobilePaymentSuccess = ''
-  processpaymentProcessing = false;
+  processpaymentProcessing = false
 
-  private modalRef: NgbModalRef | null = null;
+  private modalRef: NgbModalRef | null = null
 
   constructor(
     private panierService: PanierService,
@@ -181,8 +181,11 @@ export class PanierComponent implements OnInit, OnDestroy {
     // Initialiser le formulaire Mobile Money
     this.mobileMoneyForm = this.fb.group({
       provider: [MOBILE_MONEY_PROVIDER.MPESA, Validators.required],
-      phoneNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{9}$/)]]
-    });
+      phoneNumber: [
+        '',
+        [Validators.required, Validators.pattern(/^[0-9]{9}$/)],
+      ],
+    })
   }
 
   ngOnInit(): void {
@@ -360,12 +363,11 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     const colisData: Colis[] = []
     this.colis.forEach((data) => {
-
       const colis: Colis = {
         id: data.id,
         type: data.type,
         partenaireId: this.partenaireId || '',
-        clientNom:this.utilisateurConnecte.nom,
+        clientNom: this.utilisateurConnecte.nom,
         clientPrenom: this.utilisateurConnecte.prenom,
         clientTelephone: this.utilisateurConnecte.telephone,
         clientEmail: this.utilisateurConnecte.email,
@@ -376,7 +378,9 @@ export class PanierComponent implements OnInit, OnDestroy {
         cout: data.cout,
         dateCreation: data.dateCreation,
         codeSuivi: data.codeSuivi,
-        nombreUnites: data.nombreUnites? data.nombreUnites :Number( data.quantite),
+        nombreUnites: data.nombreUnites
+          ? data.nombreUnites
+          : Number(data.quantite),
         codeexpedition: data.codeexpedition,
         destinataire: data.destinataire,
         destination: data.destination,
@@ -385,10 +389,7 @@ export class PanierComponent implements OnInit, OnDestroy {
         transporteur: data.transporteur,
       }
       colisData.push(colis)
-
-
     })
-
 
     // Créer l'objet facture avec l'ID personnalisé
     const facture: Omit<Facture, 'id'> & { id: string } = {
@@ -403,7 +404,6 @@ export class PanierComponent implements OnInit, OnDestroy {
 
     await this.firebaseService.createFacture(facture)
 
-
     return facture.id
   }
 
@@ -412,7 +412,6 @@ export class PanierComponent implements OnInit, OnDestroy {
     const updatePromises = this.colis
       .filter((colis) => colis.id)
       .map((colis) =>
-
         /**
          * await this.firebaseService.updateColis(colis.id, {
       partenaireId: this.utilisateurConnecte.partenaireId,
@@ -429,7 +428,7 @@ export class PanierComponent implements OnInit, OnDestroy {
           clientNom: this.utilisateurConnecte.nom,
           clientPrenom: this.utilisateurConnecte.prenom,
           clientEmail: this.utilisateurConnecte.email,
-          clientTelephone: this.utilisateurConnecte.telephone
+          clientTelephone: this.utilisateurConnecte.telephone,
         })
       )
 
@@ -437,43 +436,45 @@ export class PanierComponent implements OnInit, OnDestroy {
   }
   async creerFacture(): Promise<void> {
     try {
-      this.isProcessing = true;
-      this.isCreatingFacture = true;
-      this.errorMessage = '';
-      this.successMessage = '';
+      this.isProcessing = true
+      this.isCreatingFacture = true
+      this.errorMessage = ''
+      this.successMessage = ''
 
       // Vérifier si l'utilisateur est connecté
-      const utilisateur = this.utilisateurConnecte;
+      const utilisateur = this.utilisateurConnecte
       if (!utilisateur || !utilisateur.partenaireId) {
-        this.isProcessing = false;
-        this.isCreatingFacture = false;
-        this.ouvrirModalConnexion();
-        return;
+        this.isProcessing = false
+        this.isCreatingFacture = false
+        this.ouvrirModalConnexion()
+        return
       }
 
       // Créer la facture depuis le panier
-      this.factureCreee = await this.createFacture();
+      this.factureCreee = await this.createFacture()
 
       if (this.factureCreee) {
         // Mettre à jour le statut des colis
-        await this.updateColisStatus(this.factureCreee);
+        await this.updateColisStatus(this.factureCreee)
 
         // Vider le panier après création de la facture pour éviter les doublons
-        this.panierService.viderPanier();
+        this.panierService.viderPanier()
 
         // Ouvrir le modal de sélection de méthode de paiement
-        this.openPaymentMethodModal();
+        this.openPaymentMethodModal()
 
-        this.successMessage = 'Votre facture a été créée avec succès.';
+        this.successMessage = 'Votre facture a été créée avec succès.'
       } else {
-        this.errorMessage = 'Une erreur est survenue lors de la création de la facture.';
+        this.errorMessage =
+          'Une erreur est survenue lors de la création de la facture.'
       }
     } catch (error) {
-      console.error('Erreur lors de la création de la facture:', error);
-      this.errorMessage = 'Une erreur est survenue lors de la création de la facture.';
+      console.error('Erreur lors de la création de la facture:', error)
+      this.errorMessage =
+        'Une erreur est survenue lors de la création de la facture.'
     } finally {
-      this.isProcessing = false;
-      this.isCreatingFacture = false;
+      this.isProcessing = false
+      this.isCreatingFacture = false
     }
   }
 
@@ -481,17 +482,17 @@ export class PanierComponent implements OnInit, OnDestroy {
   async initializeStripePayment(factureId: string): Promise<void> {
     try {
       // Calculer les frais de transaction (10%)
-      const montantBase = Number(this.total);
-      const commission = montantBase > 50 ? montantBase * 0.05: montantBase * 0.075;
-      const totalAvecCommission = montantBase + commission;
+      const montantBase = Number(this.total)
+      const commission =
+        montantBase > 50 ? montantBase * 0.05 : montantBase * 0.075
+      const totalAvecCommission = montantBase + commission
 
       // Obtenir le client secret via notre API
-      this.clientSecret = await this.stripeService.createPaymentIntent(
-        totalAvecCommission
-      );
+      this.clientSecret =
+        await this.stripeService.createPaymentIntent(totalAvecCommission)
 
       // Obtenir l'instance de Stripe
-      this.stripe = await this.stripeService.getStripeInstance();
+      this.stripe = await this.stripeService.getStripeInstance()
 
       // Créer les éléments Stripe
       this.elements = this.stripe.elements({
@@ -502,22 +503,22 @@ export class PanierComponent implements OnInit, OnDestroy {
             colorPrimary: '#007bff',
           },
         },
-      });
+      })
 
       // Créer l'élément de paiement
       this.paymentElement = this.elements.create('payment', {
         amount: {
           currency: 'usd',
           value: totalAvecCommission * 100, // Stripe attend les montants en centimes
-        }
-      });
+        },
+      })
 
       // Monter l'élément de paiement dans le DOM
       setTimeout(() => {
         if (this.cardElement?.nativeElement) {
-          this.paymentElement.mount(this.cardElement.nativeElement);
+          this.paymentElement.mount(this.cardElement.nativeElement)
         }
-      }, 100);
+      }, 100)
 
       this.isProcessing = false
     } catch (error) {
@@ -532,8 +533,8 @@ export class PanierComponent implements OnInit, OnDestroy {
   formaterMontant(montant: number): string {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'USD'
-    }).format(Number(Number(montant).toFixed(4)));
+      currency: 'USD',
+    }).format(Number(Number(montant).toFixed(4)))
   }
   // Traiter le paiement
   async processPayment(): Promise<void> {
@@ -574,19 +575,25 @@ export class PanierComponent implements OnInit, OnDestroy {
 
         // Rediriger vers mes-commandes même en cas d'erreur
         setTimeout(() => {
-          this.router.navigate(['/mes-commandes']);
-        }, 1500);
+          this.router.navigate(['/mes-commandes'])
+        }, 1500)
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         this.paymentStatus = 'success'
         this.successMessage = 'Paiement effectué avec succès!'
-        console.log("paymentIntent ---------------********************",paymentIntent);
+        console.log(
+          'paymentIntent ---------------********************',
+          paymentIntent
+        )
 
         // Créer un paiement avec un ID unique pour la facture créée
         if (this.factureCreee) {
           // Calculer la commission (10%)
-          const commission = this.total > 50 ? this.total * 0.05 : this.total * 0.075;
-          console.log("paymentIntent ---------------********************",paymentIntent);
-
+          const commission =
+            this.total > 50 ? this.total * 0.05 : this.total * 0.075
+          console.log(
+            'paymentIntent ---------------********************',
+            paymentIntent
+          )
 
           const paiementId = `PAY${new Date().getTime()}`
           const paiement: Paiement = {
@@ -600,12 +607,12 @@ export class PanierComponent implements OnInit, OnDestroy {
             transaction_id: paymentIntent.id, // Ajouter la référence de la transaction Stripe
             commission: commission, // Ajouter la commission de 10%
             statut: STATUT_PAIEMENT.CONFIRME,
-            statut_araka:STATUT_PAIEMENT_ARAKA.CARD_STRIPE
+            statut_araka: STATUT_PAIEMENT_ARAKA.CARD_STRIPE,
           }
 
           try {
             // Ajouter le paiement à la collection paiements
-            await this.firebaseService.addPaiement(paiement);
+            await this.firebaseService.addPaiement(paiement)
 
             // Mettre à jour la facture avec le nouveau paiement
             await this.firebaseService.updateFacture(this.factureCreee, {
@@ -643,8 +650,8 @@ export class PanierComponent implements OnInit, OnDestroy {
 
       // Rediriger vers mes-commandes même en cas d'erreur
       setTimeout(() => {
-        this.router.navigate(['/mes-commandes']);
-      }, 1500);
+        this.router.navigate(['/mes-commandes'])
+      }, 1500)
     } finally {
       this.paymentProcessing = false
     }
@@ -663,11 +670,13 @@ export class PanierComponent implements OnInit, OnDestroy {
   }
 
   confirmerSuppression(modal: any, colisId: string): void {
-    this.modalService.open(modal, { centered: true,backdrop: 'static' }).result.then((result) => {
-      if (result === 'confirm') {
-        this.supprimerColis(colisId)
-      }
-    })
+    this.modalService
+      .open(modal, { centered: true, backdrop: 'static' })
+      .result.then((result) => {
+        if (result === 'confirm') {
+          this.supprimerColis(colisId)
+        }
+      })
   }
 
   // Méthodes pour ouvrir les modals d'authentification
@@ -681,20 +690,23 @@ export class PanierComponent implements OnInit, OnDestroy {
 
   // Sélectionner le mode de paiement
   selectPaymentMode(mode: 'CARD' | 'MOBILEMONEY'): void {
-    this.selectedPaymentMode = { type: mode };
+    this.selectedPaymentMode = { type: mode }
 
     if (mode === 'CARD') {
-      this.modalRef?.close();
-      this.initializeStripePayment(this.factureCreee);
+      this.modalRef?.close()
+      this.initializeStripePayment(this.factureCreee)
     } else {
-      this.modalRef?.close();
-      this.openMobileMoneyModal();
+      this.modalRef?.close()
+      this.openMobileMoneyModal()
     }
   }
 
   // Ouvrir modal de sélection du mode de paiement
   openPaymentMethodModal(): void {
-    this.modalRef = this.modalService.open(this.paymentMethodModal, { centered: true ,backdrop: 'static'});
+    this.modalRef = this.modalService.open(this.paymentMethodModal, {
+      centered: true,
+      backdrop: 'static',
+    })
 
     // Ajouter un gestionnaire pour la fermeture du modal
     this.modalRef.result.then(
@@ -705,14 +717,17 @@ export class PanierComponent implements OnInit, OnDestroy {
       (reason) => {
         // Modal fermé par croix ou clic à l'extérieur
         // Rediriger vers mes-commandes car la facture a déjà été créée
-        this.router.navigate(['/mes-commandes']);
+        this.router.navigate(['/mes-commandes'])
       }
-    );
+    )
   }
 
   // Ouvrir modal de paiement mobile money
   openMobileMoneyModal(): void {
-    this.modalRef = this.modalService.open(this.mobileMoneyModal, { centered: true,backdrop: 'static' });
+    this.modalRef = this.modalService.open(this.mobileMoneyModal, {
+      centered: true,
+      backdrop: 'static',
+    })
 
     // Ajouter un gestionnaire pour la fermeture du modal
     this.modalRef.result.then(
@@ -723,33 +738,39 @@ export class PanierComponent implements OnInit, OnDestroy {
       (reason) => {
         // Modal fermé par croix ou clic à l'extérieur
         // Rediriger vers mes-commandes car la facture a déjà été créée
-        this.router.navigate(['/mes-commandes']);
+        this.router.navigate(['/mes-commandes'])
       }
-    );
+    )
 
     // Surveillance des changements de fournisseur pour les validations spécifiques
-    this.mobileMoneyForm.get('provider')?.valueChanges.subscribe(provider => {
-      const phoneControl = this.mobileMoneyForm.get('phoneNumber');
-      phoneControl?.setValidators([Validators.required, Validators.pattern(/^[0-9]{9}$/)]);
-      phoneControl?.updateValueAndValidity();
-    });
+    this.mobileMoneyForm.get('provider')?.valueChanges.subscribe((provider) => {
+      const phoneControl = this.mobileMoneyForm.get('phoneNumber')
+      phoneControl?.setValidators([
+        Validators.required,
+        Validators.pattern(/^[0-9]{9}$/),
+      ])
+      phoneControl?.updateValueAndValidity()
+    })
   }
 
   // Vérifier si le numéro de téléphone est valide pour le fournisseur sélectionné
-  isValidPhoneForProvider(provider: MOBILE_MONEY_PROVIDER, phone: string): boolean {
-    if (!phone || phone.length !== 9) return false;
+  isValidPhoneForProvider(
+    provider: MOBILE_MONEY_PROVIDER,
+    phone: string
+  ): boolean {
+    if (!phone || phone.length !== 9) return false
 
-    const prefix = phone.substring(0, 2);
+    const prefix = phone.substring(0, 2)
 
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
-        return ['81', '82', '83'].includes(prefix);
+        return ['81', '82', '83'].includes(prefix)
       case MOBILE_MONEY_PROVIDER.ORANGE:
-        return ['84', '85', '89'].includes(prefix);
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
-        return ['99', '97'].includes(prefix);
+        return ['84', '85', '89'].includes(prefix)
+      case MOBILE_MONEY_PROVIDER.AIRTEL:
+        return ['99', '97'].includes(prefix)
       default:
-        return false;
+        return false
     }
   }
 
@@ -757,13 +778,13 @@ export class PanierComponent implements OnInit, OnDestroy {
   getValidPrefixesForProvider(provider: MOBILE_MONEY_PROVIDER): string {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
-        return '81, 82, 83';
+        return '81, 82, 83'
       case MOBILE_MONEY_PROVIDER.ORANGE:
-        return '84, 85, 89';
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
-        return '99, 97';
+        return '84, 85, 89'
+      case MOBILE_MONEY_PROVIDER.AIRTEL:
+        return '99, 97'
       default:
-        return '';
+        return ''
     }
   }
 
@@ -771,71 +792,80 @@ export class PanierComponent implements OnInit, OnDestroy {
   private async getUtilisateurCourantInfo(): Promise<any> {
     // Vérifier d'abord si nous avons déjà les informations
     if (this.utilisateurConnecte && this.utilisateurConnecte.id) {
-      return this.utilisateurConnecte;
+      return this.utilisateurConnecte
     }
 
     // Essayer de récupérer les informations directement depuis le service
     try {
-      const userFromService = await this.utilisateurService.getCurrentUser();
+      const userFromService = await this.utilisateurService.getCurrentUser()
       if (userFromService) {
-        this.utilisateurConnecte = userFromService;
-        return userFromService;
+        this.utilisateurConnecte = userFromService
+        return userFromService
       }
 
       // Si cela ne fonctionne pas, essayer via l'observable
-      const userFromObservable = await this.utilisateurService.utilisateurCourant$.pipe(take(1)).toPromise();
+      const userFromObservable =
+        await this.utilisateurService.utilisateurCourant$
+          .pipe(take(1))
+          .toPromise()
       if (userFromObservable) {
-        this.utilisateurConnecte = userFromObservable;
-        return userFromObservable;
+        this.utilisateurConnecte = userFromObservable
+        return userFromObservable
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération utilisateur:', error);
+      console.error('Erreur lors de la récupération utilisateur:', error)
     }
 
     // Dernier recours: vérifier dans le localStorage
-    const storedUser = localStorage.getItem('utilisateur_courant');
+    const storedUser = localStorage.getItem('utilisateur_courant')
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
+        const parsedUser = JSON.parse(storedUser)
         if (parsedUser && parsedUser.id) {
-          this.utilisateurConnecte = parsedUser;
-          return parsedUser;
+          this.utilisateurConnecte = parsedUser
+          return parsedUser
         }
       } catch (e) {
-        console.error('Erreur lors du parsing utilisateur depuis localStorage:', e);
+        console.error(
+          'Erreur lors du parsing utilisateur depuis localStorage:',
+          e
+        )
       }
     }
 
     // Si aucune méthode ne fonctionne, lancer une erreur
-    throw new Error('Utilisateur non connecté ou impossible de récupérer les informations');
+    throw new Error(
+      'Utilisateur non connecté ou impossible de récupérer les informations'
+    )
   }
 
   // Soumettre le paiement par mobile money
   async submitMobilePayment(): Promise<void> {
     if (this.mobileMoneyForm.invalid) {
-      this.mobileMoneyForm.markAllAsTouched();
-      return;
+      this.mobileMoneyForm.markAllAsTouched()
+      return
     }
 
     if (!this.factureCreee) {
-      this.mobilePaymentError = 'Facture non créée';
-      return;
+      this.mobilePaymentError = 'Facture non créée'
+      return
     }
 
-    const provider = this.mobileMoneyForm.get('provider')!.value;
-    const phoneNumber = this.mobileMoneyForm.get('phoneNumber')!.value;
+    const provider = this.mobileMoneyForm.get('provider')!.value
+    const phoneNumber = this.mobileMoneyForm.get('phoneNumber')!.value
 
     if (!this.isValidPhoneForProvider(provider, phoneNumber)) {
-      this.mobilePaymentError = `Numéro invalide pour ${provider}. Le numéro doit commencer par ${this.getValidPrefixesForProvider(provider)}.`;
-      return;
+      this.mobilePaymentError = `Numéro invalide pour ${provider}. Le numéro doit commencer par ${this.getValidPrefixesForProvider(provider)}.`
+      return
     }
 
-    this.mobilePaymentProcessing = true;
-    this.processpaymentProcessing = true;
-    this.mobilePaymentError = '';
-    const montantBase = Number(this.total);
-    const commission =montantBase > 50 ? montantBase * 0.05 : montantBase * 0.075// montantBase * 0.1;
-    const totalAvecCommission = montantBase + commission;
+    this.mobilePaymentProcessing = true
+    this.processpaymentProcessing = true
+    this.mobilePaymentError = ''
+    const montantBase = Number(this.total)
+    const commission =
+      montantBase > 50 ? montantBase * 0.05 : montantBase * 0.075 // montantBase * 0.1;
+    const totalAvecCommission = montantBase + commission
 
     const paymentData = {
       provider,
@@ -844,180 +874,253 @@ export class PanierComponent implements OnInit, OnDestroy {
       customerName: `${this.utilisateurConnecte.nom} ${this.utilisateurConnecte.prenom}`,
       customerEmail: this.utilisateurConnecte.email,
       transactionReference: `MB-${Date.now()}-${this.factureCreee}`,
-      montantBase:montantBase // Utiliser l'URL actuelle pour éviter le rechargement
-    };
+      montantBase: montantBase, // Utiliser l'URL actuelle pour éviter le rechargement
+    }
 
     try {
-      this.processpaymentProcessing = true;
-      const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
-
+      this.processpaymentProcessing = true
+      const response = await this.arakaPaymentService
+        .processPayment(paymentData)
+        .toPromise()
 
       if (response.statusCode == '202') {
-        this.mobilePaymentSuccess = 'Paiement en attente de confirmation dans les 5 minutes : Veuillez confirmer ce paiement sur votre appareil...';
+        this.mobilePaymentSuccess =
+          'Paiement en attente de confirmation dans les 5 minutes : Veuillez confirmer ce paiement sur votre appareil...'
 
-        this.firebaseService.paiements_transactions_data({...response,source:"PANIER"})
+        this.firebaseService.paiements_transactions_data({
+          ...response,
+          source: 'PANIER',
+        })
 
-        this.updateFactureApresConfirmationMobile(this.factureCreee, response.originatingTransactionId, response.transactionId, provider, montantBase, commission);
-
+        this.updateFactureApresConfirmationMobile(
+          this.factureCreee,
+          response.originatingTransactionId,
+          response.transactionId,
+          provider,
+          montantBase,
+          commission
+        )
 
         //  this.startPaymentStatusCheck(response.transactionId, response.originatingTransactionId);
       } else {
-        this.processpaymentProcessing = false;
-        this.mobilePaymentError = 'Erreur inattendue lors du traitement du paiement.';
+        this.processpaymentProcessing = false
+        this.mobilePaymentError =
+          'Erreur inattendue lors du traitement du paiement.'
       }
     } catch (error) {
-      this.processpaymentProcessing = false;
+      this.processpaymentProcessing = false
 
-      this.mobilePaymentError = 'An error occurred while processing the payment.';
+      this.mobilePaymentError =
+        'An error occurred while processing the payment.'
     } finally {
-      this.processpaymentProcessing = false;
-      this.mobilePaymentProcessing = false;
+      this.processpaymentProcessing = false
+      this.mobilePaymentProcessing = false
     }
   }
 
-  private async startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): Promise<void> {
+  private async startPaymentStatusCheck(
+    transactionId: string,
+    originatingTransactionId: string
+  ): Promise<void> {
     try {
-      this.processpaymentProcessing = true;
-      const statusResponse = await this.arakaPaymentService.checkTransactionStatusById(transactionId).toPromise();
+      this.processpaymentProcessing = true
+      const statusResponse = await this.arakaPaymentService
+        .checkTransactionStatusById(transactionId)
+        .toPromise()
 
+      if (
+        statusResponse.statusCode == '200' &&
+        statusResponse.status == 'APPROVED'
+      ) {
+        this.firebaseService.paiements_transactions_data({
+          ...statusResponse,
+          source: 'PANIER',
+        })
 
-      if (statusResponse.statusCode == '200' && statusResponse.status == 'APPROVED') {
+        //  this.processpaymentProcessing = false;
+        //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
+        // if (this.factureSelectionnee) {
+        this.updatePaiementByReferenceArakaId(
+          transactionId,
+          originatingTransactionId
+        )
 
-        this.firebaseService.paiements_transactions_data({...statusResponse,source:"PANIER"})
-
-      //  this.processpaymentProcessing = false;
-    //    this.mobilePaymentSuccess = 'Paiement confirmé avec succès!';
-       // if (this.factureSelectionnee) {
-          this.updatePaiementByReferenceArakaId(transactionId, originatingTransactionId);
-
-         //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
+        //await this.updateFactureApresConfirmationMobile(this.factureSelectionnee.id!, statusResponse.transactionId, statusResponse.originatingTransactionId, statusResponse.provider, statusResponse.amount, statusResponse.commission);
         // } else {
         //   this.processpaymentProcessing = false;
         //   console.error('Facture selectionnée est null lors de la mise à jour après confirmation.');
         // }
       } else if (statusResponse.statusCode == '202') {
-     //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
-      }else
-      if (statusResponse.statusCode == '400' || statusResponse.status == 'DECLINED') {
+        //   this.mobilePaymentSuccess = 'Transaction en attente de confirmation. Veuillez confirmer le paiement sur votre appareil.';
+      } else if (
+        statusResponse.statusCode == '400' ||
+        statusResponse.status == 'DECLINED'
+      ) {
+        // this.processpaymentProcessing = false;
+        this.firebaseService.paiements_transactions_data({
+          ...statusResponse,
+          source: 'PANIER',
+        })
 
-       // this.processpaymentProcessing = false;
-       this.firebaseService.paiements_transactions_data({...statusResponse,source:"PANIER"})
+        this.updatePaiementByReferenceArakaId2(
+          transactionId,
+          originatingTransactionId,
+          STATUT_PAIEMENT.ANNULE
+        )
 
-        this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
-
-      //  this.mobilePaymentError = 'Le paiement a été refusé.';
-      }else
-      if (statusResponse.statusCode == '500') {
-
+        //  this.mobilePaymentError = 'Le paiement a été refusé.';
+      } else if (statusResponse.statusCode == '500') {
         //this.processpaymentProcessing = false;
-        this.updatePaiementByReferenceArakaId2(transactionId, originatingTransactionId, STATUT_PAIEMENT.ANNULE);
+        this.updatePaiementByReferenceArakaId2(
+          transactionId,
+          originatingTransactionId,
+          STATUT_PAIEMENT.ANNULE
+        )
 
-   //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
+        //     this.mobilePaymentError = 'Erreur lors de la vérification du statut du paiement.';
       }
     } catch (error) {
-     // this.processpaymentProcessing = false;
-
+      // this.processpaymentProcessing = false;
       //console.error('Error checking payment status:', error);
     }
   }
 
+  private async updatePaiementByReferenceArakaId(
+    transactionId: string,
+    originatingTransactionId: string
+  ) {
+    const factureId = originatingTransactionId.split('-')[2]
 
-  private async updatePaiementByReferenceArakaId(transactionId: string, originatingTransactionId: string) {
+    const facture = await this.firebaseService.getFactureById(factureId)
 
-    const factureId = originatingTransactionId.split('-')[2];
-
-      const facture = await this.firebaseService.getFactureById(factureId);
-
-        if (!facture) {
-          console.error(`Facture non trouvée: ${factureId}`);
-          return;
-        }
-        let montantPaye=0;
-        // Mettre à jour le statut des paiements existants qui sont en attente
-        const paiementsUpdated = facture.paiements.map(paiement => {
-
-          if (paiement.transaction_reference==originatingTransactionId && paiement.transaction_id==transactionId) {
-
-            this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
-              ...paiement,
-              statut: STATUT_PAIEMENT.CONFIRME,
-              statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
-            });
-            montantPaye=Number(paiement.montant_paye);
-            return {
-              ...paiement,
-              statut: STATUT_PAIEMENT.CONFIRME,
-              statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
-            };
-
+    if (!facture) {
+      console.error(`Facture non trouvée: ${factureId}`)
+      return
+    }
+    let montantPaye = 0
+    // Mettre à jour le statut des paiements existants qui sont en attente
+    const paiementsUpdated = facture.paiements.map((paiement) => {
+      if (
+        paiement.transaction_reference == originatingTransactionId &&
+        paiement.transaction_id == transactionId
+      ) {
+        this.firebaseService.updatePaiementByTransactionReference(
+          paiement.transaction_reference!,
+          {
+            ...paiement,
+            statut: STATUT_PAIEMENT.CONFIRME,
+            statut_araka: STATUT_PAIEMENT_ARAKA.APPROVED,
           }
-          return paiement;
-        });
-
-        // Mettre à jour la facture
-        await this.firebaseService.updateFacture(factureId, {
-          paiements: paiementsUpdated,
-          montantPaye: Number(facture.montantPaye)+montantPaye, // Considérer comme entièrement payée
-        });
-
-        // Mettre à jour le statut des colis
-        if (facture.colis && facture.colis.length > 0) {
-          const montantPaye =facture.paiements.reduce((acc, p) => (p.statut === STATUT_PAIEMENT.CONFIRME)?acc + (p.montant_paye || 0) : acc, 0)  ;
-          const montant = facture.montant;
-
-
-          for (const colisId of facture.colis) {
-            if (typeof colisId === 'string') {
-              await this.firebaseService.updateColis(colisId, {
-                statut: montantPaye >= montant ? STATUT_COLIS.PAYE : STATUT_COLIS.PARTIELLEMENT_PAYEE
-              });
-            }
-          }
+        )
+        montantPaye = Number(paiement.montant_paye)
+        return {
+          ...paiement,
+          statut: STATUT_PAIEMENT.CONFIRME,
+          statut_araka: STATUT_PAIEMENT_ARAKA.APPROVED,
         }
+      }
+      return paiement
+    })
+    const datepaiement = new Date().toISOString()
+    const all_Colis_facts = []
+    const montantPayeFAct = paiementsUpdated.reduce(
+      (acc, p) =>
+        p.statut === STATUT_PAIEMENT.CONFIRME
+          ? acc + (p.montant_paye || 0)
+          : acc,
+      0
+    )
+    const montant = facture.montant
+    facture.colis.forEach((colis) => {
+      all_Colis_facts.push({
+        ...colis,
+        derniere_date_paiement: datepaiement,
+        statut:
+          montantPayeFAct >= montant
+            ? STATUT_COLIS.PAYE
+            : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+      })
+    })
 
+    // Mettre à jour la facture
+    await this.firebaseService.updateFacture(factureId, {
+      paiements: paiementsUpdated,
+      montantPaye: Number(facture.montantPaye) + montantPaye, // Considérer comme entièrement payée
+    })
+
+    // Mettre à jour le statut des colis
+    if (facture.colis && facture.colis.length > 0) {
+      const montantPaye = facture.paiements.reduce(
+        (acc, p) =>
+          p.statut === STATUT_PAIEMENT.CONFIRME
+            ? acc + (p.montant_paye || 0)
+            : acc,
+        0
+      )
+      const montant = facture.montant
+
+      for (const colisId of facture.colis) {
+        //if (typeof colisId === 'string') {
+
+        await this.firebaseService.updateColis(colisId.id!, {
+          derniere_date_paiement: datepaiement,
+          statut:
+            montantPaye >= montant
+              ? STATUT_COLIS.PAYE
+              : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+        })
+        // }
+      }
+    }
+  }
+
+  private async updatePaiementByReferenceArakaId2(
+    transactionId: string,
+    originatingTransactionId: string,
+    statut: STATUT_PAIEMENT
+  ) {
+    const factureId = originatingTransactionId.split('-')[2]
+
+    const facture = await this.firebaseService.getFactureById(factureId)
+
+    //console.log('Facture:', facture);
+    if (!facture) {
+      console.error(`Facture non trouvée: ${factureId}`)
+      return
     }
 
-    private async updatePaiementByReferenceArakaId2(transactionId: string, originatingTransactionId: string, statut: STATUT_PAIEMENT) {
-
-      const factureId = originatingTransactionId.split('-')[2];
-
-        const facture = await this.firebaseService.getFactureById(factureId);
-
-        //console.log('Facture:', facture);
-          if (!facture) {
-            console.error(`Facture non trouvée: ${factureId}`);
-            return;
+    // Mettre à jour le statut des paiements existants qui sont en attente
+    const paiementsUpdated = facture.paiements.map((paiement) => {
+      if (
+        paiement.transaction_reference == originatingTransactionId &&
+        paiement.transaction_id == transactionId
+      ) {
+        this.firebaseService.updatePaiementByTransactionReference(
+          paiement.transaction_reference!,
+          {
+            ...paiement,
+            statut: STATUT_PAIEMENT.ANNULE,
+            statut_araka: STATUT_PAIEMENT_ARAKA.DECLINED,
           }
+        )
 
-          // Mettre à jour le statut des paiements existants qui sont en attente
-          const paiementsUpdated = facture.paiements.map(paiement => {
-
-            if (paiement.transaction_reference==originatingTransactionId && paiement.transaction_id==transactionId) {
-              this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
-                ...paiement,
-                statut: STATUT_PAIEMENT.ANNULE,
-                statut_araka:STATUT_PAIEMENT_ARAKA.DECLINED
-              });
-
-              return {
-                ...paiement,
-                statut: STATUT_PAIEMENT.ANNULE,
-                statut_araka:STATUT_PAIEMENT_ARAKA.DECLINED
-              };
-            }
-            return paiement;
-          });
-
-          // Mettre à jour la facture
-          await this.firebaseService.updateFacture(factureId, {
-            paiements: paiementsUpdated,
-          //  montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
-          });
-
-          // Mettre à jour le statut des colis
-
-
+        return {
+          ...paiement,
+          statut: STATUT_PAIEMENT.ANNULE,
+          statut_araka: STATUT_PAIEMENT_ARAKA.DECLINED,
+        }
       }
+      return paiement
+    })
+
+    // Mettre à jour la facture
+    await this.firebaseService.updateFacture(factureId, {
+      paiements: paiementsUpdated,
+      //  montantPaye: facture.montantPaye-montantPaye, // Considérer comme entièrement payée
+    })
+
+    // Mettre à jour le statut des colis
+  }
   // private startPaymentStatusCheck(transactionId: string, originatingTransactionId: string): void {
   //   const checkInterval = 20000; // 20 seconds
   //   const timeout = 60000; // 1 minute
@@ -1076,8 +1179,8 @@ export class PanierComponent implements OnInit, OnDestroy {
   //     case MOBILE_MONEY_PROVIDER.ORANGE:
   //       typePaiement = TYPE_PAIEMENT.ORANGE;
   //       break;
-  //     case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
-  //       typePaiement = TYPE_PAIEMENT.AIRTEL_MONEY;
+  //     case MOBILE_MONEY_PROVIDER.AIRTEL:
+  //       typePaiement = TYPE_PAIEMENT.AIRTEL;
   //       break;
   //     default:
   //       typePaiement = TYPE_PAIEMENT.ESPECE;
@@ -1103,11 +1206,18 @@ export class PanierComponent implements OnInit, OnDestroy {
   //   );
   // }
 
-  private async updateFactureApresConfirmationMobile(factureId: string, transaction_reference: any, transaction_id: any, provider: string, montantRestant: number, commission: number): Promise<void> {
+  private async updateFactureApresConfirmationMobile(
+    factureId: string,
+    transaction_reference: any,
+    transaction_id: any,
+    provider: string,
+    montantRestant: number,
+    commission: number
+  ): Promise<void> {
     try {
-      this.processpaymentProcessing = true;
+      this.processpaymentProcessing = true
       // Récupérer la facture actuelle
-      const paiementId = `PAY${new Date().getTime()}`;
+      const paiementId = `PAY${new Date().getTime()}`
       const nouveauPaiement: Paiement = {
         id: paiementId,
         montant_paye: montantRestant,
@@ -1119,23 +1229,21 @@ export class PanierComponent implements OnInit, OnDestroy {
         transaction_id: transaction_id, // Référence Stripe
         commission: commission, // Commission de 10%,
         statut: STATUT_PAIEMENT.EN_ATTENTE,
-        statut_araka:STATUT_PAIEMENT_ARAKA.ACCEPTED
-      };
+        statut_araka: STATUT_PAIEMENT_ARAKA.ACCEPTED,
+      }
 
+      const facture = await this.firebaseService.getFactureById(factureId)
 
-      const facture = await this.firebaseService.getFactureById(factureId);
-
-
-      await this.firebaseService.addPaiement(nouveauPaiement);
-      const paiementsActuels = facture?.paiements || [];
+      await this.firebaseService.addPaiement(nouveauPaiement)
+      const paiementsActuels = facture?.paiements || []
       await this.firebaseService.updateFacture(factureId, {
-      //  montantPaye: (facture?.montantPaye || 0) + montantRestant,
-        paiements: [...paiementsActuels, nouveauPaiement]
-      });
+        //  montantPaye: (facture?.montantPaye || 0) + montantRestant,
+        paiements: [...paiementsActuels, nouveauPaiement],
+      })
 
       setTimeout(() => {
-        this.startPaymentStatusCheck(transaction_id, transaction_reference);
-      }, 20000);
+        this.startPaymentStatusCheck(transaction_id, transaction_reference)
+      }, 20000)
 
       // if (this.factureSelectionnee?.colisObjets) {
       //   for (const colis of this.factureSelectionnee.colisObjets) {
@@ -1148,24 +1256,24 @@ export class PanierComponent implements OnInit, OnDestroy {
       // }
 
       this.router.navigateByUrl('mes-commandes')
-    //  console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
-      this.processpaymentProcessing = false;
+      //  console.log(`Facture ${factureId} mise à jour avec succès après confirmation du paiement mobile`);
+      this.processpaymentProcessing = false
     } catch (error) {
       //console.error(`Erreur lors de la mise à jour de la facture ${factureId}:`, error);
-      this.processpaymentProcessing = false;
+      this.processpaymentProcessing = false
     }
   }
 
   getTypePaiementFromProvider(provider: string): TYPE_PAIEMENT {
     switch (provider) {
       case MOBILE_MONEY_PROVIDER.MPESA:
-        return TYPE_PAIEMENT.MPESA;
+        return TYPE_PAIEMENT.MPESA
       case MOBILE_MONEY_PROVIDER.ORANGE:
-        return TYPE_PAIEMENT.ORANGE;
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
-        return TYPE_PAIEMENT.AIRTEL_MONEY;
+        return TYPE_PAIEMENT.ORANGE
+      case MOBILE_MONEY_PROVIDER.AIRTEL:
+        return TYPE_PAIEMENT.AIRTEL
       default:
-        return TYPE_PAIEMENT.ESPECE;
+        return TYPE_PAIEMENT.ESPECE
     }
   }
   // private async updateFactureApresConfirmationMobile(factureId: string, statusResponse: any): Promise<void> {

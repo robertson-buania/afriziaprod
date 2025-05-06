@@ -520,14 +520,14 @@
             <!-- AIRTEL MONEY -->
             <div class="col-md-4">
               <div class="mobile-provider-card"
-                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.AIRTEL_MONEY"
-                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.AIRTEL_MONEY)">
+                   [class.selected]="mobileMoneyForm.get('provider')?.value === mobileMoneyProviders.AIRTEL"
+                   (click)="mobileMoneyForm.get('provider')?.setValue(mobileMoneyProviders.AIRTEL)">
                 <div class="provider-header">
                   <input type="radio" class="form-check-input"
-                         [id]="'provider-' + mobileMoneyProviders.AIRTEL_MONEY"
-                         [value]="mobileMoneyProviders.AIRTEL_MONEY"
+                         [id]="'provider-' + mobileMoneyProviders.AIRTEL"
+                         [value]="mobileMoneyProviders.AIRTEL"
                          formControlName="provider">
-                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.AIRTEL_MONEY">
+                  <label class="form-check-label" [for]="'provider-' + mobileMoneyProviders.AIRTEL">
                     Airtel Money
                   </label>
                 </div>

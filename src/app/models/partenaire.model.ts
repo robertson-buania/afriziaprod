@@ -21,7 +21,7 @@ export interface Facture{
   id?:string
   montant:number
   montantPaye:number
-  colis:(Colis | string)[]
+  colis:Colis []
   colisObjets?:Colis[]
   paiements:Paiement[]
   dateCreation?: string
@@ -52,6 +52,7 @@ export interface Colis{
   destinataire:string,
   destination:string,
   quantite:string,
+  derniere_date_paiement?:string,
   nature:string,
   transporteur:string
 }
@@ -102,7 +103,7 @@ export enum  TYPE_PAIEMENT{
   CARTE,
   MPESA,
   ORANGE,
-  AIRTEL_MONEY
+  AIRTEL
 }
 
 

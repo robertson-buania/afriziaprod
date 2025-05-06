@@ -39,7 +39,7 @@ interface BaseFacture extends Omit<Facture, 'colis'> {
 
 interface ExtendedFacture extends BaseFacture {
   pourcentagePaye: number;
-  colis: (string | Colis)[];
+  colis: Colis[];
   colisObjets?: Colis[];
 }
 
@@ -47,7 +47,7 @@ interface ExtendedFacture extends BaseFacture {
 enum MOBILE_MONEY_PROVIDER {
   MPESA = 'MPESA',
   ORANGE = 'ORANGE',
-  AIRTEL_MONEY = 'AIRTEL_MONEY'
+  AIRTEL = 'AIRTEL'
 }
 
 // Interface pour le mode de paiement
@@ -888,7 +888,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         return ['81', '82', '83'].includes(prefix);
       case MOBILE_MONEY_PROVIDER.ORANGE:
         return ['84', '85', '89'].includes(prefix);
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+      case MOBILE_MONEY_PROVIDER.AIRTEL:
         return ['99', '97'].includes(prefix);
       default:
         return false;
@@ -902,7 +902,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         return '81, 82, 83';
       case MOBILE_MONEY_PROVIDER.ORANGE:
         return '84, 85, 89';
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
+      case MOBILE_MONEY_PROVIDER.AIRTEL:
         return '99, 97';
       default:
         return '';
@@ -1045,45 +1045,79 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         console.error(`Facture non trouvée: ${factureId}`);
         return;
       }
-      let montantPaye=0;
+      let montantPaye = 0
       // Mettre à jour le statut des paiements existants qui sont en attente
-      const paiementsUpdated = facture.paiements.map(paiement => {
-
-
-        if (paiement.transaction_reference && paiement.transaction_id==transactionId) {
-          this.firebaseService.updatePaiementByTransactionReference(paiement.transaction_reference!, {
-            ...paiement,
-            statut: STATUT_PAIEMENT.CONFIRME,
-            statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
-          });
-          montantPaye=Number(paiement.montant_paye);
+      const paiementsUpdated = facture.paiements.map((paiement) => {
+        if (
+          paiement.transaction_reference == originatingTransactionId &&
+          paiement.transaction_id == transactionId
+        ) {
+          this.firebaseService.updatePaiementByTransactionReference(
+            paiement.transaction_reference!,
+            {
+              ...paiement,
+              statut: STATUT_PAIEMENT.CONFIRME,
+              statut_araka: STATUT_PAIEMENT_ARAKA.APPROVED,
+            }
+          )
+          montantPaye = Number(paiement.montant_paye)
           return {
             ...paiement,
             statut: STATUT_PAIEMENT.CONFIRME,
-            statut_araka:STATUT_PAIEMENT_ARAKA.APPROVED
-          };
+            statut_araka: STATUT_PAIEMENT_ARAKA.APPROVED,
+          }
         }
-        return paiement;
-      });
+        return paiement
+      })
+      const datepaiement = new Date().toISOString()
+      const all_Colis_facts = []
+      const montantPayeFAct = paiementsUpdated.reduce(
+        (acc, p) =>
+          p.statut === STATUT_PAIEMENT.CONFIRME
+            ? acc + (p.montant_paye || 0)
+            : acc,
+        0
+      )
+      const montant = facture.montant
+      facture.colis.forEach((colis) => {
+        all_Colis_facts.push({
+          ...colis,
+          derniere_date_paiement: datepaiement,
+          statut:
+            montantPayeFAct >= montant
+              ? STATUT_COLIS.PAYE
+              : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+        })
+      })
 
       // Mettre à jour la facture
       await this.firebaseService.updateFacture(factureId, {
         paiements: paiementsUpdated,
-        montantPaye: Number(facture.montantPaye)+montantPaye, // Considérer comme entièrement payée
-      });
+        montantPaye: Number(facture.montantPaye) + montantPaye, // Considérer comme entièrement payée
+      })
 
       // Mettre à jour le statut des colis
       if (facture.colis && facture.colis.length > 0) {
-        const montantPaye =facture.paiements.reduce((acc, p) => (p.statut === STATUT_PAIEMENT.CONFIRME)?acc + (p.montant_paye || 0) : acc, 0)  ;
-        const montant = facture.montant;
-
+        const montantPaye = facture.paiements.reduce(
+          (acc, p) =>
+            p.statut === STATUT_PAIEMENT.CONFIRME
+              ? acc + (p.montant_paye || 0)
+              : acc,
+          0
+        )
+        const montant = facture.montant
 
         for (const colisId of facture.colis) {
-          if (typeof colisId === 'string') {
-            await this.firebaseService.updateColis(colisId, {
-              statut: montantPaye >= montant ? STATUT_COLIS.PAYE : STATUT_COLIS.PARTIELLEMENT_PAYEE
-            });
-          }
+          //if (typeof colisId === 'string') {
+
+          await this.firebaseService.updateColis(colisId.id!, {
+            derniere_date_paiement: datepaiement,
+            statut:
+              montantPaye >= montant
+                ? STATUT_COLIS.PAYE
+                : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+          })
+          // }
         }
       }
 
@@ -1141,8 +1175,8 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
         return TYPE_PAIEMENT.MPESA;
       case MOBILE_MONEY_PROVIDER.ORANGE:
         return TYPE_PAIEMENT.ORANGE;
-      case MOBILE_MONEY_PROVIDER.AIRTEL_MONEY:
-        return TYPE_PAIEMENT.AIRTEL_MONEY;
+      case MOBILE_MONEY_PROVIDER.AIRTEL:
+        return TYPE_PAIEMENT.AIRTEL;
       default:
         return TYPE_PAIEMENT.ESPECE;
     }
