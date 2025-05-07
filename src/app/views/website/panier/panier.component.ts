@@ -50,8 +50,7 @@ import { take } from 'rxjs/operators'
 import { environment } from '@/environments/environment'
 import { PaiementService } from '@/app/shared/service/paiement.service'
 import { ArakaPaymentService } from '@/app/core/services/araka-payment.service'
-
-// Types de paiement mobile
+ 
 enum MOBILE_MONEY_PROVIDER {
   MPESA = 'MPESA',
   ORANGE = 'ORANGE',
