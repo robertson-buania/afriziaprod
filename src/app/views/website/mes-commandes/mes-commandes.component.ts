@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { NgbNavModule, NgbAccordionModule, NgbAlertModule, NgbTooltipModule, NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { UtilisateurService } from '@/app/core/services/utilisateur.service';
 import { FirebaseService } from '@/app/core/services/firebase.service';
-import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT, FactureStatus, STATUT_PAIEMENT, STATUT_PAIEMENT_ARAKA } from '@/app/models/partenaire.model';
+import { Facture, Colis, STATUT_COLIS, Paiement, TYPE_PAIEMENT, FactureStatus, STATUT_PAIEMENT, STATUT_PAIEMENT_ARAKA, TYPE_COLIS_EXPORTE } from '@/app/models/partenaire.model';
 import { Subscription, of, Subject, timer, from, Observable } from 'rxjs';
 import { PaymentService } from '@/app/core/services/payment.service';
 import { AuthService } from '@/app/core/services/auth.service';
@@ -1116,6 +1116,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
               montantPaye >= montant
                 ? STATUT_COLIS.PAYE
                 : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+                export:TYPE_COLIS_EXPORTE.NON_EXPORTE
           })
           // }
         }

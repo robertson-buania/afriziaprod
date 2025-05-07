@@ -54,6 +54,8 @@ export interface Colis{
   quantite:string,
   derniere_date_paiement?:string,
   nature:string,
+  export?:TYPE_COLIS_EXPORTE,
+  dateExport?:string,
   transporteur:string
 }
 
@@ -116,6 +118,11 @@ export enum  TYPE_PAIEMENT{
 //   LIVRE,
 //   ANNULE
 // }
+
+export enum TYPE_COLIS_EXPORTE{
+  EXPORTE,
+  NON_EXPORTE
+}
 export enum STATUT_COLIS{
   EN_ATTENTE_PAIEMENT,
   PAYE,

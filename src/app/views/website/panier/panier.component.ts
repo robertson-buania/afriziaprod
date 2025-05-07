@@ -33,6 +33,7 @@ import {
   TYPE_PAIEMENT,
   STATUT_PAIEMENT,
   STATUT_PAIEMENT_ARAKA,
+  TYPE_COLIS_EXPORTE,
 } from '@/app/models/partenaire.model'
 import { UtilisateurService } from '@/app/core/services/utilisateur.service'
 import { Subscription } from 'rxjs'
@@ -1039,6 +1040,7 @@ export class PanierComponent implements OnInit, OnDestroy {
           montantPayeFAct >= montant
             ? STATUT_COLIS.PAYE
             : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+            export:TYPE_COLIS_EXPORTE.NON_EXPORTE
       })
     })
 
@@ -1068,6 +1070,7 @@ export class PanierComponent implements OnInit, OnDestroy {
             montantPaye >= montant
               ? STATUT_COLIS.PAYE
               : STATUT_COLIS.PARTIELLEMENT_PAYEE,
+              export:TYPE_COLIS_EXPORTE.NON_EXPORTE
         })
         // }
       }
