@@ -156,6 +156,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
   mobilePaymentError = '';
   mobilePaymentSuccess = '';
   processpaymentProcessing = false;
+  processpaymentProcessing2 = false;
   readonly MOBILE_API_URL = 'https://araka-api-uat.azurewebsites.net/api/Pay/paymentrequest';
 
   private mobileMoneyModalRef: NgbModalRef | null = null;
@@ -958,6 +959,7 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
 
     try {
       this.processpaymentProcessing = true;
+      this.processpaymentProcessing2=true
 
       const response = await this.arakaPaymentService.processPayment(paymentData).toPromise();
 
@@ -989,8 +991,10 @@ export class MesCommandesComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.processpaymentProcessing = false;
      // console.error('Payment error:', error);
+     this.processpaymentProcessing2=false
       this.mobilePaymentError = 'Une erreur est survenue lors du traitement du paiement.';
     } finally {
+      this.processpaymentProcessing = false;
       this.mobilePaymentProcessing = false;
     }
   }

@@ -579,7 +579,7 @@
 
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="closeMobileMoneyModal()">Annuler</button>
-    <button  (click)="submitMobilePayment()" type="submit" class="btn btn-primary" [disabled]="mobileMoneyForm.invalid || processpaymentProcessing">
+    <button  (click)="submitMobilePayment()" type="submit" class="btn btn-primary" [disabled]="mobileMoneyForm.invalid || processpaymentProcessing2">
       <span *ngIf="mobilePaymentProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       Payer maintenant
     </button>
